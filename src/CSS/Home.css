@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+.home-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Nunito', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.floating-items {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.floating-items span {
+  position: absolute;
+  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));
+  animation: float 4s ease-in-out infinite;
+}
+
+.floating-items span:nth-child(odd) {
+  animation-duration: 5s;
+  animation-direction: alternate;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+.home-content {
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.brand {
+  font-size: 64px;
+  font-weight: 900;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.brand-saber { color: #F5812A; }
+.brand-plus  { color: #1A6FC4; }
+
+.subtitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #3A5A7A;
+  margin-bottom: 40px;
+}
+
+.cards-row {
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+}
+
+.access-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px 32px 32px;
+  width: 260px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  border: 1px solid rgba(255,255,255,0.8);
+}
+
+.avatar {
+  font-size: 100px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+}
+
+.btn-blue, .btn-green {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  color: #fff;
+}
+
+.btn-blue  { background: #1A6FC4; }
+.btn-green { background: #3DAA5C; }
+
+.btn-blue:hover  { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(26,111,196,0.4); }
+.btn-green:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(61,170,92,0.4); }
