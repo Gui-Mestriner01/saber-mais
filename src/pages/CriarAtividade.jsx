@@ -19,6 +19,15 @@ function CriarAtividade() {
   const [salaSelecionada, setSalaSelecionada] = useState('');
   const [tipoSelecionado, setTipoSelecionado] = useState('');
 
+  const handleContinuar = () => {
+    if (tipoSelecionado === 'quiz') navigate('/professor/criar-quiz');
+    if (tipoSelecionado === 'ligar')  navigate('/professor/criar-ligar');
+    if (tipoSelecionado === 'pintar')  navigate('/professor/criar-pintura');
+    if (tipoSelecionado === 'resposta_aberta') navigate('/professor/criar-resposta-aberta');
+
+    // outros tipos serão adicionados futuramente
+  };
+
   return (
     <div className="dashboard-container">
       <aside className="sidebar">
@@ -36,7 +45,7 @@ function CriarAtividade() {
       <main className="dashboard-main">
         <header className="dashboard-header">
           <h1>Criar Atividade</h1>
-          <div className="header-avatar">👨‍🏫</div>
+          <div className="header-avatar" onClick={() => navigate('/professor/perfil')} style={{cursor:'pointer'}}>👨‍🏫</div>
         </header>
 
         <div className="form-card">
@@ -69,7 +78,11 @@ function CriarAtividade() {
               </div>
 
               {tipoSelecionado && (
-                <button className="btn-criar-sala" style={{marginTop: '24px'}}>
+                <button
+                  className="btn-criar-sala"
+                  style={{marginTop: '24px'}}
+                  onClick={handleContinuar}
+                >
                   CONTINUAR
                 </button>
               )}

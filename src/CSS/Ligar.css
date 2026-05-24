@@ -1,0 +1,278 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+.ligar-builder {
+  display: flex;
+  height: 100vh;
+  font-family: 'Nunito', sans-serif;
+  background: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
+  overflow: hidden;
+}
+
+/* Reutiliza sidebar do Quiz */
+.ligar-sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  border-right: 1.5px solid rgba(255,255,255,0.9);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 14px;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.ligar-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px 40px;
+  overflow-y: auto;
+}
+
+.ligar-titulo-ativ {
+  width: 100%;
+  padding: 18px 24px;
+  background: rgba(255,255,255,0.9);
+  border: 2px solid rgba(255,255,255,0.95);
+  border-radius: 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  color: #2A4A6A;
+  outline: none;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.1);
+}
+
+.ligar-titulo-ativ:focus { border-color: #1A6FC4; }
+.ligar-titulo-ativ::placeholder { color: #A0B8CC; font-weight: 400; font-size: 16px; }
+
+.ligar-header-colunas {
+  display: grid;
+  grid-template-columns: 1fr 48px 1fr;
+  gap: 16px;
+  padding: 0 48px;
+  font-size: 13px;
+  font-weight: 900;
+  color: #5A7A9A;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.pares-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.par-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 48px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.par-num {
+  background: #1A6FC4;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.par-lado {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.par-tipo-toggle {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid #C8DFF0;
+  width: fit-content;
+}
+
+.par-tipo-toggle button {
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7AAAC8;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.par-tipo-toggle button.ativo {
+  background: #1A6FC4;
+  color: #fff;
+}
+
+.par-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.9);
+  border: 2px solid #C8DFF0;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2A4A6A;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.par-input:focus { border-color: #1A6FC4; }
+.par-input::placeholder { color: #A0B8CC; font-weight: 400; }
+
+.par-img-area {
+  width: 100%;
+  height: 90px;
+  background: rgba(255,255,255,0.9);
+  border: 2px dashed #C8DFF0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  font-size: 13px;
+  font-weight: 700;
+  color: #7AAAC8;
+}
+
+.par-img-area:hover { border-color: #1A6FC4; }
+
+.par-img-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.par-conector {
+  font-size: 20px;
+  text-align: center;
+}
+
+.par-del {
+  background: none;
+  border: none;
+  color: #C8DFF0;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 4px;
+}
+
+.par-del:hover { color: #E23F3F; }
+
+.btn-add-par {
+  align-self: center;
+  background: rgba(255,255,255,0.8);
+  border: 2px dashed #C8DFF0;
+  border-radius: 12px;
+  padding: 12px 32px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #5A7A9A;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-add-par:hover { border-color: #1A6FC4; color: #1A6FC4; }
+
+/* Modal e Props reutiliza do Quiz.css */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 36px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+}
+
+.modal-card h3 {
+  font-size: 20px;
+  font-weight: 900;
+  color: #2A4A6A;
+  margin-bottom: 10px;
+}
+
+.modal-card p {
+  font-size: 14px;
+  color: #7AAAC8;
+  font-weight: 700;
+  margin-bottom: 28px;
+}
+
+.modal-btns { display: flex; flex-direction: column; gap: 10px; }
+
+.modal-btn-salvar {
+  padding: 14px;
+  background: #3DAA5C;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.modal-btn-salvar:hover { background: #2E8A48; }
+
+.modal-btn-sair {
+  padding: 14px;
+  background: transparent;
+  color: #E23F3F;
+  border: 2px solid #E23F3F;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.modal-btn-sair:hover { background: #E23F3F; color: #fff; }
+
+.modal-btn-cancelar {
+  padding: 12px;
+  background: transparent;
+  color: #7AAAC8;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-btn-cancelar:hover { color: #2A4A6A; }

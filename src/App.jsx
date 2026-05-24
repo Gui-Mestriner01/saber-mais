@@ -8,6 +8,11 @@ import DashboardProfessor from './pages/DashboardProfessor';
 import CriarSala from './pages/CriarSala';
 import CriarAtividade from './pages/CriarAtividade';
 import PerfilProfessor from './pages/PerfilProfessor';
+import CriarQuiz from './pages/CriarQuiz';
+import CriarLigar from './pages/CriarLigar';
+import PinturaAluno from './pages/PinturaAluno';
+import CriarPintura from './pages/CriarPintura';
+import CriarRespostaAberta from './pages/CriarRespostaAberta';
 
 function App() {
   return (
@@ -22,6 +27,11 @@ function App() {
         <Route path="/professor/criar-sala" element={<CriarSala />} />
         <Route path="/professor/criar-atividade" element={<CriarAtividade />} />
         <Route path="/professor/perfil" element={<PerfilProfessor />} />
+        <Route path="/professor/criar-quiz" element={<CriarQuiz />} />
+        <Route path="/professor/criar-ligar" element={<CriarLigar />} />
+        <Route path="/aluno/pintura" element={<PinturaAluno />} />
+        <Route path="/professor/criar-pintura" element={<CriarPintura />} />
+        <Route path="/professor/criar-resposta-aberta" element={<CriarRespostaAberta />} /> 
       </Routes>
     </BrowserRouter>
   );
