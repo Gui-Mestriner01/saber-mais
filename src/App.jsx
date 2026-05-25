@@ -12,6 +12,7 @@ import PinturaAluno from './pages/PinturaAluno';
 import CriarPintura from './pages/CriarPintura';
 import CriarRespostaAberta from './pages/CriarRespostaAberta';
 import AreaAluno from './pages/AreaAluno';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="/professor/criar-resposta-aberta" element={<CriarRespostaAberta />} />
         <Route path="/aluno/pintura" element={<PinturaAluno />} />
         <Route path="/aluno/area" element={<AreaAluno />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
       </Routes>
     </BrowserRouter>
   );
