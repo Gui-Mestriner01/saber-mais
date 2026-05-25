@@ -21,7 +21,7 @@ function Home() {
           </div>
           <div className="access-card">
             <div className="avatar">🧑‍💻</div>
-            <button className="btn-green" onClick={() => navigate('/login/aluno')}>
+            <button className="btn-green" onClick={() => navigate('/aluno/area')}>
               ACESSO ALUNO
             </button>
           </div>

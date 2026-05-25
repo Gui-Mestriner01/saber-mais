@@ -15,27 +15,7 @@
 }
 
 /* Emojis flutuantes */
-.floating-items {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
 
-.floating-items span {
-  position: absolute;
-  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));
-  animation: float 4s ease-in-out infinite;
-}
-
-.floating-items span:nth-child(odd) {
-  animation-duration: 5s;
-  animation-direction: alternate;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-14px); }
-}
 
 /* Conteúdo central */
 .cadastro-content {
