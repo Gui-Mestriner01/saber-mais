@@ -1,35 +1,76 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Dashboard.css';
 
-const salasDoProf = [
-  { id: 1, nome: 'Turma da Manhã', serie: '5º Ano', materia: 'Matemática', codigo: '48321' },
-  { id: 2, nome: 'Turma da Tarde', serie: '3º Ano', materia: 'Português',  codigo: '71204' },
-];
-
 function PerfilProfessor() {
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
   const inputFoto = useRef(null);
 
-  // Dados virão do backend — mockados por enquanto
-  const [foto, setFoto]             = useState(null);
-  const [nome, setNome]             = useState('Guilherme Mestriner');
-  const [email, setEmail]           = useState('guilherme@email.com');
-  const [telefone, setTelefone]     = useState('');
+  // --- DECLARAÇÃO DE ESTADOS ---
+  // Inferidos com base nos inputs e variáveis que você usa no JSX
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
   const [instituicao, setInstituicao] = useState('');
-  const [materia, setMateria]       = useState('');
+  const [materia, setMateria] = useState('');
   const [responsavelUnica, setResponsavelUnica] = useState(false);
   const [msgSucesso, setMsgSucesso] = useState(false);
+  const [foto, setFoto] = useState(null);
+  
+  // Array vazio por padrão para não quebrar o .map() das salas
+  const [salasDoProf, setSalasDoProf] = useState([]); 
 
-  const handleFoto = (e) => {
-    const file = e.target.files[0];
-    if (file) setFoto(URL.createObjectURL(file));
+  useEffect(() => {
+    buscarPerfil();
+  }, []);
+
+  const buscarPerfil = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/professor/perfil', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setNome(data.nome || '');
+      setEmail(data.email || '');
+      setTelefone(data.telefone || '');
+      setInstituicao(data.instituicao || '');
+      setMateria(data.materia || '');
+      // Se a API retornar as salas e a foto, você pode atualizar os estados aqui também:
+      // setSalasDoProf(data.salas || []);
+      // setFoto(data.foto || null);
+    } catch {
+      console.error('Erro ao buscar perfil');
+    }
   };
 
-  const handleSalvar = (e) => {
+  const handleSalvar = async (e) => {
     e.preventDefault();
-    setMsgSucesso(true);
-    setTimeout(() => setMsgSucesso(false), 3000);
+    try {
+      const res = await fetch('http://localhost:3001/professor/perfil', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ nome, telefone, instituicao, materia })
+      });
+
+      if (res.ok) {
+        setMsgSucesso(true);
+        setTimeout(() => setMsgSucesso(false), 3000);
+      }
+    } catch {
+      console.error('Erro ao salvar perfil');
+    }
+  };
+
+  // Função para exibir a foto selecionada na tela
+  const handleFoto = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const imageUrl = URL.createObjectURL(file);
+      setFoto(imageUrl);
+    }
   };
 
   return (

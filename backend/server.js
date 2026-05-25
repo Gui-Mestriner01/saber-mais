@@ -159,6 +159,21 @@ app.get('/salas', (req, res) => {
 // ========================
 
 // Criar Sala
+const TEMAS = {
+  frutas:   ['🍎','🍌','🍇','🍓','🍊','🍋','🍉','🍑','🍒','🥭'],
+  animais:  ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯'],
+  esportes: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸'],
+};
+
+function gerarSenhaEmoji() {
+  const temas = Object.keys(TEMAS);
+  const tema = temas[Math.floor(Math.random() * temas.length)];
+  const emojis = TEMAS[tema];
+  const senha = Array.from({length: 4}, () => emojis[Math.floor(Math.random() * emojis.length)]).join('');
+  return { tema, senha };
+}
+
+// Atualiza a rota POST /professor/sala
 app.post('/professor/sala', autenticar, (req, res) => {
   const { nome, serie, materia, codigo } = req.body;
   const professorId = req.usuario.id;
@@ -166,18 +181,26 @@ app.post('/professor/sala', autenticar, (req, res) => {
   if (!nome || !serie || !materia || !codigo)
     return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
 
+  const { tema, senha } = gerarSenhaEmoji();
+
   const sql = `
-    INSERT INTO sala (nome, serie, materia, codigo, professor_id, ano_letivo)
-    VALUES (?, ?, ?, ?, ?, 2026)
+    INSERT INTO sala (nome, serie, materia, codigo, senha_emojis, tema_senha, professor_id, ano_letivo)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 2026)
   `;
 
-  db.query(sql, [nome, serie, materia, codigo, professorId], (err, result) => {
+  db.query(sql, [nome, serie, materia, codigo, senha, tema, professorId], (err, result) => {
     if (err) {
       if (err.code === 'ER_DUP_ENTRY')
         return res.status(409).json({ erro: 'Código de sala já existe.' });
       return res.status(500).json({ erro: 'Erro ao criar sala.' });
     }
-    res.status(201).json({ mensagem: 'Sala criada com sucesso!', id: result.insertId, codigo });
+    res.status(201).json({
+      mensagem: 'Sala criada com sucesso!',
+      id: result.insertId,
+      codigo,
+      senha,
+      tema
+    });
   });
 });
 

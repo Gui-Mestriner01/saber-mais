@@ -2,23 +2,53 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Dashboard.css';
 
-const ANO_ATUAL = 2026;
-
-function gerarCodigo() {
-  return Math.floor(10000 + Math.random() * 90000).toString();
-}
+// Função auxiliar criada fora do componente para gerar o código aleatório
+const gerarCodigo = () => {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+};
 
 function CriarSala() {
   const navigate = useNavigate();
+  
+  // 1. TODOS OS ESTADOS AQUI DENTRO DAA FUNÇÃO
   const [nomeSala, setNomeSala]     = useState('');
   const [serie, setSerie]           = useState('');
   const [materia, setMateria]       = useState('');
   const [codigo]                    = useState(() => gerarCodigo());
   const [salaCriada, setSalaCriada] = useState(false);
+  const [erro, setErro]             = useState('');
+  const [senhaGerada, setSenhaGerada] = useState(''); // <- Movido para cá!
 
-  const handleCriarSala = (e) => {
+  // Criando a constante do ano atual para o seu input
+  const ANO_ATUAL = new Date().getFullYear();
+
+  // 2. FUNÇÃO DE SUBMIT MOVIDA PARA DENTRO
+  const handleCriarSala = async (e) => {
     e.preventDefault();
-    setSalaCriada(true);
+    setErro('');
+
+    try {
+      const response = await fetch('http://localhost:3001/professor/sala', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ nome: nomeSala, serie, materia, codigo })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErro(data.erro || 'Erro ao criar sala.');
+        return;
+      }
+
+      setSenhaGerada(data.senha);
+      setSalaCriada(true);
+    } catch {
+      setErro('Não foi possível conectar ao servidor.');
+    }
   };
 
   return (
@@ -106,17 +136,27 @@ function CriarSala() {
                 </div>
               </div>
 
-              {!salaCriada ? (
-                <button type="submit" className="btn-criar-sala">CRIAR SALA</button>
-              ) : (
+              {erro && <div className="msg-erro">{erro}</div>}
+              
+              {salaCriada && (
                 <>
                   <div className="codigo-sala">
                     ✏️ Código da Sala: <strong>{codigo}</strong>
                   </div>
+                  <div className="codigo-sala" style={{background:'#EBF4FF', borderColor:'#1A6FC4', color:'#1A6FC4'}}>
+                    🔑 Senha da Sala: <strong>{senhaGerada}</strong>
+                  </div>
                   <div className="msg-sucesso">
-                    ✅ Sala criada! Compartilhe o código com seus alunos.
+                    ✅ Sala criada! Compartilhe o código e a senha com seus alunos.
                   </div>
                 </>
+              )}
+
+              {/* Adicionei um botão de submit para que a função seja chamada ao clicar */}
+              {!salaCriada && (
+                <button type="submit" className="btn-criar-sala" style={{marginTop: '20px'}}>
+                  CRIAR SALA
+                </button>
               )}
 
             </form>

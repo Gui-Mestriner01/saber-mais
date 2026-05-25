@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/AreaAluno.css';
 
@@ -8,27 +8,38 @@ const TEMAS = {
   esportes: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','🥊','🎯'],
 };
 
-const SALAS = [
-  { id: 1, codigo: '48321', nome: 'Turma da Manhã',   serie: '5º Ano', materia: 'Matemática', escola: 'E.E. Santos Dumont', cidade: 'São Paulo - SP',   tema: 'frutas',   senha: ['🍎','🍌','🍇','🍓'] },
-  { id: 2, codigo: '71204', nome: 'Turma da Tarde',   serie: '3º Ano', materia: 'Português',  escola: 'Colégio COC',         cidade: 'Salvador - BA',   tema: 'animais',  senha: ['🐶','🐱','🐻','🦊'] },
-  { id: 3, codigo: '39571', nome: 'Turma da Manhã B', serie: '4º Ano', materia: 'Ciências',   escola: 'E.A. Adventista',     cidade: 'Curitiba - PR',   tema: 'esportes', senha: ['⚽','🏀','🎾','🏓'] },
-  { id: 4, codigo: '62840', nome: 'Turma Especial',   serie: '2º Ano', materia: 'Artes',      escola: 'Escola Municipal',    cidade: 'Fortaleza - CE',  tema: 'frutas',   senha: ['🍉','🍒','🥭','🍍'] },
-];
-
 const ETAPAS = { LISTA: 'lista', SENHA: 'senha', NOME: 'nome' };
 
 function AreaAluno() {
   const navigate = useNavigate();
 
-  const [busca, setBusca]           = useState('');
-  const [etapa, setEtapa]           = useState(ETAPAS.LISTA);
+  const [salas, setSalas]             = useState([]);
+  const [carregando, setCarregando]   = useState(true);
+  const [busca, setBusca]             = useState('');
+  const [etapa, setEtapa]             = useState(ETAPAS.LISTA);
   const [salaSelecionada, setSalaSelecionada] = useState(null);
   const [senhaDigitada, setSenhaDigitada]     = useState([]);
-  const [erroSenha, setErroSenha]   = useState(false);
-  const [nome, setNome]             = useState('');
-  const [erroNome, setErroNome]     = useState(false);
+  const [erroSenha, setErroSenha]     = useState(false);
+  const [nome, setNome]               = useState('');
+  const [erroNome, setErroNome]       = useState(false);
 
-  const salasFiltradas = SALAS.filter(s =>
+  useEffect(() => {
+    buscarSalas();
+  }, []);
+
+  const buscarSalas = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/salas');
+      const data = await res.json();
+      setSalas(data);
+    } catch {
+      console.error('Erro ao buscar salas');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const salasFiltradas = salas.filter(s =>
     busca === '' ||
     s.codigo.includes(busca) ||
     s.nome.toLowerCase().includes(busca.toLowerCase())
@@ -43,13 +54,15 @@ function AreaAluno() {
 
   const adicionarEmoji = (emoji) => {
     if (senhaDigitada.length >= 4) return;
+    setErroSenha(false);
     const nova = [...senhaDigitada, emoji];
     setSenhaDigitada(nova);
 
     if (nova.length === 4) {
       setTimeout(() => {
-        const correta = salaSelecionada.senha.every((e, i) => e === nova[i]);
-        if (correta) {
+        const senhaCorreta = salaSelecionada.senha_emojis;
+        const senhaDigitadaStr = nova.join('');
+        if (senhaCorreta === senhaDigitadaStr) {
           setErroSenha(false);
           setEtapa(ETAPAS.NOME);
         } else {
@@ -67,8 +80,6 @@ function AreaAluno() {
 
   return (
     <div className="area-aluno-container">
-
-      {/* HEADER */}
       <header className="area-aluno-header">
         <div className="area-aluno-brand" onClick={() => navigate('/')}>
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
@@ -89,13 +100,13 @@ function AreaAluno() {
                 value={busca}
                 onChange={e => setBusca(e.target.value)}
               />
-              {busca && (
-                <button className="busca-limpar" onClick={() => setBusca('')}>✕</button>
-              )}
+              {busca && <button className="busca-limpar" onClick={() => setBusca('')}>✕</button>}
             </div>
           </div>
 
-          {salasFiltradas.length === 0 ? (
+          {carregando ? (
+            <div className="salas-vazio"><span>⏳</span><p>Carregando salas...</p></div>
+          ) : salasFiltradas.length === 0 ? (
             <div className="salas-vazio">
               <span>😕</span>
               <p>Nenhuma sala encontrada!</p>
@@ -105,15 +116,14 @@ function AreaAluno() {
             <div className="salas-grid">
               {salasFiltradas.map(sala => (
                 <div key={sala.id} className="sala-card" onClick={() => entrarNaSala(sala)}>
-                  <div className="sala-card-header" style={{background: temaCor(sala.tema)}}>
-                    <span className="sala-tema-icon">{temaIcone(sala.tema)}</span>
+                  <div className="sala-card-header" style={{background: temaCor(sala.tema_senha)}}>
+                    <span className="sala-tema-icon">{temaIcone(sala.tema_senha)}</span>
                     <span className="sala-codigo-tag">{sala.codigo}</span>
                   </div>
                   <div className="sala-card-body">
                     <h3>{sala.nome}</h3>
                     <p className="sala-materia">{sala.serie} · {sala.materia}</p>
-                    <p className="sala-escola">🏫 {sala.escola}</p>
-                    <p className="sala-cidade">📍 {sala.cidade}</p>
+                    <p className="sala-escola">👨‍🏫 {sala.professor}</p>
                   </div>
                   <button className="sala-entrar-btn">Entrar →</button>
                 </div>
@@ -130,14 +140,13 @@ function AreaAluno() {
             <button className="senha-voltar" onClick={() => setEtapa(ETAPAS.LISTA)}>← Voltar</button>
 
             <div className="senha-info-sala">
-              <span className="senha-tema-icon">{temaIcone(salaSelecionada.tema)}</span>
+              <span className="senha-tema-icon">{temaIcone(salaSelecionada.tema_senha)}</span>
               <h2>{salaSelecionada.nome}</h2>
-              <p>{salaSelecionada.escola}</p>
+              <p>{salaSelecionada.professor}</p>
             </div>
 
             <p className="senha-instrucao">🔒 Digite a senha da sala!</p>
 
-            {/* Indicador de emojis digitados */}
             <div className="senha-digitada">
               {[0,1,2,3].map(i => (
                 <div key={i} className={`senha-slot ${senhaDigitada[i] ? 'preenchido' : ''} ${erroSenha ? 'erro' : ''}`}>
@@ -146,13 +155,10 @@ function AreaAluno() {
               ))}
             </div>
 
-            {erroSenha && (
-              <p className="senha-erro">❌ Senha errada! Tente de novo.</p>
-            )}
+            {erroSenha && <p className="senha-erro">❌ Senha errada! Tente de novo.</p>}
 
-            {/* Teclado virtual */}
             <div className="teclado-virtual">
-              {TEMAS[salaSelecionada.tema].map((emoji, i) => (
+              {TEMAS[salaSelecionada.tema_senha]?.map((emoji, i) => (
                 <button
                   key={i}
                   className="tecla-emoji"
@@ -164,7 +170,7 @@ function AreaAluno() {
               ))}
             </div>
 
-            {senhaDigitada.length > 0 && !erroSenha && (
+            {senhaDigitada.length > 0 && (
               <button className="senha-apagar" onClick={() => setSenhaDigitada(prev => prev.slice(0, -1))}>
                 ⌫ Apagar
               </button>
@@ -203,7 +209,6 @@ function AreaAluno() {
   );
 }
 
-// Helpers
 function temaCor(tema) {
   return { frutas: '#FF6B6B', animais: '#4ECDC4', esportes: '#45B7D1' }[tema] || '#1A6FC4';
 }

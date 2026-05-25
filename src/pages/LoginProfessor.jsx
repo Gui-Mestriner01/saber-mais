@@ -5,9 +5,9 @@ import '../CSS/Login.css';
 function LoginProfessor() {
   const navigate = useNavigate();
 
-  const [email, setEmail]       = useState('');
-  const [senha, setSenha]       = useState('');
-  const [erro, setErro]         = useState('');
+  const [email, setEmail]           = useState('');
+  const [senha, setSenha]           = useState('');
+  const [erro, setErro]             = useState('');
   const [carregando, setCarregando] = useState(false);
 
   const handleLogin = async (e) => {
@@ -30,12 +30,18 @@ function LoginProfessor() {
         return;
       }
 
-      // Salva o token e nome no localStorage
+      // Salva no localStorage
       localStorage.setItem('token', data.token);
       localStorage.setItem('nomeUsuario', data.usuario.nome);
       localStorage.setItem('idUsuario', data.usuario.id);
+      localStorage.setItem('tipoUsuario', data.usuario.tipo);
 
-      navigate('/professor/dashboard');
+      // Redireciona baseado no tipo
+      if (data.usuario.tipo === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/professor/dashboard');
+      }
 
     } catch {
       setErro('Não foi possível conectar ao servidor.');
@@ -96,17 +102,3 @@ function LoginProfessor() {
 }
 
 export default LoginProfessor;
-
-
-// Salva o token e nome no localStorage
-localStorage.setItem('token', data.token);
-localStorage.setItem('nomeUsuario', data.usuario.nome);
-localStorage.setItem('idUsuario', data.usuario.id);
-localStorage.setItem('tipoUsuario', data.usuario.tipo);
-
-// Redireciona baseado no tipo
-if (data.usuario.tipo === 'admin') {
-  navigate('/admin/dashboard');
-} else {
-  navigate('/professor/dashboard');
-}
