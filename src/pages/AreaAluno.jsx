@@ -62,8 +62,7 @@ function AreaAluno() {
       setTimeout(() => {
         const senhaCorreta = salaSelecionada.senha_emojis;
         const senhaDigitadaStr = nova.join('');
-        if (senhaCorreta === senhaDigitadaStr) {
-          setErroSenha(false);
+        if (senhaCorreta.trim() === senhaDigitadaStr.trim()) {          setErroSenha(false);
           setEtapa(ETAPAS.NOME);
         } else {
           setErroSenha(true);

@@ -142,7 +142,8 @@ app.post('/login/professor', authLimiter, async (req, res) => {
 // Listar todas as salas (área do aluno)
 app.get('/salas', (req, res) => {
   const sql = `
-    SELECT s.id, s.nome, s.serie, s.materia, s.codigo, s.tema_senha,
+    SELECT s.id, s.nome, s.serie, s.materia, s.codigo, 
+           s.senha_emojis, s.tema_senha,
            u.nome AS professor
     FROM sala s
     JOIN usuario u ON s.professor_id = u.id
