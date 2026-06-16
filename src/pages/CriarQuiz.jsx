@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/Quiz.css';
 
 const CORES = [
@@ -23,6 +23,8 @@ const novaPergunta = () => ({
 
 function CriarQuiz() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const salaId = location.state?.salaId;
   const imgRef = useRef(null);
 
   const [titulo, setTitulo]         = useState('');
@@ -84,13 +86,34 @@ function CriarQuiz() {
   };
 
   const handleSalvar = async () => {
+    if (!titulo) { alert('Adicione um título ao quiz!'); return; }
+
     setSalvando(true);
-    // Aqui vai a chamada ao backend
-    setTimeout(() => {
-      setSalvando(false);
+    try {
+      const response = await fetch('http://localhost:3001/professor/atividade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          titulo,
+          tipo: 'quiz',
+          sala_id: salaId,
+          conteudo: { perguntas }
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.erro);
+
       setMsgSucesso(true);
       setTimeout(() => navigate('/professor/dashboard'), 1500);
-    }, 1000);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const handleSairSemSalvar = () => {
@@ -100,7 +123,6 @@ function CriarQuiz() {
   return (
     <div className="quiz-builder">
 
-      {/* MODAL SAIR */}
       {modalSair && (
         <div className="modal-overlay">
           <div className="modal-card">
@@ -121,7 +143,6 @@ function CriarQuiz() {
         </div>
       )}
 
-      {/* SIDEBAR ESQUERDA */}
       <aside className="quiz-sidebar">
         <div className="quiz-brand">
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
@@ -159,7 +180,6 @@ function CriarQuiz() {
         </button>
       </aside>
 
-      {/* ÁREA PRINCIPAL */}
       <main className="quiz-main">
         <div className="quiz-pergunta-wrap">
           <input
@@ -225,7 +245,6 @@ function CriarQuiz() {
         )}
       </main>
 
-      {/* PAINEL DIREITO */}
       <aside className="quiz-props">
         <h3>Propriedades</h3>
 

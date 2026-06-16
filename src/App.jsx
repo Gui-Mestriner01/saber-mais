@@ -14,6 +14,9 @@ import CriarRespostaAberta from './pages/CriarRespostaAberta';
 import AreaAluno from './pages/AreaAluno';
 import AdminDashboard from './pages/AdminDashboard';
 import AlunoHome from './pages/AlunoHome';
+import ResponderQuiz from './pages/ResponderQuiz';
+import Relatorios from './pages/Relatorios';
+
 
 
 function App() {
@@ -35,6 +38,10 @@ function App() {
         <Route path="/aluno/area" element={<AreaAluno />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/aluno/home" element={<AlunoHome />} />
+        <Route path="/aluno/atividade/:id" element={<ResponderQuiz />} />
+        <Route path="/professor/relatorios" element={<Relatorios />} />
+
+
 
       </Routes>
     </BrowserRouter>

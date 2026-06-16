@@ -1,0 +1,217 @@
+.rel-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rel-card {
+  background: rgba(255,255,255,0.9);
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.08);
+  border: 1.5px solid rgba(255,255,255,0.95);
+}
+
+.rel-card-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rel-tipo-icon { font-size: 36px; }
+
+.rel-card-info h3 {
+  font-size: 16px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.rel-card-info p {
+  font-size: 13px;
+  color: #7AAAC8;
+  font-weight: 700;
+  margin: 2px 0;
+}
+
+.rel-badge {
+  display: inline-block;
+  background: #EBF4FF;
+  color: #1A6FC4;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-top: 4px;
+}
+
+.rel-btn-ver {
+  padding: 10px 20px;
+  background: #1A6FC4;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.rel-btn-ver:hover { background: #155DA0; }
+
+.rel-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 60px;
+  color: #7AAAC8;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.rel-vazio span { font-size: 48px; }
+
+.rel-voltar {
+  background: none;
+  border: 2px solid #C8DFF0;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #5A7A9A;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  width: fit-content;
+}
+
+.rel-voltar:hover { border-color: #1A6FC4; color: #1A6FC4; }
+
+.rel-detalhe-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rel-detalhe-header h2 {
+  font-size: 22px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.rel-detalhe-header p {
+  font-size: 14px;
+  color: #7AAAC8;
+  font-weight: 700;
+}
+
+.rel-data {
+  font-size: 13px;
+  font-weight: 700;
+  color: #A0B8CC;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+
+.modal-respostas-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-respostas-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.modal-respostas-header h3 {
+  font-size: 18px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.modal-respostas-header p {
+  font-size: 13px;
+  color: #7AAAC8;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.modal-respostas-header button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #7AAAC8;
+}
+
+.modal-respostas-header button:hover { color: #E23F3F; }
+
+.modal-respostas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-perg-card {
+  border-radius: 14px;
+  padding: 16px;
+  border: 2px solid #C8DFF0;
+}
+
+.modal-perg-card.acertou { border-color: #3DAA5C; background: #F0FFF4; }
+.modal-perg-card.errou   { border-color: #E23F3F; background: #FFF5F5; }
+
+.modal-perg-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.modal-perg-header strong {
+  font-size: 14px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.modal-perg-respostas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-alt {
+  font-size: 14px;
+  font-weight: 700;
+  color: #5A7A9A;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.modal-alt.correta-marcada   { color: #15803D; background: #DCFCE7; }
+.modal-alt.errada-marcada    { color: #B91C1C; background: #FDE8E8; }
+.modal-alt.correta-nao-marcada { color: #15803D; opacity: 0.6; }

@@ -1,11 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Dashboard.css';
-
-const salas = [
-  { id: 1, nome: '5º Ano A', materia: 'Matemática' },
-  { id: 2, nome: '3º Ano B', materia: 'Português' },
-];
 
 const tiposAtividade = [
   { id: 'quiz', icon: '🎯', nome: 'Quiz', desc: 'Perguntas de múltipla escolha' },
@@ -16,16 +11,35 @@ const tiposAtividade = [
 
 function CriarAtividade() {
   const navigate = useNavigate();
+  const [salas, setSalas]                     = useState([]);
   const [salaSelecionada, setSalaSelecionada] = useState('');
   const [tipoSelecionado, setTipoSelecionado] = useState('');
 
-  const handleContinuar = () => {
-    if (tipoSelecionado === 'quiz') navigate('/professor/criar-quiz');
-    if (tipoSelecionado === 'ligar')  navigate('/professor/criar-ligar');
-    if (tipoSelecionado === 'pintar')  navigate('/professor/criar-pintura');
-    if (tipoSelecionado === 'resposta_aberta') navigate('/professor/criar-resposta-aberta');
+  useEffect(() => {
+    buscarSalas();
+  }, []);
 
-    // outros tipos serão adicionados futuramente
+  const buscarSalas = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/professor/salas', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setSalas(data);
+    } catch {
+      console.error('Erro ao buscar salas');
+    }
+  };
+
+  const handleContinuar = () => {
+    if (tipoSelecionado === 'quiz')
+      navigate('/professor/criar-quiz', { state: { salaId: salaSelecionada } });
+    if (tipoSelecionado === 'ligar')
+      navigate('/professor/criar-ligar', { state: { salaId: salaSelecionada } });
+    if (tipoSelecionado === 'pintar')
+      navigate('/professor/criar-pintura', { state: { salaId: salaSelecionada } });
+    if (tipoSelecionado === 'resposta_aberta')
+      navigate('/professor/criar-resposta-aberta', { state: { salaId: salaSelecionada } });
   };
 
   return (
@@ -54,9 +68,12 @@ function CriarAtividade() {
             <span className="input-icon">🏫</span>
             <select value={salaSelecionada} onChange={e => setSalaSelecionada(e.target.value)}>
               <option value="">Escolha uma sala...</option>
-              {salas.map(s => (
-                <option key={s.id} value={s.id}>{s.nome} — {s.materia}</option>
-              ))}
+              {salas.length === 0
+                ? <option disabled>Nenhuma sala cadastrada</option>
+                : salas.map(s => (
+                    <option key={s.id} value={s.id}>{s.nome} — {s.materia}</option>
+                  ))
+              }
             </select>
           </div>
 

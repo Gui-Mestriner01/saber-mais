@@ -278,6 +278,123 @@ app.put('/admin/professor/:id/rejeitar', autenticar, apenasAdmin, (req, res) => 
 });
 
 // ========================
+// ROTAS DE ATIVIDADES
+// ========================
+
+// Salvar atividade (professor)
+app.post('/professor/atividade', autenticar, (req, res) => {
+  const { titulo, tipo, sala_id, conteudo } = req.body;
+  const professorId = req.usuario.id;
+
+  if (!titulo || !tipo || !sala_id || !conteudo)
+    return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
+
+  const sql = `
+    INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  db.query(sql, [titulo, tipo, sala_id, professorId, JSON.stringify(conteudo)], (err, result) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao salvar atividade.' });
+    res.status(201).json({ mensagem: 'Atividade salva com sucesso!', id: result.insertId });
+  });
+});
+
+// Buscar atividades de uma sala (aluno)
+app.get('/sala/:salaId/atividades', (req, res) => {
+  const sql = `
+    SELECT id, titulo, tipo, criado_em
+    FROM atividade
+    WHERE sala_id = ?
+    ORDER BY criado_em DESC
+  `;
+  db.query(sql, [req.params.salaId], (err, results) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar atividades.' });
+    res.json(results);
+  });
+});
+
+// Buscar atividade completa (aluno responder)
+app.get('/atividade/:id', (req, res) => {
+  const sql = `SELECT * FROM atividade WHERE id = ?`;
+  db.query(sql, [req.params.id], (err, results) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar atividade.' });
+    if (results.length === 0) return res.status(404).json({ erro: 'Atividade não encontrada.' });
+    const atv = results[0];
+    try {
+      atv.conteudo = typeof atv.conteudo === 'string' 
+        ? JSON.parse(atv.conteudo) 
+        : atv.conteudo;
+    } catch {
+      // já é objeto, deixa como está
+    }
+    res.json(atv);
+  });
+});
+
+// Salvar resposta do aluno
+app.post('/atividade/:id/resposta', (req, res) => {
+  const { nome_aluno, sala_id, resposta } = req.body;
+
+  if (!nome_aluno || !sala_id || !resposta)
+    return res.status(400).json({ erro: 'Dados incompletos.' });
+
+  const sql = `
+    INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta)
+    VALUES (?, ?, ?, ?)
+  `;
+
+  db.query(sql, [req.params.id, nome_aluno, sala_id, JSON.stringify(resposta)], (err, result) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao salvar resposta.' });
+    res.status(201).json({ mensagem: 'Resposta enviada com sucesso!', id: result.insertId });
+  });
+});
+
+// Relatório — professor vê todas as respostas de uma atividade
+app.get('/professor/atividade/:id/respostas', autenticar, (req, res) => {
+  const sql = `
+    SELECT r.id, r.nome_aluno, r.resposta, r.nota, r.corrigido, r.criado_em,
+           s.nome AS nome_sala, s.serie, s.materia
+    FROM resposta_aluno r
+    JOIN sala s ON r.sala_id = s.id
+    WHERE r.atividade_id = ?
+    ORDER BY r.criado_em DESC
+  `;
+  db.query(sql, [req.params.id], (err, results) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar respostas.' });
+    results.forEach(r => {
+      try {
+        r.resposta = typeof r.resposta === 'string'
+          ? JSON.parse(r.resposta)
+          : r.resposta;
+      } catch {
+        // já é objeto
+      }
+    });
+    res.json(results);
+  });
+});
+
+// Buscar todas as atividades do professor com contagem de respostas
+app.get('/professor/atividades', autenticar, (req, res) => {
+  const sql = `
+    SELECT a.id, a.titulo, a.tipo, a.criado_em,
+           s.nome AS nome_sala, s.serie, s.materia,
+           COUNT(r.id) AS total_respostas
+    FROM atividade a
+    JOIN sala s ON a.sala_id = s.id
+    LEFT JOIN resposta_aluno r ON a.id = r.atividade_id
+    WHERE a.professor_id = ?
+    GROUP BY a.id, s.nome, s.serie, s.materia
+    ORDER BY a.criado_em DESC
+  `;
+  db.query(sql, [req.usuario.id], (err, results) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar atividades.' });
+    res.json(results);
+  });
+});
+
+// ========================
 // INICIAR SERVIDOR
 // ========================
 app.listen(3001, () => console.log('🚀 Server rodando na porta 3001'));

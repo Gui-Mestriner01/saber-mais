@@ -23,8 +23,19 @@ function AlunoHome() {
   const [modalAvatar, setModalAvatar]             = useState(false);
 
   useEffect(() => {
-    if (!nomeAluno || !sala) navigate('/aluno');
-  }, []);
+  if (!nomeAluno || !sala) { navigate('/aluno'); return; }
+  buscarAtividades();
+}, []);
+
+const buscarAtividades = async () => {
+  try {
+    const res = await fetch(`http://localhost:3001/sala/${sala.id}/atividades`);
+    const data = await res.json();
+    setAtividades(data);
+  } catch {
+    console.error('Erro ao buscar atividades');
+  }
+};
 
   const calcularNivel = (pts) => {
     if (pts < 100)  return { nivel: 1, titulo: 'Iniciante' };
@@ -166,7 +177,12 @@ function AlunoHome() {
                       <strong>{atv.titulo}</strong>
                       <p>{tipoNome(atv.tipo)}</p>
                     </div>
-                    <button className="atv-btn">Fazer →</button>
+                    <button
+                      className="atv-btn"
+                      onClick={() => navigate(`/aluno/atividade/${atv.id}`, {
+                      state: { atividade: atv, nomeAluno, sala }
+                      })}
+                    > Fazer → </button>
                   </div>
                 ))}
               </div>
