@@ -179,10 +179,15 @@ const buscarAtividades = async () => {
                     </div>
                     <button
                       className="atv-btn"
-                      onClick={() => navigate(`/aluno/atividade/${atv.id}`, {
-                      state: { atividade: atv, nomeAluno, sala }
-                      })}
-                    > Fazer → </button>
+                      onClick={() => navigate(
+                        atv.tipo === 'pintura' ? `/aluno/pintura` :
+                        atv.tipo === 'ligar'   ? `/aluno/ligar/${atv.id}` :
+                        `/aluno/atividade/${atv.id}`,
+                        { state: { atividade: atv, nomeAluno, sala } }
+                      )}
+                    >
+                      Fazer →
+                    </button>
                   </div>
                 ))}
               </div>
@@ -235,7 +240,17 @@ const buscarAtividades = async () => {
                       <strong>{atv.titulo}</strong>
                       <p>{tipoNome(atv.tipo)}</p>
                     </div>
-                    <button className="atv-btn">Fazer →</button>
+                    <button
+                      className="atv-btn"
+                      onClick={() => navigate(
+                        atv.tipo === 'pintura' ? `/aluno/pintura` :
+                        atv.tipo === 'ligar'   ? `/aluno/ligar/${atv.id}` :
+                        `/aluno/atividade/${atv.id}`,
+                        { state: { atividade: atv, nomeAluno, sala } }
+                      )}
+                    >
+                      Fazer →
+                    </button>
                   </div>
                 ))}
               </div>

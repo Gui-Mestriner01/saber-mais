@@ -7,7 +7,40 @@ const rateLimit  = require('express-rate-limit');
 const db         = require('./db');
 require('dotenv').config();
 
+const multer = require('multer');
+const path   = require('path');
+const fs     = require('fs');
+
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const tipos = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    tipos.includes(file.mimetype) ? cb(null, true) : cb(new Error('Formato inválido'));
+  }
+});
+
+// INICIALIZE O APP PRIMEIRO
 const app = express();
+
+// USE O APP DEPOIS
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+});
+app.use('/uploads', express.static(uploadDir));
 
 // ========================
 // SEGURANÇA
@@ -155,6 +188,18 @@ app.get('/salas', (req, res) => {
   });
 });
 
+// Entrar na sala (Salvar aluno)
+app.post('/aluno/entrar-sala', (req, res) => {
+  const { nome_aluno, sala_id } = req.body;
+  if (!nome_aluno || !sala_id)
+    return res.status(400).json({ erro: 'Dados incompletos.' });
+  const sql = `INSERT INTO aluno_sala (nome_aluno, sala_id) VALUES (?, ?)`;
+  db.query(sql, [nome_aluno, sala_id], (err) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao registrar aluno.' });
+    res.status(201).json({ mensagem: 'Aluno registrado!' });
+  });
+});
+
 // ========================
 // ROTAS PROTEGIDAS — PROFESSOR
 // ========================
@@ -210,6 +255,20 @@ app.get('/professor/salas', autenticar, (req, res) => {
   const sql = `SELECT * FROM sala WHERE professor_id = ? ORDER BY criado_em DESC`;
   db.query(sql, [req.usuario.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar salas.' });
+    res.json(results);
+  });
+});
+
+// Listar Alunos de uma Sala Específica
+app.get('/professor/sala/:id/alunos', autenticar, (req, res) => {
+  const sql = `
+    SELECT nome_aluno, entrou_em
+    FROM aluno_sala
+    WHERE sala_id = ?
+    ORDER BY entrou_em DESC
+  `;
+  db.query(sql, [req.params.id], (err, results) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar alunos.' });
     res.json(results);
   });
 });
@@ -368,7 +427,6 @@ app.get('/professor/atividade/:id/respostas', autenticar, (req, res) => {
           ? JSON.parse(r.resposta)
           : r.resposta;
       } catch {
-        // já é objeto
       }
     });
     res.json(results);
@@ -391,6 +449,35 @@ app.get('/professor/atividades', autenticar, (req, res) => {
   db.query(sql, [req.usuario.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar atividades.' });
     res.json(results);
+  });
+});
+
+// Upload da imagem (professor)
+app.post('/professor/pintura/upload', autenticar, upload.single('imagem'), (req, res) => {
+  if (!req.file) return res.status(400).json({ erro: 'Nenhuma imagem enviada.' });
+  const url = `http://localhost:3001/uploads/${req.file.filename}`;
+  res.json({ url, filename: req.file.filename });
+});
+
+// Salvar resposta da pintura (aluno)
+app.post('/atividade/:id/resposta/pintura', upload.single('pintura'), (req, res) => {
+  const { nome_aluno, sala_id } = req.body;
+
+  if (!req.file) return res.status(400).json({ erro: 'Nenhuma imagem enviada.' });
+  if (!nome_aluno || !sala_id) return res.status(400).json({ erro: 'Dados incompletos.' });
+
+  const url = `http://localhost:3001/uploads/${req.file.filename}`;
+
+  const sql = `
+    INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta)
+    VALUES (?, ?, ?, ?)
+  `;
+
+  const resposta = JSON.stringify({ url_pintura: url, filename: req.file.filename });
+
+  db.query(sql, [req.params.id, nome_aluno, sala_id, resposta], (err, result) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao salvar pintura.' });
+    res.status(201).json({ mensagem: 'Pintura enviada!', url, id: result.insertId });
   });
 });
 

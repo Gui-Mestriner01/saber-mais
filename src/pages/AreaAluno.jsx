@@ -62,7 +62,8 @@ function AreaAluno() {
       setTimeout(() => {
         const senhaCorreta = salaSelecionada.senha_emojis;
         const senhaDigitadaStr = nova.join('');
-        if (senhaCorreta.trim() === senhaDigitadaStr.trim()) {          setErroSenha(false);
+        if (senhaCorreta.trim() === senhaDigitadaStr.trim()) {
+          setErroSenha(false);
           setEtapa(ETAPAS.NOME);
         } else {
           setErroSenha(true);
@@ -72,8 +73,18 @@ function AreaAluno() {
     }
   };
 
-  const handleEntrar = () => {
+  const handleEntrar = async () => {
     if (!nome.trim()) { setErroNome(true); return; }
+    // Registra o aluno na sala
+    try {
+      await fetch('http://localhost:3001/aluno/entrar-sala', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome_aluno: nome, sala_id: salaSelecionada.id })
+      });
+    } catch {
+      console.error('Erro ao registrar aluno');
+    }
     navigate('/aluno/home', { state: { sala: salaSelecionada, nomeAluno: nome } });
   };
 

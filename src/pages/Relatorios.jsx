@@ -150,6 +150,21 @@ function Relatorios() {
                   <p>{respostaSelecionada.nome_sala} · {respostaSelecionada.serie} · ⭐ {respostaSelecionada.resposta.pontos}/{respostaSelecionada.resposta.total} pts</p>
                 </div>
                 <button onClick={() => setRespostaSelecionada(null)}>✕</button>
+                {respostaSelecionada?.resposta?.url_pintura && (
+                  <div className="modal-pintura-wrap">
+                    <img src={respostaSelecionada.resposta.url_pintura} alt="pintura" className="modal-pintura-img" />
+                    
+                    <a
+                      href={respostaSelecionada.resposta.url_pintura}
+                      download={`pintura_${respostaSelecionada.nome_aluno}.png`}
+                      className="rel-btn-ver"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      ⬇️ Baixar Pintura
+                    </a>
+                  </div>
+                )}
               </div>
 
               <div className="modal-respostas-lista">
@@ -182,6 +197,53 @@ function Relatorios() {
                   );
                 })}
               </div>
+
+              {/* Respostas do Ligar */}
+              {atvSelecionada?.tipo === 'ligar' && respostaSelecionada?.resposta?.conexoes && (
+                <div className="modal-respostas-lista">
+                  {respostaSelecionada.resposta.conexoes.map((c, i) => {
+                    const pares = atvSelecionada?.conteudo?.pares || [];
+                    const parA  = pares[c.parIdA];
+                    const parB  = pares[c.parIdB];
+                    const acertou = c.parIdA === c.parIdB;
+                    return (
+                      <div key={i} className={`modal-perg-card ${acertou ? 'acertou' : 'errou'}`}>
+                        <div className="modal-perg-header">
+                          <span>{acertou ? '✅' : '❌'}</span>
+                          <strong>Par {i + 1}</strong>
+                        </div>
+                        <div className="ligar-correcao-row">
+                          <div className="ligar-correcao-item">
+                            {parA?.ladoA?.tipo === 'imagem'
+                              ? <img src={parA.ladoA.conteudo} alt="A" style={{width:60, borderRadius:8}} />
+                              : <span>{parA?.ladoA?.conteudo}</span>
+                            }
+                          </div>
+                          <span>🔗</span>
+                          <div className="ligar-correcao-item">
+                            {parB?.ladoB?.tipo === 'imagem'
+                              ? <img src={parB.ladoB.conteudo} alt="B" style={{width:60, borderRadius:8}} />
+                              : <span>{parB?.ladoB?.conteudo}</span>
+                            }
+                          </div>
+                          {!acertou && (
+                            <>
+                              <span style={{color:'#E23F3F', fontWeight:900}}>→ Correto:</span>
+                              <div className="ligar-correcao-item correto">
+                                {pares[c.parIdA]?.ladoB?.tipo === 'imagem'
+                                  ? <img src={pares[c.parIdA].ladoB.conteudo} alt="correto" style={{width:60, borderRadius:8}} />
+                                  : <span>{pares[c.parIdA]?.ladoB?.conteudo}</span>
+                                }
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
             </div>
           </div>
         )}

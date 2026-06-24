@@ -1,0 +1,270 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+.ligar-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* HEADER */
+.ligar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1.5px solid rgba(255,255,255,0.9);
+  flex-shrink: 0;
+}
+
+.ligar-brand { font-size: 24px; font-weight: 900; }
+.brand-saber { color: #F5812A; }
+.brand-plus  { color: #1A6FC4; }
+
+.ligar-header h2 {
+  font-size: 18px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.ligar-btn-enviar {
+  padding: 10px 24px;
+  background: #C8DFF0;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: not-allowed;
+  transition: background 0.2s;
+}
+
+.ligar-btn-enviar.ativo {
+  background: #3DAA5C;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(61,170,92,0.3);
+}
+
+.ligar-btn-enviar.ativo:hover { background: #2E8A48; }
+
+/* INSTRUÇÃO */
+.ligar-instrucao {
+  text-align: center;
+  padding: 10px;
+  background: #FFF9C4;
+  border-bottom: 1.5px solid #F5D020;
+  font-size: 14px;
+  font-weight: 700;
+  color: #7A6000;
+}
+
+/* WORKSPACE */
+.ligar-workspace {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 120px;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* SVG FIOS */
+.ligar-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* COLUNAS */
+.ligar-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 2;
+  min-width: 220px;
+}
+
+.ligar-coluna-titulo {
+  font-size: 14px;
+  font-weight: 900;
+  color: #5A7A9A;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* ITEMS */
+.ligar-item {
+  background: rgba(255,255,255,0.9);
+  border: 3px solid #C8DFF0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2A4A6A;
+  position: relative;
+  min-height: 64px;
+  box-shadow: 0 2px 8px rgba(26,111,196,0.08);
+}
+
+.ligar-item:hover { transform: translateY(-2px); border-color: #1A6FC4; }
+
+.ligar-item.selecionado {
+  border-color: #1A6FC4;
+  background: #EBF4FF;
+  transform: scale(1.03);
+  box-shadow: 0 0 0 4px rgba(26,111,196,0.2);
+}
+
+.ligar-item.conectado { font-weight: 900; }
+
+.ligar-item.lado-b { justify-content: flex-end; text-align: right; }
+
+.ligar-item.destacado:not(.conectado) {
+  border-color: #F5812A;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245,129,42,0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(245,129,42,0); }
+}
+
+.ligar-item-img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* DOTS */
+.ligar-dot {
+  position: absolute;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ligar-dot.esquerda {
+  left: -8px;
+  right: auto;
+}
+
+/* FOOTER */
+.ligar-footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #7AAAC8;
+  background: rgba(255,255,255,0.6);
+  border-top: 1.5px solid rgba(255,255,255,0.9);
+}
+
+/* FINALIZADO */
+.ligar-finalizado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 80px 40px;
+  text-align: center;
+}
+
+.ligar-finalizado span { font-size: 72px; }
+
+.ligar-finalizado h1 {
+  font-size: 36px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.ligar-finalizado p {
+  font-size: 18px;
+  color: #7AAAC8;
+  font-weight: 700;
+}
+
+.ligar-pts-badge {
+  background: #FFF9C4;
+  border: 2px solid #F5D020;
+  border-radius: 16px;
+  padding: 16px 40px;
+  font-size: 28px;
+  font-weight: 900;
+  color: #7A6000;
+}
+
+.ligar-btn-voltar {
+  padding: 16px 40px;
+  background: #1A6FC4;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ligar-btn-voltar:hover { background: #155DA0; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 36px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+}
+
+.modal-card h3 { font-size: 20px; font-weight: 900; color: #2A4A6A; margin-bottom: 10px; }
+.modal-card p  { font-size: 14px; color: #7AAAC8; font-weight: 700; margin-bottom: 28px; }
+.modal-btns    { display: flex; flex-direction: column; gap: 10px; }
+
+.modal-btn-salvar {
+  padding: 14px; background: #3DAA5C; color: #fff; border: none;
+  border-radius: 12px; font-family: 'Nunito', sans-serif;
+  font-size: 15px; font-weight: 900; cursor: pointer;
+}
+.modal-btn-salvar:hover { background: #2E8A48; }
+
+.modal-btn-cancelar {
+  padding: 12px; background: transparent; color: #7AAAC8; border: none;
+  font-family: 'Nunito', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.modal-btn-cancelar:hover { color: #2A4A6A; }

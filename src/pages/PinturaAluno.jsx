@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/Pintura.css';
 
 const CORES = [
@@ -9,59 +9,67 @@ const CORES = [
 ];
 
 function PinturaAluno() {
-  const navigate = useNavigate();
-  const canvasRef     = useRef(null);
-  const imgRef        = useRef(null);
-  const pintando      = useRef(false);
-  const ultimoPonto   = useRef(null);
+  const { state }   = useLocation();
+  const navigate    = useNavigate();
+  const canvasRef   = useRef(null);
+  const imgRef      = useRef(null);
+  const pintando    = useRef(false);
+  const ultimoPonto = useRef(null);
+
+  const atividade  = state?.atividade;
+  const nomeAluno  = state?.nomeAluno;
+  const sala       = state?.sala;
 
   const [corAtual, setCorAtual]       = useState('#E23F3F');
   const [tamanho, setTamanho]         = useState(12);
-  const [ferramenta, setFerramenta]   = useState('pincel'); // pincel | borracha
+  const [ferramenta, setFerramenta]   = useState('pincel');
+  const [enviando, setEnviando]       = useState(false);
   const [enviado, setEnviado]         = useState(false);
   const [modalEnviar, setModalEnviar] = useState(false);
 
-  // Imagem mockada — virá do backend
-  const imagemFundo = null;
-
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    if (imagemFundo) {
-      const img = new Image();
-      img.src = imagemFundo;
-      img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    } else {
-      // Placeholder para testar sem imagem do backend
-      ctx.strokeStyle = '#ccc';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-      ctx.font = '18px Nunito';
-      ctx.fillStyle = '#aaa';
-      ctx.textAlign = 'center';
-      ctx.fillText('Desenho do professor aparece aqui', canvas.width / 2, canvas.height / 2);
-    }
+    if (!atividade) { navigate('/aluno'); return; }
+    carregarImagem();
   }, []);
+
+  const carregarImagem = async () => {
+    try {
+      const res  = await fetch(`http://localhost:3001/atividade/${atividade.id}`);
+      const data = await res.json();
+      const urlImagem = data.conteudo?.url_imagem;
+
+      const canvas = canvasRef.current;
+      const ctx    = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (urlImagem) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = urlImagem;
+        img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      }
+    } catch {
+      console.error('Erro ao carregar imagem');
+    }
+  };
 
   const getPos = (e) => {
     const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
+    const rect   = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
     const scaleY = canvas.height / rect.height;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return {
       x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
+      y: (clientY - rect.top)  * scaleY,
     };
   };
 
   const iniciarPintura = (e) => {
     e.preventDefault();
-    pintando.current = true;
+    pintando.current    = true;
     ultimoPonto.current = getPos(e);
   };
 
@@ -69,64 +77,87 @@ function PinturaAluno() {
     e.preventDefault();
     if (!pintando.current) return;
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const pos = getPos(e);
+    const ctx    = canvas.getContext('2d');
+    const pos    = getPos(e);
 
     ctx.beginPath();
     ctx.moveTo(ultimoPonto.current.x, ultimoPonto.current.y);
     ctx.lineTo(pos.x, pos.y);
     ctx.strokeStyle = ferramenta === 'borracha' ? '#ffffff' : corAtual;
-    ctx.lineWidth = ferramenta === 'borracha' ? tamanho * 3 : tamanho;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.lineWidth   = ferramenta === 'borracha' ? tamanho * 3 : tamanho;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
     ctx.stroke();
 
     ultimoPonto.current = pos;
   };
 
   const pararPintura = () => {
-    pintando.current = false;
+    pintando.current    = false;
     ultimoPonto.current = null;
   };
 
   const limparCanvas = () => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx    = canvas.getContext('2d');
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    carregarImagem();
   };
 
-  const handleEnviar = () => {
-    setEnviado(true);
-    setModalEnviar(false);
-    // Aqui vai enviar o canvas como imagem pro backend
-    // canvasRef.current.toDataURL('image/png')
-    setTimeout(() => navigate('/aluno/dashboard'), 1500);
+  const handleEnviar = async () => {
+    setEnviando(true);
+    try {
+      const canvas = canvasRef.current;
+
+      // Converte canvas para blob
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+      const formData = new FormData();
+      formData.append('pintura', blob, `pintura_${nomeAluno}_${Date.now()}.png`);
+      formData.append('nome_aluno', nomeAluno);
+      formData.append('sala_id', sala.id);
+
+      const res = await fetch(`http://localhost:3001/atividade/${atividade.id}/resposta/pintura`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Erro ao enviar');
+
+      setEnviado(true);
+      setModalEnviar(false);
+      setTimeout(() => navigate('/aluno/home', { state: { sala, nomeAluno } }), 1500);
+    } catch (err) {
+      alert('Erro ao enviar pintura: ' + err.message);
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
     <div className="pintura-container">
 
-      {/* MODAL ENVIAR */}
       {modalEnviar && (
         <div className="modal-overlay">
           <div className="modal-card">
             <h3>Enviar pintura?</h3>
             <p>Após enviar você não poderá mais editar.</p>
             <div className="modal-btns">
-              <button className="modal-btn-salvar" onClick={handleEnviar}>✅ Enviar</button>
+              <button className="modal-btn-salvar" onClick={handleEnviar} disabled={enviando}>
+                {enviando ? 'Enviando...' : '✅ Enviar'}
+              </button>
               <button className="modal-btn-cancelar" onClick={() => setModalEnviar(false)}>Cancelar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* HEADER */}
       <header className="pintura-header">
         <div className="pintura-brand">
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
         </div>
-        <h2 className="pintura-titulo">🎨 Pinte o desenho!</h2>
+        <h2 className="pintura-titulo">🎨 {atividade?.titulo || 'Pinte o desenho!'}</h2>
         <div className="pintura-header-acoes">
           <button className="btn-limpar" onClick={limparCanvas}>🗑️ Limpar</button>
           <button className="btn-enviar-pintura" onClick={() => setModalEnviar(true)}>
@@ -136,34 +167,16 @@ function PinturaAluno() {
       </header>
 
       <div className="pintura-workspace">
-
-        {/* TOOLBAR ESQUERDA */}
         <aside className="pintura-toolbar">
-
           <div className="toolbar-secao">
             <span className="toolbar-label">Ferramenta</span>
-            <button
-              className={`tool-btn ${ferramenta === 'pincel' ? 'ativo' : ''}`}
-              onClick={() => setFerramenta('pincel')}
-              title="Pincel"
-            >🖌️</button>
-            <button
-              className={`tool-btn ${ferramenta === 'borracha' ? 'ativo' : ''}`}
-              onClick={() => setFerramenta('borracha')}
-              title="Borracha"
-            >🧹</button>
+            <button className={`tool-btn ${ferramenta === 'pincel'  ? 'ativo' : ''}`} onClick={() => setFerramenta('pincel')}>🖌️</button>
+            <button className={`tool-btn ${ferramenta === 'borracha' ? 'ativo' : ''}`} onClick={() => setFerramenta('borracha')}>🧹</button>
           </div>
 
           <div className="toolbar-secao">
             <span className="toolbar-label">Tamanho</span>
-            <input
-              type="range"
-              min="2"
-              max="40"
-              value={tamanho}
-              onChange={e => setTamanho(Number(e.target.value))}
-              className="pintura-range"
-            />
+            <input type="range" min="2" max="40" value={tamanho} onChange={e => setTamanho(Number(e.target.value))} className="pintura-range" />
             <span className="tamanho-valor">{tamanho}px</span>
           </div>
 
@@ -190,21 +203,17 @@ function PinturaAluno() {
             </div>
           </div>
 
-          {/* Preview do pincel */}
           <div className="pincel-preview">
-            <div
-              style={{
-                width: Math.min(tamanho, 40),
-                height: Math.min(tamanho, 40),
-                background: ferramenta === 'borracha' ? '#ddd' : corAtual,
-                borderRadius: '50%',
-                border: '2px solid #C8DFF0',
-              }}
-            />
+            <div style={{
+              width:  Math.min(tamanho, 40),
+              height: Math.min(tamanho, 40),
+              background: ferramenta === 'borracha' ? '#ddd' : corAtual,
+              borderRadius: '50%',
+              border: '2px solid #C8DFF0',
+            }} />
           </div>
         </aside>
 
-        {/* CANVAS */}
         <div className="pintura-canvas-wrap">
           <canvas
             ref={canvasRef}

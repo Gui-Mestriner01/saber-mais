@@ -1,0 +1,290 @@
+/* GRID DE BANNERS */
+.salas-banner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+/* BANNER DA SALA */
+.sala-banner {
+  background: rgba(255,255,255,0.9);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.1);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1.5px solid rgba(255,255,255,0.95);
+}
+
+.sala-banner:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(26,111,196,0.2);
+}
+
+.sala-banner-topo {
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sala-banner-icon { font-size: 48px; }
+
+.sala-banner-codigo {
+  background: rgba(255,255,255,0.3);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 4px 12px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  font-family: 'Nunito', sans-serif;
+}
+
+.sala-banner-corpo {
+  padding: 16px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sala-banner-corpo h3 {
+  font-size: 16px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.sala-banner-corpo p {
+  font-size: 13px;
+  color: #7AAAC8;
+  font-weight: 700;
+}
+
+.sala-banner-senha {
+  margin-top: 8px;
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.sala-banner-btn {
+  margin: 0 16px 16px;
+  padding: 12px;
+  background: #1A6FC4;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sala-banner-btn:hover { background: #155DA0; }
+
+/* NOVA SALA */
+.sala-banner-nova {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 280px;
+  border: 2px dashed #C8DFF0;
+  background: transparent;
+  cursor: pointer;
+  color: #7AAAC8;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.sala-banner-nova:hover { border-color: #1A6FC4; color: #1A6FC4; transform: translateY(-4px); }
+.sala-banner-nova span { font-size: 36px; }
+
+/* LOADING / EMPTY */
+.salas-loading, .salas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px;
+  color: #7AAAC8;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  text-align: center;
+}
+
+.salas-empty span { font-size: 48px; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+
+.salas-modal {
+  background: #fff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+}
+
+.salas-modal-header {
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-radius: 24px 24px 0 0;
+  position: relative;
+}
+
+.salas-modal-icon { font-size: 40px; flex-shrink: 0; }
+
+.salas-modal-header h2 {
+  font-size: 20px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.salas-modal-header p {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  font-weight: 700;
+}
+
+.salas-modal-fechar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.salas-modal-fechar:hover { background: rgba(255,255,255,0.35); }
+
+.salas-modal-body {
+  padding: 24px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.salas-modal-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.salas-info-card {
+  background: #F4F9FD;
+  border: 1.5px solid #C8DFF0;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.salas-info-card span { font-size: 24px; }
+
+.salas-info-card strong {
+  font-size: 12px;
+  font-weight: 900;
+  color: #5A7A9A;
+  text-transform: uppercase;
+  display: block;
+}
+
+.salas-info-card p {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2A4A6A;
+}
+
+.salas-alunos-titulo {
+  font-size: 16px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.salas-alunos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.salas-aluno-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #F4F9FD;
+  border: 1.5px solid #C8DFF0;
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+
+.salas-aluno-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #1A6FC4;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.salas-aluno-card strong {
+  font-size: 14px;
+  font-weight: 900;
+  color: #2A4A6A;
+  display: block;
+}
+
+.salas-aluno-card p {
+  font-size: 12px;
+  color: #7AAAC8;
+  font-weight: 700;
+}
+
+.salas-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px;
+  color: #7AAAC8;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  text-align: center;
+}
+
+.salas-vazio span { font-size: 36px; }

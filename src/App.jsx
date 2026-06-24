@@ -16,6 +16,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import AlunoHome from './pages/AlunoHome';
 import ResponderQuiz from './pages/ResponderQuiz';
 import Relatorios from './pages/Relatorios';
+import LigarAluno from './pages/LigarAluno';
+import Salas from './pages/Salas';
+
 
 
 
@@ -40,6 +43,8 @@ function App() {
         <Route path="/aluno/home" element={<AlunoHome />} />
         <Route path="/aluno/atividade/:id" element={<ResponderQuiz />} />
         <Route path="/professor/relatorios" element={<Relatorios />} />
+        <Route path="/aluno/ligar/:id" element={<LigarAluno />} />
+        <Route path="/professor/salas" element={<Salas />} />
 
 
 
