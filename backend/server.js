@@ -336,6 +336,58 @@ app.put('/admin/professor/:id/rejeitar', autenticar, apenasAdmin, (req, res) => 
   );
 });
 
+
+// ========================
+// ROTAS PROTEGIDAS — ALUNO
+// ========================
+
+// Buscar alunos da sala para login
+app.get('/sala/:id/alunos', (req, res) => {
+  const sql = `
+    SELECT id, nome_aluno, pontos, ultimo_acesso
+    FROM aluno_sala
+    WHERE sala_id = ?
+    ORDER BY nome_aluno ASC
+  `;
+  db.query(sql, [req.params.id], (err, results) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar alunos.' });
+    res.json(results);
+  });
+});
+
+// Cadastrar aluno com PIN
+app.post('/aluno/cadastrar', (req, res) => {
+  const { nome_aluno, sala_id, pin } = req.body;
+  if (!nome_aluno || !sala_id || !pin)
+    return res.status(400).json({ erro: 'Dados incompletos.' });
+
+  const sql = `INSERT INTO aluno_sala (nome_aluno, sala_id, pin) VALUES (?, ?, ?)`;
+  db.query(sql, [nome_aluno, sala_id, pin], (err, result) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao cadastrar aluno.' });
+    res.status(201).json({ mensagem: 'Aluno cadastrado!', id: result.insertId });
+  });
+});
+
+// Login do aluno com PIN
+app.post('/aluno/login', (req, res) => {
+  const { aluno_id, pin } = req.body;
+  const sql = `
+    SELECT id, nome_aluno, sala_id, pontos
+    FROM aluno_sala
+    WHERE id = ? AND pin = ?
+  `;
+  db.query(sql, [aluno_id, pin], (err, results) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao fazer login.' });
+    if (results.length === 0)
+      return res.status(401).json({ erro: 'PIN incorreto!' });
+
+    // Atualiza último acesso
+    db.query(`UPDATE aluno_sala SET ultimo_acesso = NOW() WHERE id = ?`, [aluno_id]);
+
+    res.json({ mensagem: 'Login realizado!', aluno: results[0] });
+  });
+});
+
 // ========================
 // ROTAS DE ATIVIDADES
 // ========================

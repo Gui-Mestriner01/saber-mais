@@ -2,11 +2,25 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/AlunoHome.css';
 
+// Avatares para os alunos
 const AVATARES = [
-  '/avatares/avatar.png',
-  '/avatares/avatar2.PNG',
-  '/avatares/avatar3.PNG',
-  '/avatares/avatar4.PNG',
+  '/avatares/img1.PNG', '/avatares/img2.PNG', '/avatares/img3.PNG', '/avatares/img4.PNG',
+  '/avatares/img5.PNG', '/avatares/img6.PNG', '/avatares/img7.PNG', '/avatares/img8.PNG',
+  '/avatares/img9.PNG', '/avatares/img10.PNG', '/avatares/img11.PNG', '/avatares/img12.PNG',
+  '/avatares/img13.PNG', '/avatares/img14.PNG', '/avatares/img15.PNG', '/avatares/img16.PNG',
+  '/avatares/img17.PNG', '/avatares/img18.PNG', '/avatares/img19.PNG', '/avatares/img20.PNG',
+  '/avatares/img21.PNG', '/avatares/img22.PNG', '/avatares/img23.PNG', '/avatares/img24.PNG',
+  '/avatares/img25.PNG', '/avatares/img26.PNG', '/avatares/img27.PNG', '/avatares/img28.PNG',
+  '/avatares/img29.PNG', '/avatares/img30.PNG', '/avatares/img31.PNG', '/avatares/img32.PNG',
+  '/avatares/img33.PNG',
+];
+
+// Banners de boas vindas
+const ILUSTRACOES_BEM_VINDO = [
+  '/ilustracoes/banner1.png',
+  '/ilustracoes/banner2.png',
+  '/ilustracoes/banner3.png',
+  '/ilustracoes/banner4.png',
 ];
 
 function AlunoHome() {
@@ -21,21 +35,31 @@ function AlunoHome() {
   const [salas, setSalas]                         = useState([sala]);
   const [avatarSelecionado, setAvatarSelecionado] = useState(null);
   const [modalAvatar, setModalAvatar]             = useState(false);
+  
+  // Estado para a paginação do carrossel de avatares
+  const [paginaAvatar, setPaginaAvatar]           = useState(0);
+  
+  // Estado para armazenar a imagem sorteada do banner
+  const [imagemBanner, setImagemBanner]           = useState('');
 
   useEffect(() => {
-  if (!nomeAluno || !sala) { navigate('/aluno'); return; }
-  buscarAtividades();
-}, []);
+    if (!nomeAluno || !sala) { navigate('/aluno'); return; }
+    buscarAtividades();
 
-const buscarAtividades = async () => {
-  try {
-    const res = await fetch(`http://localhost:3001/sala/${sala.id}/atividades`);
-    const data = await res.json();
-    setAtividades(data);
-  } catch {
-    console.error('Erro ao buscar atividades');
-  }
-};
+    // Sorteia a imagem quando o componente carregar
+    const imagemSorteada = ILUSTRACOES_BEM_VINDO[Math.floor(Math.random() * ILUSTRACOES_BEM_VINDO.length)];
+    setImagemBanner(imagemSorteada);
+  }, []);
+
+  const buscarAtividades = async () => {
+    try {
+      const res = await fetch(`http://localhost:3001/sala/${sala.id}/atividades`);
+      const data = await res.json();
+      setAtividades(data);
+    } catch {
+      console.error('Erro ao buscar atividades');
+    }
+  };
 
   const calcularNivel = (pts) => {
     if (pts < 100)  return { nivel: 1, titulo: 'Iniciante' };
@@ -56,6 +80,14 @@ const buscarAtividades = async () => {
     { nome: 'Ana',     pontos: 500 },
   ].sort((a, b) => b.pontos - a.pontos).map((a, i) => ({ ...a, posicao: i + 1 }));
 
+  // Lógica de paginação dos avatares
+  const itensPorPagina = 12; // Mostra 12 avatares por vez (3 linhas de 4)
+  const totalPaginasAvatar = Math.ceil(AVATARES.length / itensPorPagina);
+  const avataresAtuais = AVATARES.slice(
+    paginaAvatar * itensPorPagina, 
+    (paginaAvatar + 1) * itensPorPagina
+  );
+
   return (
     <div className="aluno-container">
 
@@ -68,18 +100,50 @@ const buscarAtividades = async () => {
               <button onClick={() => setModalAvatar(false)}>✕</button>
             </div>
             <p>Escolha um avatar para te representar no Saber+</p>
-            <div className="avatares-grid">
-              {AVATARES.map((av, i) => (
-                <div
-                  key={i}
-                  className={`avatar-opcao ${avatarSelecionado === av ? 'selecionado' : ''}`}
-                  onClick={() => { setAvatarSelecionado(av); setModalAvatar(false); }}
-                >
-                  <img src={av} alt={`avatar ${i + 1}`} />
-                  {avatarSelecionado === av && <span className="avatar-check">✅</span>}
-                </div>
+            
+            {/* Container do Carrossel */}
+            <div className="carrossel-avatares-container">
+              
+              <button 
+                className="carrossel-btn" 
+                onClick={() => setPaginaAvatar(prev => Math.max(prev - 1, 0))}
+                disabled={paginaAvatar === 0}
+              >
+                ◀
+              </button>
+
+              <div className="avatares-grid">
+                {avataresAtuais.map((av, i) => (
+                  <div
+                    key={i}
+                    className={`avatar-opcao ${avatarSelecionado === av ? 'selecionado' : ''}`}
+                    onClick={() => { setAvatarSelecionado(av); setModalAvatar(false); }}
+                  >
+                    <img src={av} alt={`avatar ${i + 1}`} />
+                    {avatarSelecionado === av && <span className="avatar-check">✅</span>}
+                  </div>
+                ))}
+              </div>
+
+              <button 
+                className="carrossel-btn" 
+                onClick={() => setPaginaAvatar(prev => Math.min(prev + 1, totalPaginasAvatar - 1))}
+                disabled={paginaAvatar === totalPaginasAvatar - 1}
+              >
+                ▶
+              </button>
+            </div>
+
+            {/* Indicadores de Página (Bolinhas) */}
+            <div className="carrossel-indicadores">
+              {Array.from({ length: totalPaginasAvatar }).map((_, index) => (
+                <div 
+                  key={index}
+                  className={`indicador-bolinha ${paginaAvatar === index ? 'ativo' : ''}`}
+                />
               ))}
             </div>
+
           </div>
         </div>
       )}
@@ -129,12 +193,17 @@ const buscarAtividades = async () => {
         {pagina === 'home' && (
           <>
             <div className="aluno-header-card">
+              {/* IMAGEM DE FUNDO RENDERIZADA PRIMEIRO */}
+              {imagemBanner && (
+                <img src={imagemBanner} alt="Ilustração de boas-vindas" className="aluno-header-imagem-bg" />
+              )}
+              
+              {/* TEXTO RENDERIZADO POR CIMA */}
               <div className="aluno-header-texto">
-                <h1>Olá, {nomeAluno}! 👋</h1>
+                <h1>Olá, {nomeAluno}! <span className="emoji-acenando">👋</span></h1>
                 <p>Que bom te ver por aqui!</p>
                 <p>Vamos aprender e conquistar novas estrelas hoje?</p>
               </div>
-              <div className="aluno-header-ilustracao">📚✏️🌟</div>
             </div>
 
             <div className="aluno-stats">
@@ -196,31 +265,27 @@ const buscarAtividades = async () => {
         )}
 
         {/* MINHAS SALAS */}
-        {pagina === 'salas' && (
-          <div className="aluno-secao">
-            <div className="aluno-salas-grid">
-              {salas.map((s, i) => (
-                <div key={i} className="aluno-sala-card">
-                  <div className="aluno-sala-header">
-                    <span>{temaIcone(s.tema_senha)}</span>
+          {pagina === 'salas' && (
+            <div className="aluno-secao">
+              <div className="aluno-salas-grid">
+                {salas.map((s, i) => (
+                  <div key={i} className="aluno-sala-card">
+                    <div className="aluno-sala-header">
+                      <span>{temaIcone(s.tema_senha)}</span>
+                    </div>
+                    <div className="aluno-sala-body">
+                      <h3>{s.nome}</h3>
+                      <p>{s.serie} · {s.materia}</p>
+                      <p>👨‍🏫 {s.professor}</p>
+                    </div>
+                    <button className="aluno-sala-btn" onClick={() => setPagina('atividades')}>
+                      Ver Atividades →
+                    </button>
                   </div>
-                  <div className="aluno-sala-body">
-                    <h3>{s.nome}</h3>
-                    <p>{s.serie} · {s.materia}</p>
-                    <p>👨‍🏫 {s.professor}</p>
-                  </div>
-                  <button className="aluno-sala-btn" onClick={() => { setSalas([s]); setPagina('atividades'); }}>
-                    Ver Atividades →
-                  </button>
-                </div>
-              ))}
-              <div className="aluno-sala-card nova-sala" onClick={() => navigate('/aluno')}>
-                <span>➕</span>
-                <p>Entrar em outra sala</p>
+                ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* ATIVIDADES */}
         {pagina === 'atividades' && (

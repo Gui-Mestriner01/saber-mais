@@ -8,28 +8,24 @@ const TEMAS = {
   esportes: ['⚽','🏀','🏈','⚾','🎾','🏐','🏉','🎱','🏓','🏸','🥊','🎯'],
 };
 
-const ETAPAS = { LISTA: 'lista', SENHA: 'senha', NOME: 'nome' };
+const ETAPAS = { LISTA: 'lista', SENHA: 'senha' };
 
 function AreaAluno() {
   const navigate = useNavigate();
 
-  const [salas, setSalas]             = useState([]);
-  const [carregando, setCarregando]   = useState(true);
-  const [busca, setBusca]             = useState('');
-  const [etapa, setEtapa]             = useState(ETAPAS.LISTA);
+  const [salas, setSalas]           = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca]           = useState('');
+  const [etapa, setEtapa]           = useState(ETAPAS.LISTA);
   const [salaSelecionada, setSalaSelecionada] = useState(null);
   const [senhaDigitada, setSenhaDigitada]     = useState([]);
-  const [erroSenha, setErroSenha]     = useState(false);
-  const [nome, setNome]               = useState('');
-  const [erroNome, setErroNome]       = useState(false);
+  const [erroSenha, setErroSenha]   = useState(false);
 
-  useEffect(() => {
-    buscarSalas();
-  }, []);
+  useEffect(() => { buscarSalas(); }, []);
 
   const buscarSalas = async () => {
     try {
-      const res = await fetch('http://localhost:3001/salas');
+      const res  = await fetch('http://localhost:3001/salas');
       const data = await res.json();
       setSalas(data);
     } catch {
@@ -60,32 +56,16 @@ function AreaAluno() {
 
     if (nova.length === 4) {
       setTimeout(() => {
-        const senhaCorreta = salaSelecionada.senha_emojis;
-        const senhaDigitadaStr = nova.join('');
-        if (senhaCorreta.trim() === senhaDigitadaStr.trim()) {
-          setErroSenha(false);
-          setEtapa(ETAPAS.NOME);
+        const senhaCorreta    = salaSelecionada.senha_emojis?.trim();
+        const senhaDigitadaStr = nova.join('').trim();
+        if (senhaCorreta === senhaDigitadaStr) {
+          navigate('/aluno/login', { state: { sala: salaSelecionada } });
         } else {
           setErroSenha(true);
           setSenhaDigitada([]);
         }
       }, 400);
     }
-  };
-
-  const handleEntrar = async () => {
-    if (!nome.trim()) { setErroNome(true); return; }
-    // Registra o aluno na sala
-    try {
-      await fetch('http://localhost:3001/aluno/entrar-sala', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome_aluno: nome, sala_id: salaSelecionada.id })
-      });
-    } catch {
-      console.error('Erro ao registrar aluno');
-    }
-    navigate('/aluno/home', { state: { sala: salaSelecionada, nomeAluno: nome } });
   };
 
   return (
@@ -185,33 +165,6 @@ function AreaAluno() {
                 ⌫ Apagar
               </button>
             )}
-          </div>
-        </main>
-      )}
-
-      {/* NOME DO ALUNO */}
-      {etapa === ETAPAS.NOME && (
-        <main className="area-aluno-main centralizado">
-          <div className="nome-card">
-            <span className="nome-icon">👋</span>
-            <h2>Olá! Qual é o seu nome?</h2>
-            <p>Antes de entrar na sala, me diz como te chamar!</p>
-
-            <input
-              className={`nome-input ${erroNome ? 'erro' : ''}`}
-              type="text"
-              placeholder="Digite seu nome..."
-              value={nome}
-              onChange={e => { setNome(e.target.value); setErroNome(false); }}
-              onKeyDown={e => e.key === 'Enter' && handleEntrar()}
-              autoFocus
-            />
-
-            {erroNome && <p className="nome-erro">Por favor, digite seu nome!</p>}
-
-            <button className="btn-entrar-sala" onClick={handleEntrar}>
-              Entrar na Sala 🚀
-            </button>
           </div>
         </main>
       )}

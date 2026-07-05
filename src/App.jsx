@@ -18,7 +18,7 @@ import ResponderQuiz from './pages/ResponderQuiz';
 import Relatorios from './pages/Relatorios';
 import LigarAluno from './pages/LigarAluno';
 import Salas from './pages/Salas';
-
+import LoginAluno from './pages/LoginAluno';
 
 
 
@@ -45,7 +45,7 @@ function App() {
         <Route path="/professor/relatorios" element={<Relatorios />} />
         <Route path="/aluno/ligar/:id" element={<LigarAluno />} />
         <Route path="/professor/salas" element={<Salas />} />
-
+        <Route path="/aluno/login" element={<LoginAluno />} />
 
 
       </Routes>

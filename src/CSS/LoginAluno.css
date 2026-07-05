@@ -1,0 +1,268 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+.login-aluno-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-aluno-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1.5px solid rgba(255,255,255,0.9);
+}
+
+.login-aluno-brand { font-size: 24px; font-weight: 900; }
+.brand-saber { color: #F5812A; }
+.brand-plus  { color: #1A6FC4; }
+
+.login-aluno-header h2 {
+  font-size: 18px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.login-aluno-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.login-aluno-card {
+  background: rgba(255,255,255,0.92);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 8px 32px rgba(26,111,196,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  position: relative;
+}
+
+.login-aluno-card h2 {
+  font-size: 26px;
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.login-aluno-card p {
+  font-size: 15px;
+  color: #7AAAC8;
+  font-weight: 700;
+}
+
+.login-voltar {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: none;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #7AAAC8;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.login-voltar:hover { color: #2A4A6A; }
+
+/* GRID DE ALUNOS */
+.alunos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.aluno-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #F4F9FD;
+  border: 2px solid #C8DFF0;
+  border-radius: 16px;
+  padding: 16px 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.15s, background 0.2s;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2A4A6A;
+}
+
+.aluno-btn:hover {
+  border-color: #1A6FC4;
+  background: #EBF4FF;
+  transform: translateY(-2px);
+}
+
+.aluno-btn-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #1A6FC4;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.aluno-btn-novo .aluno-btn-avatar.novo {
+  background: #3DAA5C;
+  font-size: 20px;
+}
+
+.aluno-btn-pts {
+  font-size: 11px;
+  font-weight: 700;
+  color: #F5812A;
+}
+
+/* PIN */
+.pin-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #1A6FC4;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.pin-dots {
+  display: flex;
+  gap: 16px;
+  margin: 8px 0;
+}
+
+.pin-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #C8DFF0;
+  border: 2px solid #C8DFF0;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.pin-dot.preenchido {
+  background: #1A6FC4;
+  border-color: #1A6FC4;
+  transform: scale(1.1);
+}
+
+.pin-dot.erro { background: #E23F3F; border-color: #E23F3F; }
+
+.pin-erro {
+  font-size: 14px;
+  font-weight: 700;
+  color: #E23F3F;
+}
+
+.pin-teclado {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 240px;
+}
+
+.pin-tecla {
+  padding: 16px;
+  background: #F4F9FD;
+  border: 2px solid #C8DFF0;
+  border-radius: 14px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: #2A4A6A;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.pin-tecla:hover:not(:disabled) {
+  background: #EBF4FF;
+  border-color: #1A6FC4;
+  transform: scale(1.05);
+}
+
+.pin-tecla.apagar { color: #E23F3F; font-size: 18px; }
+
+/* NOVO ALUNO */
+.novo-campo {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.novo-campo label {
+  font-size: 13px;
+  font-weight: 900;
+  color: #5A7A9A;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  align-self: flex-start;
+}
+
+.novo-input {
+  width: 100%;
+  padding: 14px 18px;
+  background: #F4F9FD;
+  border: 2px solid #C8DFF0;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2A4A6A;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.novo-input:focus { border-color: #1A6FC4; }
+.novo-input::placeholder { color: #A0B8CC; font-weight: 400; }
+
+.btn-entrar-pin {
+  width: 100%;
+  padding: 16px;
+  background: #1A6FC4;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  margin-top: 8px;
+}
+
+.btn-entrar-pin:hover:not(:disabled) {
+  background: #155DA0;
+  transform: translateY(-2px);
+}
+
+.btn-entrar-pin:disabled { opacity: 0.5; cursor: not-allowed; }
