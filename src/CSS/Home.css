@@ -41,11 +41,12 @@
   z-index: 1;
 }
 
+/* --- LOGO MAIOR E COM MAIS PRESENÇA --- */
 .brand {
-  font-size: 64px;
+  font-size: 80px; 
   font-weight: 900;
-  margin-bottom: 12px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  margin-bottom: 16px; 
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15)); 
 }
 
 .brand-saber { color: #F5812A; }
@@ -60,45 +61,66 @@
 
 .cards-row {
   display: flex;
-  gap: 28px;
+  gap: 32px;
   justify-content: center;
 }
 
+/* --- CARTÃO COM RESPIRO --- */
 .access-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 40px 32px 32px;
-  width: 260px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  background: #ffffff;
+  border-radius: 28px; 
+  padding: 32px 32px 40px 32px; 
+  width: 400px; 
+  box-shadow: 0 12px 32px rgba(0,0,0,0.08); 
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
-  border: 1px solid rgba(255,255,255,0.8);
+  gap: 32px; 
+  position: relative;
+  border: 4px solid #fff;
 }
 
+/* --- CONTAINER DA IMAGEM --- */
 .avatar {
-  font-size: 100px;
-  line-height: 1;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+  width: 100%; 
+  height: 190px; 
+  background: transparent;
+  box-shadow: none; 
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.btn-blue, .btn-green {
+.avatar-img {
   width: 100%;
-  padding: 14px;
+  height: 100%;
+  object-fit: contain; 
+  object-position: center bottom; 
+  display: block;
+  mix-blend-mode: multiply; /* Mágica: some com qualquer fundo branco ou bordinha cinza da imagem original */
+  transform: scale(1.05); /* Leve zoom para evitar bordinhas chatas */
+}
+
+/* --- BOTÕES NO FLUXO NORMAL --- */
+.btn-blue, .btn-green {
+  position: relative; 
+  bottom: auto;
+  width: 100%; 
+  padding: 18px; 
   border: none;
-  border-radius: 10px;
+  border-radius: 16px;
   font-family: 'Nunito', sans-serif;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   color: #fff;
 }
 
-.btn-blue  { background: #1A6FC4; }
-.btn-green { background: #3DAA5C; }
+.btn-blue  { background: #1A6FC4; box-shadow: 0 4px 12px rgba(26,111,196,0.2); }
+.btn-green { background: #3DAA5C; box-shadow: 0 4px 12px rgba(61,170,92,0.2); }
 
-.btn-blue:hover  { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(26,111,196,0.4); }
-.btn-green:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(61,170,92,0.4); }
+.btn-blue:hover  { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(26,111,196,0.4); }
+.btn-green:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(61,170,92,0.4); }

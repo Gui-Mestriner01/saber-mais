@@ -129,9 +129,6 @@
   padding: 32px 40px;
   display: flex;
   align-items: center;
-  box-shadow: 0 4px 16px rgba(26,111,196,0.1);
-  overflow: hidden; 
-  min-height: 240px; /* Mais altura para o personagem caber inteiro */
 }
 
 .aluno-header-imagem-bg {
