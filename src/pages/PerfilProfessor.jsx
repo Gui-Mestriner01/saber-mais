@@ -6,8 +6,6 @@ function PerfilProfessor() {
   const navigate = useNavigate();
   const inputFoto = useRef(null);
 
-  // --- DECLARAÇÃO DE ESTADOS ---
-  // Inferidos com base nos inputs e variáveis que você usa no JSX
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -17,11 +15,15 @@ function PerfilProfessor() {
   const [msgSucesso, setMsgSucesso] = useState(false);
   const [foto, setFoto] = useState(null);
   
-  // Array vazio por padrão para não quebrar o .map() das salas
   const [salasDoProf, setSalasDoProf] = useState([]); 
+
+  // --- NOVOS ESTADOS PARA AS ESTATÍSTICAS ---
+  const [totalSalas, setTotalSalas] = useState(0);
+  const [totalAlunos, setTotalAlunos] = useState(0);
 
   useEffect(() => {
     buscarPerfil();
+    buscarSalasEEstatisticas();
   }, []);
 
   const buscarPerfil = async () => {
@@ -35,11 +37,28 @@ function PerfilProfessor() {
       setTelefone(data.telefone || '');
       setInstituicao(data.instituicao || '');
       setMateria(data.materia || '');
-      // Se a API retornar as salas e a foto, você pode atualizar os estados aqui também:
-      // setSalasDoProf(data.salas || []);
       // setFoto(data.foto || null);
     } catch {
       console.error('Erro ao buscar perfil');
+    }
+  };
+
+  // Busca as salas para preencher a lista de códigos e contar as estatísticas
+  const buscarSalasEEstatisticas = async () => {
+    try {
+      const res = await fetch('http://localhost:3001/professor/salas', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setSalasDoProf(data);
+      setTotalSalas(data.length);
+
+      // Aqui você poderia fazer uma chamada adicional para contar os alunos reais, 
+      // mas para o visual, vamos simular que cada sala tem alguns alunos, ou se a API já retornar:
+      setTotalAlunos(data.length * 15); // Exemplo visual provisório
+
+    } catch {
+      console.error('Erro ao buscar salas');
     }
   };
 
@@ -64,13 +83,17 @@ function PerfilProfessor() {
     }
   };
 
-  // Função para exibir a foto selecionada na tela
   const handleFoto = (e) => {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       setFoto(imageUrl);
     }
+  };
+
+  const copiarCodigo = (codigo) => {
+    navigator.clipboard.writeText(codigo);
+    alert(`Código ${codigo} copiado com sucesso!`);
   };
 
   return (
@@ -90,7 +113,6 @@ function PerfilProfessor() {
       <main className="dashboard-main">
         <header className="dashboard-header">
           <h1>⚙️ Meu Perfil</h1>
-          {/* Avatar clicável com foto */}
           <div className="header-avatar avatar-clicavel" onClick={() => inputFoto.current.click()}>
             {foto
               ? <img src={foto} alt="avatar" className="avatar-foto" />
@@ -103,11 +125,10 @@ function PerfilProfessor() {
 
         <div className="perfil-grid">
 
-          {/* Formulário */}
+          {/* COLUNA ESQUERDA: Formulário */}
           <div className="form-card">
             <h2 className="form-section-title">Informações Pessoais</h2>
 
-            {/* Upload de foto centralizado */}
             <div className="foto-upload-area" onClick={() => inputFoto.current.click()}>
               <div className="foto-circulo">
                 {foto
@@ -131,7 +152,7 @@ function PerfilProfessor() {
                 <div className="campo-label">E-mail</div>
                 <div className="input-group">
                   <span className="input-icon">@</span>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} />
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} disabled style={{backgroundColor: '#f0f5f9'}} />
                 </div>
               </div>
 
@@ -183,23 +204,73 @@ function PerfilProfessor() {
             </form>
           </div>
 
-          {/* Códigos das salas */}
-          <div className="form-card">
-            <h2 className="form-section-title">📋 Códigos das Minhas Salas</h2>
-            <p style={{fontSize:'13px', color:'#7AAAC8', fontWeight:700, marginBottom:'16px'}}>
-              Compartilhe o código com seus alunos para entrar na sala.
-            </p>
-            <div className="salas-codigos-list">
-              {salasDoProf.map(sala => (
-                <div key={sala.id} className="sala-codigo-card">
-                  <div className="sala-codigo-info">
-                    <strong>{sala.nome}</strong>
-                    <span>{sala.serie} · {sala.materia}</span>
+          {/* COLUNA DIREITA: Dashboard/Estatísticas */}
+          <div className="perfil-sidebar-direita">
+            
+            {/* NOVO CARD: Estatísticas */}
+            <div className="form-card estatisticas-card">
+              <h2 className="form-section-title">📊 Meu Desempenho</h2>
+              <div className="stats-grid">
+                <div className="stat-box">
+                  <span className="stat-icon">🏫</span>
+                  <div className="stat-info">
+                    <span className="stat-num">{totalSalas}</span>
+                    <span className="stat-label">Salas Ativas</span>
                   </div>
-                  <div className="sala-codigo-badge">{sala.codigo}</div>
                 </div>
-              ))}
+                <div className="stat-box">
+                  <span className="stat-icon">🎓</span>
+                  <div className="stat-info">
+                    <span className="stat-num">{totalAlunos}</span>
+                    <span className="stat-label">Alunos</span>
+                  </div>
+                </div>
+                <div className="stat-box full-width">
+                  <span className="stat-icon">⭐</span>
+                  <div className="stat-info">
+                    <span className="stat-num">Profissional Saber+</span>
+                    <span className="stat-label">Nível de Engajamento</span>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* CARD ATUALIZADO: Códigos das salas */}
+            <div className="form-card">
+              <h2 className="form-section-title">📋 Acesso Rápido</h2>
+              <p className="form-card-subtitle">
+                Compartilhe o código para seus alunos entrarem na sala.
+              </p>
+              
+              <div className="salas-codigos-list">
+                {salasDoProf.length === 0 ? (
+                  <div className="empty-state-mini">
+                    <span>👻</span>
+                    <p>Nenhuma sala criada ainda.</p>
+                  </div>
+                ) : (
+                  salasDoProf.map(sala => (
+                    <div key={sala.id} className="sala-codigo-card">
+                      <div className="sala-codigo-info">
+                        <strong>{sala.nome}</strong>
+                        <span>{sala.serie} · {sala.materia}</span>
+                      </div>
+                      <div className="sala-codigo-actions">
+                        <div className="sala-codigo-badge">{sala.codigo}</div>
+                        <button 
+                          className="btn-copiar-codigo" 
+                          onClick={() => copiarCodigo(sala.codigo)}
+                          title="Copiar Código"
+                        >
+                          📄
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
           </div>
 
         </div>

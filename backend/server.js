@@ -53,7 +53,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.use(express.json());
+// --- CORREÇÃO AQUI: Aumentando o limite de JSON para 50MB ---
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// ------------------------------------------------------------
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

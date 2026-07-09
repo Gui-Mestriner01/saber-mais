@@ -67,7 +67,14 @@ function CriarLigar() {
 
   const handleImagem = (parIdx, lado, e) => {
     const file = e.target.files[0];
-    if (file) setPar(parIdx, lado, { tipo: 'imagem', conteudo: URL.createObjectURL(file) });
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // reader.result contém a imagem em formato Base64 (texto)
+        setPar(parIdx, lado, { tipo: 'imagem', conteudo: reader.result });
+      };
+      reader.readAsDataURL(file); // Inicia a leitura do arquivo
+    }
   };
 
   const toggleTipo = (parIdx, lado) => {

@@ -139,9 +139,10 @@
 .par-input:focus { border-color: #1A6FC4; }
 .par-input::placeholder { color: #A0B8CC; font-weight: 400; }
 
+/* --- AQUI ESTÁ A CORREÇÃO PARA A IMAGEM DO PROFESSOR NÃO CORTAR --- */
 .par-img-area {
   width: 100%;
-  height: 90px;
+  height: 110px; /* Aumentei um pouquinho a altura */
   background: rgba(255,255,255,0.9);
   border: 2px dashed #C8DFF0;
   border-radius: 12px;
@@ -154,6 +155,7 @@
   font-size: 13px;
   font-weight: 700;
   color: #7AAAC8;
+  padding: 4px; /* Respiro para a imagem */
 }
 
 .par-img-area:hover { border-color: #1A6FC4; }
@@ -161,8 +163,10 @@
 .par-img-area img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain; /* Encaixa a imagem perfeitamente sem cortar */
+  border-radius: 8px; /* Acompanha o estilo da caixa */
 }
+/* ----------------------------------------------------------------- */
 
 .par-conector {
   font-size: 20px;

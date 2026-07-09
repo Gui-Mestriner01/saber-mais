@@ -41,6 +41,26 @@ function Salas() {
     }
   };
 
+  // --- FUNÇÃO PARA REMOVER ALUNO ---
+  const removerAluno = async (idAluno) => {
+    if (!window.confirm("Tem certeza que deseja remover este aluno da sala?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:3001/professor/sala/${salaSelecionada.id}/aluno/${idAluno}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (res.ok) {
+        setAlunos(alunos.filter(aluno => aluno.id !== idAluno));
+      } else {
+        alert("Erro ao remover aluno.");
+      }
+    } catch {
+      console.error('Erro de conexão ao tentar remover aluno');
+    }
+  };
+
   const temaCor = (tema) => ({
     frutas:   'linear-gradient(135deg, #FF6B6B, #FF8E53)',
     animais:  'linear-gradient(135deg, #4ECDC4, #44A08D)',
@@ -71,7 +91,6 @@ function Salas() {
           <div className="header-avatar" onClick={() => navigate('/professor/perfil')} style={{cursor:'pointer'}}>👨‍🏫</div>
         </header>
 
-        {/* MODAL DETALHES */}
         {salaSelecionada && (
           <div className="modal-overlay" onClick={() => setSalaSelecionada(null)}>
             <div className="salas-modal" onClick={e => e.stopPropagation()}>
@@ -86,46 +105,26 @@ function Salas() {
 
               <div className="salas-modal-body">
                 <div className="salas-modal-info">
-                  <div className="salas-info-card">
-                    <span>🔑</span>
-                    <div>
-                      <strong>Código</strong>
-                      <p>{salaSelecionada.codigo}</p>
-                    </div>
-                  </div>
-                  <div className="salas-info-card">
-                    <span>🔒</span>
-                    <div>
-                      <strong>Senha</strong>
-                      <p>{salaSelecionada.senha_emojis}</p>
-                    </div>
-                  </div>
-                  <div className="salas-info-card">
-                    <span>👥</span>
-                    <div>
-                      <strong>Alunos</strong>
-                      <p>{alunos.length} aluno(s)</p>
-                    </div>
-                  </div>
+                  <div className="salas-info-card"><span>🔑</span><div><strong>Código</strong><p>{salaSelecionada.codigo}</p></div></div>
+                  <div className="salas-info-card"><span>🔒</span><div><strong>Senha</strong><p>{salaSelecionada.senha_emojis}</p></div></div>
+                  <div className="salas-info-card"><span>👥</span><div><strong>Alunos</strong><p>{alunos.length} aluno(s)</p></div></div>
                 </div>
 
                 <h3 className="salas-alunos-titulo">👥 Alunos da Sala</h3>
                 {alunos.length === 0 ? (
-                  <div className="salas-vazio">
-                    <span>📭</span>
-                    <p>Nenhum aluno entrou ainda.</p>
-                  </div>
+                  <div className="salas-vazio"><span>📭</span><p>Nenhum aluno entrou ainda.</p></div>
                 ) : (
                   <div className="salas-alunos-lista">
                     {alunos.map((aluno, i) => (
                       <div key={i} className="salas-aluno-card">
-                        <div className="salas-aluno-avatar">
-                          {aluno.nome_aluno?.charAt(0).toUpperCase()}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div className="salas-aluno-avatar">{aluno.nome_aluno?.charAt(0).toUpperCase()}</div>
+                          <div>
+                            <strong>{aluno.nome_aluno}</strong>
+                            <p>Entrou em {new Date(aluno.entrou_em).toLocaleDateString('pt-BR')}</p>
+                          </div>
                         </div>
-                        <div>
-                          <strong>{aluno.nome_aluno}</strong>
-                          <p>Entrou em {new Date(aluno.entrou_em).toLocaleDateString('pt-BR')}</p>
-                        </div>
+                        <button className="btn-remover-aluno" onClick={() => removerAluno(aluno.id)} title="Remover da sala">🗑️</button>
                       </div>
                     ))}
                   </div>
@@ -138,43 +137,30 @@ function Salas() {
         {carregando ? (
           <div className="salas-loading">⏳ Carregando salas...</div>
         ) : salas.length === 0 ? (
-          <div className="salas-empty">
-            <span>🏫</span>
-            <p>Você ainda não criou nenhuma sala.</p>
-            <button className="btn-card-blue" onClick={() => navigate('/professor/criar-sala')}>
-              + Criar primeira sala
-            </button>
+          <div className="salas-empty"><span>🏫</span><p>Você ainda não criou nenhuma sala.</p>
+            <button className="btn-card-blue" onClick={() => navigate('/professor/criar-sala')}>+ Criar primeira sala</button>
           </div>
         ) : (
-          <>
-            <div className="salas-banner-grid">
-              {salas.map(sala => (
-                <div key={sala.id} className="sala-banner">
-                  <div className="sala-banner-topo" style={{background: temaCor(sala.tema_senha)}}>
-                    <span className="sala-banner-icon">{temaIcone(sala.tema_senha)}</span>
-                    <span className="sala-banner-codigo">{sala.codigo}</span>
-                  </div>
-                  <div className="sala-banner-corpo">
-                    <h3>{sala.nome}</h3>
-                    <p>{sala.serie}</p>
-                    <p>{sala.materia}</p>
-                    <div className="sala-banner-senha">
-                      🔒 {sala.senha_emojis}
-                    </div>
-                  </div>
-                  <button className="sala-banner-btn" onClick={() => verDetalhes(sala)}>
-                    Ver detalhes →
-                  </button>
+          <div className="salas-banner-grid">
+            {salas.map(sala => (
+              <div key={sala.id} className="sala-banner">
+                <div className="sala-banner-topo" style={{background: temaCor(sala.tema_senha)}}>
+                  <span className="sala-banner-codigo">{sala.codigo}</span>
                 </div>
-              ))}
-
-              {/* Card criar nova sala */}
-              <div className="sala-banner sala-banner-nova" onClick={() => navigate('/professor/criar-sala')}>
-                <span>➕</span>
-                <p>Criar nova sala</p>
+                <div className="sala-banner-avatar"><span className="sala-banner-icon">{temaIcone(sala.tema_senha)}</span></div>
+                <div className="sala-banner-corpo">
+                  <h3>{sala.nome}</h3>
+                  <p className="sala-disciplina">{sala.serie} • {sala.materia}</p>
+                  <div className="sala-banner-metricas"><span>👨‍🎓 Turma Ativa</span><span>📝 Acompanhar</span></div>
+                  <div className="sala-banner-senha"><span className="senha-label">Senha da Sala</span><div className="senha-emojis">{sala.senha_emojis}</div></div>
+                </div>
+                <button className="sala-banner-btn" onClick={() => verDetalhes(sala)}>Ver Detalhes →</button>
               </div>
+            ))}
+            <div className="sala-banner-nova" onClick={() => navigate('/professor/criar-sala')}>
+              <div className="nova-sala-icon">➕</div><p>Criar Nova Sala</p>
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>
