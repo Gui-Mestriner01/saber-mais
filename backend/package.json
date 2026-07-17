@@ -1,17 +1,24 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API Saber Mais",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "multer": "^2.2.0",
-    "react-router-dom": "^7.14.2"
+    "bcryptjs": "*",
+    "cloudinary": "*",
+    "cors": "*",
+    "dotenv": "*",
+    "express": "*",
+    "express-rate-limit": "*",
+    "helmet": "*",
+    "jsonwebtoken": "*",
+    "multer": "*",
+    "mysql2": "*"
   }
 }

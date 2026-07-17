@@ -11,9 +11,24 @@ const multer = require('multer');
 const path   = require('path');
 const fs     = require('fs');
 
+// ========================
+// CONFIGURAÇÃO DO CLOUDINARY
+// ========================
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({ 
+  cloud_name: 'oawhotar', 
+  api_key: '997571475262991', 
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'H_7jTIqQ-B3YgS_k8wv61wBTO14'
+});
+
+// ========================
+// CONFIGURAÇÃO DO MULTER (Upload Temporário)
+// ========================
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
+// O Multer agora salva temporariamente para podermos jogar pra nuvem
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
@@ -43,26 +58,39 @@ app.use('/uploads', (req, res, next) => {
 app.use('/uploads', express.static(uploadDir));
 
 // ========================
-// SEGURANÇA
+// SEGURANÇA E CORS
 // ========================
 app.use(helmet());
 
+// Array com os domínios autorizados a acessar sua API
+const origensPermitidas = [
+  'http://localhost:5173', // Seu ambiente de desenvolvimento local
+  process.env.FRONTEND_URL // O seu futuro domínio de produção (ex: Vercel, Netlify, etc)
+];
+
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Permite se a origem estiver na lista ou se não houver origem (ex: Postman/Insomnia)
+    if (!origin || origensPermitidas.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Acesso bloqueado pela política de CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-// --- CORREÇÃO AQUI: Aumentando o limite de JSON para 50MB ---
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-// ------------------------------------------------------------
-
+// ========================
+// LIMITADOR DE ACESSOS
+// ========================
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { erro: 'Muitas tentativas. Tente novamente em 15 minutos.' }
 });
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ========================
 // MIDDLEWARES
@@ -207,7 +235,6 @@ app.post('/aluno/entrar-sala', (req, res) => {
 // ROTAS PROTEGIDAS — PROFESSOR
 // ========================
 
-// Criar Sala
 const TEMAS = {
   frutas:   ['🍎','🍌','🍇','🍓','🍊','🍋','🍉','🍑','🍒','🥭'],
   animais:  ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯'],
@@ -222,7 +249,7 @@ function gerarSenhaEmoji() {
   return { tema, senha };
 }
 
-// Atualiza a rota POST /professor/sala
+// Criar Sala
 app.post('/professor/sala', autenticar, (req, res) => {
   const { nome, serie, materia, codigo } = req.body;
   const professorId = req.usuario.id;
@@ -265,7 +292,7 @@ app.get('/professor/salas', autenticar, (req, res) => {
 // Listar Alunos de uma Sala Específica
 app.get('/professor/sala/:id/alunos', autenticar, (req, res) => {
   const sql = `
-    SELECT nome_aluno, entrou_em
+    SELECT id, nome_aluno, entrou_em
     FROM aluno_sala
     WHERE sala_id = ?
     ORDER BY entrou_em DESC
@@ -273,6 +300,16 @@ app.get('/professor/sala/:id/alunos', autenticar, (req, res) => {
   db.query(sql, [req.params.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar alunos.' });
     res.json(results);
+  });
+});
+
+// Excluir Aluno da Sala (A Rota Nova do Modal!)
+app.delete('/professor/sala/:idSala/aluno/:idAluno', autenticar, (req, res) => {
+  const sql = `DELETE FROM aluno_sala WHERE sala_id = ? AND id = ?`;
+  db.query(sql, [req.params.idSala, req.params.idAluno], (err, result) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao excluir aluno.' });
+    if (result.affectedRows === 0) return res.status(404).json({ erro: 'Aluno não encontrado.' });
+    res.json({ mensagem: 'Aluno removido com sucesso!' });
   });
 });
 
@@ -338,7 +375,6 @@ app.put('/admin/professor/:id/rejeitar', autenticar, apenasAdmin, (req, res) => 
     }
   );
 });
-
 
 // ========================
 // ROTAS PROTEGIDAS — ALUNO
@@ -507,36 +543,73 @@ app.get('/professor/atividades', autenticar, (req, res) => {
   });
 });
 
-// Upload da imagem (professor)
-app.post('/professor/pintura/upload', autenticar, upload.single('imagem'), (req, res) => {
+// ========================
+// INTEGRAÇÃO CLOUDINARY: Uploads de Imagens
+// ========================
+
+// Upload da imagem BASE (professor cria a atividade)
+app.post('/professor/pintura/upload', autenticar, upload.single('imagem'), async (req, res) => {
   if (!req.file) return res.status(400).json({ erro: 'Nenhuma imagem enviada.' });
-  const url = `http://localhost:3001/uploads/${req.file.filename}`;
-  res.json({ url, filename: req.file.filename });
+  
+  try {
+    // 1. Envia o arquivo que está temporariamente no servidor para o Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'saber_plus/atividades'
+    });
+
+    // 2. Apaga o arquivo local do HD do servidor (limpeza)
+    fs.unlinkSync(req.file.path);
+
+    // 3. Retorna a URL segura e profissional gerada pelo Cloudinary
+    res.json({ url: result.secure_url, filename: result.public_id });
+
+  } catch (error) {
+    console.error('Erro no upload para Cloudinary:', error);
+    // Mesmo em caso de erro, tenta limpar o arquivo local
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ erro: 'Erro ao salvar a imagem na nuvem.' });
+  }
 });
 
-// Salvar resposta da pintura (aluno)
-app.post('/atividade/:id/resposta/pintura', upload.single('pintura'), (req, res) => {
+// Salvar resposta da pintura (aluno finaliza e envia)
+app.post('/atividade/:id/resposta/pintura', upload.single('pintura'), async (req, res) => {
   const { nome_aluno, sala_id } = req.body;
 
   if (!req.file) return res.status(400).json({ erro: 'Nenhuma imagem enviada.' });
   if (!nome_aluno || !sala_id) return res.status(400).json({ erro: 'Dados incompletos.' });
 
-  const url = `http://localhost:3001/uploads/${req.file.filename}`;
+  try {
+    // 1. Envia o desenho do aluno para uma pasta separada no Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'saber_plus/respostas_alunos'
+    });
 
-  const sql = `
-    INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta)
-    VALUES (?, ?, ?, ?)
-  `;
+    // 2. Apaga o arquivo temporário local
+    fs.unlinkSync(req.file.path);
 
-  const resposta = JSON.stringify({ url_pintura: url, filename: req.file.filename });
+    const urlNuvem = result.secure_url;
 
-  db.query(sql, [req.params.id, nome_aluno, sala_id, resposta], (err, result) => {
-    if (err) return res.status(500).json({ erro: 'Erro ao salvar pintura.' });
-    res.status(201).json({ mensagem: 'Pintura enviada!', url, id: result.insertId });
-  });
+    // 3. Salva no Banco de Dados MySQL com o link da nuvem
+    const sql = `
+      INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta)
+      VALUES (?, ?, ?, ?)
+    `;
+    const resposta = JSON.stringify({ url_pintura: urlNuvem, filename: result.public_id });
+
+    db.query(sql, [req.params.id, nome_aluno, sala_id, resposta], (err, bdResult) => {
+      if (err) return res.status(500).json({ erro: 'Erro ao salvar pintura no banco de dados.' });
+      res.status(201).json({ mensagem: 'Pintura enviada!', url: urlNuvem, id: bdResult.insertId });
+    });
+
+  } catch (error) {
+    console.error('Erro no upload da resposta para o Cloudinary:', error);
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ erro: 'Erro ao processar pintura na nuvem.' });
+  }
 });
 
 // ========================
 // INICIAR SERVIDOR
 // ========================
-app.listen(3001, () => console.log('🚀 Server rodando na porta 3001'));
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`🚀 Server rodando na porta ${PORT} (Agora com Cloudinary!)`));
