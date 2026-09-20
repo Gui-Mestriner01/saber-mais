@@ -1,0 +1,459 @@
+/* =======================================
+   ESTILOS GERAIS DA TELA DE CRIAÇÃO V/F
+======================================= */
+.criar-vf-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+}
+
+/* =======================================
+   BARRA LATERAL ESQUERDA
+======================================= */
+.criar-vf-sidebar-left {
+  width: 280px;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.criar-vf-brand {
+  font-size: 32px;
+  font-weight: 900;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.brand-saber { color: #f97316; }
+.brand-plus { color: #0ea5e9; }
+
+.criar-vf-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  outline: none;
+  margin-bottom: 24px;
+  font-size: 1rem;
+  color: #334155;
+  box-sizing: border-box;
+}
+
+/* Lista de Perguntas */
+.criar-vf-question-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.criar-vf-question-item {
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.criar-vf-question-item.active {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.criar-vf-question-number {
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  background-color: #cbd5e1;
+}
+
+.criar-vf-question-item.active .criar-vf-question-number {
+  background-color: #2563eb;
+}
+
+.criar-vf-question-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Botão de Apagar */
+.criar-vf-btn-delete {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.criar-vf-question-item.active .criar-vf-btn-delete {
+  color: #ef4444;
+}
+
+.criar-vf-btn-delete:hover {
+  transform: scale(1.2);
+}
+
+/* Botões Inferiores Sidebar */
+.criar-vf-btn-add {
+  width: 100%;
+  padding: 12px;
+  background-color: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+}
+
+.criar-vf-btn-exit {
+  width: 100%;
+  padding: 12px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* =======================================
+   ÁREA CENTRAL (CANVAS)
+======================================= */
+.criar-vf-main {
+  flex: 1;
+  background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px;
+  overflow-y: auto;
+}
+
+.criar-vf-main-input-wrapper {
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 24px;
+}
+
+.criar-vf-main-input {
+  width: 100%;
+  padding: 24px;
+  border-radius: 16px;
+  border: none;
+  background-color: #ffffff;
+  color: #334155;
+  font-size: 1.2rem;
+  text-align: center;
+  outline: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+}
+
+.criar-vf-upload-box {
+  width: 100%;
+  max-width: 800px;
+  background-color: #ffffff;
+  border: 2px dashed #93c5fd;
+  border-radius: 16px;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 32px;
+  box-sizing: border-box;
+}
+
+.criar-vf-upload-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.criar-vf-upload-text {
+  color: #3b82f6;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* Botões de Resposta (V/F) */
+.criar-vf-choices-wrapper {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.criar-vf-choice-btn {
+  flex: 1;
+  background-color: #ffffff;
+  border: none;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.criar-vf-choice-icon {
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.criar-vf-choice-icon.true { background-color: #22c55e; }
+.criar-vf-choice-icon.false { background-color: #ef4444; }
+
+.criar-vf-choice-text {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #64748b;
+}
+
+.criar-vf-choice-radio {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+}
+
+/* Estado Ativo - Verdadeiro */
+.criar-vf-choice-btn.active-true {
+  box-shadow: 0 0 0 4px #22c55e;
+}
+.criar-vf-choice-btn.active-true .criar-vf-choice-text { color: #166534; }
+.criar-vf-choice-btn.active-true .criar-vf-choice-radio { border: 6px solid #22c55e; }
+
+/* Estado Ativo - Falso */
+.criar-vf-choice-btn.active-false {
+  box-shadow: 0 0 0 4px #ef4444;
+}
+.criar-vf-choice-btn.active-false .criar-vf-choice-text { color: #991b1b; }
+.criar-vf-choice-btn.active-false .criar-vf-choice-radio { border: 6px solid #ef4444; }
+
+/* =======================================
+   BARRA LATERAL DIREITA
+======================================= */
+.criar-vf-sidebar-right {
+  width: 280px;
+  background-color: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.criar-vf-prop-header {
+  font-size: 1.1rem;
+  color: #1e293b;
+  margin-bottom: 32px;
+  font-weight: bold;
+}
+
+.criar-vf-prop-group {
+  margin-bottom: 24px;
+}
+
+.criar-vf-prop-label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.criar-vf-prop-value-highlight {
+  color: #3b82f6;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.criar-vf-prop-value-muted {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.criar-vf-prop-value-dark {
+  color: #334155;
+  font-weight: 600;
+}
+
+.criar-vf-spacer {
+  flex: 1;
+}
+
+.criar-vf-btn-save {
+  width: 100%;
+  padding: 16px;
+  background-color: #22c55e;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.2);
+}
+/* ==========================================================================
+   TEMA SABER+ — MONTADOR DE VERDADEIRO OU FALSO
+   Só aparência: a lógica não foi tocada.
+   ========================================================================== */
+.criar-vf-container { background: var(--ceu); background-attachment: fixed; }
+
+.criar-vf-sidebar-left,
+.criar-vf-sidebar-right {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  border-color: var(--borda);
+}
+
+.criar-vf-brand { font-size: 28px; font-weight: 900; letter-spacing: -0.5px; }
+
+.criar-vf-input,
+.criar-vf-main-input {
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  color: var(--tinta);
+}
+
+.criar-vf-input:focus,
+.criar-vf-main-input:focus {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 4px rgba(26, 111, 196, 0.1);
+  outline: none;
+}
+
+.criar-vf-main-input-wrapper {
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+}
+
+.criar-vf-question-item {
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.criar-vf-question-item:hover { border-color: var(--azul); }
+
+.criar-vf-question-item.ativo,
+.criar-vf-question-item.active {
+  border-color: var(--azul);
+  background: var(--azul-lavado);
+  box-shadow: 0 0 0 3px rgba(26, 111, 196, 0.12);
+}
+
+.criar-vf-question-number {
+  background: var(--azul);
+  color: #fff;
+  font-weight: 900;
+}
+
+.criar-vf-question-text { font-weight: 700; color: var(--tinta-media); }
+
+.criar-vf-upload-box {
+  border: 2px dashed var(--borda);
+  border-radius: var(--r);
+  background: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s;
+}
+
+.criar-vf-upload-box:hover { border-color: var(--azul); background: var(--azul-lavado); }
+.criar-vf-upload-text { color: var(--tinta-clara); font-weight: 800; }
+
+.criar-vf-choice-btn {
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  border: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.criar-vf-choice-btn:hover { transform: translateY(-2px); }
+.criar-vf-choice-btn.selecionado,
+.criar-vf-choice-btn.ativo { border-color: var(--verde); box-shadow: 0 0 0 3px rgba(61, 170, 92, 0.18); }
+
+.criar-vf-choice-text { font-weight: 900; color: var(--tinta); }
+
+/* Painel da direita */
+.criar-vf-prop-group { border-bottom: 2px solid var(--superficie-2); }
+
+.criar-vf-prop-label,
+.criar-vf-prop-header {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tinta-clara);
+}
+
+.criar-vf-prop-value-dark      { color: var(--tinta); font-weight: 900; }
+.criar-vf-prop-value-highlight { color: var(--azul); font-weight: 900; }
+.criar-vf-prop-value-muted     { color: var(--tinta-clara); font-weight: 700; }
+
+.criar-vf-btn-add,
+.criar-vf-btn-save {
+  border-radius: var(--r-sm);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  transition: transform 0.2s;
+}
+
+.criar-vf-btn-add:hover, .criar-vf-btn-save:hover { transform: translateY(-2px); }
+
+.criar-vf-btn-exit {
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  font-weight: 800;
+  color: var(--tinta-media);
+}
+
+.criar-vf-btn-exit:hover { border-color: var(--vermelho); color: var(--vermelho); }
+
+/* O botão flutuante de acessibilidade tapava o Salvar */
+.criar-vf-sidebar-right { padding-bottom: 96px; }
+.criar-vf-btn-save { margin-right: 64px; }

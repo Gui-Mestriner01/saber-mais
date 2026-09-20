@@ -1,0 +1,198 @@
+/* =======================================
+   ESTILOS GERAIS DA TELA V/F
+======================================= */
+.vf-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 100%);
+  overflow: hidden;
+}
+
+.vf-loading {
+  display: flex;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+  background-color: #e0f2fe;
+  font-size: 1.5rem;
+  color: #0369a1;
+  font-weight: bold;
+}
+
+/* =======================================
+   CABEÇALHO
+======================================= */
+.vf-header {
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+.vf-title {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.vf-counter {
+  background-color: #2563eb;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 24px;
+  font-weight: bold;
+}
+
+/* =======================================
+   ÁREA DA PERGUNTA
+======================================= */
+.vf-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+.vf-question-wrapper {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+
+.vf-question-text {
+  font-size: 2.5rem;
+  color: #1e293b;
+  text-align: center;
+  margin: 0;
+  font-weight: 900;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.vf-image {
+  max-height: 400px;
+  width: auto;
+  border-radius: 24px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+}
+
+/* =======================================
+   BOTÕES GIGANTES
+======================================= */
+.vf-buttons-container {
+  display: flex;
+  gap: 24px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.vf-btn {
+  flex: 1;
+  padding: 32px;
+  border: none;
+  border-radius: 32px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.1s ease, filter 0.2s ease, opacity 0.2s ease;
+}
+
+.vf-btn:active {
+  transform: translateY(8px);
+}
+
+.vf-btn:hover {
+  filter: brightness(1.05);
+}
+
+.vf-btn-true {
+  background-color: #22c55e;
+  box-shadow: 0 8px 0 #166534, 0 15px 20px rgba(0, 0, 0, 0.1);
+}
+
+.vf-btn-false {
+  background-color: #ef4444;
+  box-shadow: 0 8px 0 #991b1b, 0 15px 20px rgba(0, 0, 0, 0.1);
+}
+
+.vf-btn-icon {
+  font-size: 4rem;
+  color: white;
+  font-weight: bold;
+}
+
+.vf-btn-text {
+  font-size: 1.8rem;
+  color: white;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+/* Efeitos de Seleção ao voltar a pergunta */
+.vf-btn.selecionado { 
+  box-shadow: 0 0 0 6px white, 0 0 0 10px #3b82f6; 
+  transform: scale(1.02); 
+}
+
+.vf-btn.nao-selecionado { 
+  opacity: 0.4; 
+  transform: scale(0.95); 
+}
+
+/* =======================================
+   TELA DE CONCLUSÃO
+======================================= */
+.vf-conclusion-card {
+  background-color: white;
+  padding: 48px;
+  border-radius: 32px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  width: 100%;
+}
+
+.vf-trophy {
+  font-size: 5rem;
+  margin-bottom: 24px;
+}
+
+.vf-conclusion-title {
+  font-size: 2.5rem;
+  color: #16a34a;
+  margin: 0 0 16px 0;
+  font-weight: 900;
+}
+
+.vf-conclusion-text {
+  font-size: 1.2rem;
+  color: #64748b;
+  margin-bottom: 32px;
+}
+
+.vf-btn-back {
+  padding: 16px 32px;
+  font-size: 1.2rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.vf-btn-back:hover {
+  background-color: #2563eb;
+}

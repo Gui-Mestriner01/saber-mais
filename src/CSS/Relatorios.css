@@ -252,3 +252,958 @@
   background: #DCFCE7;
   color: #15803D;
 }
+
+/* ==========================================================================
+   MODAL DE SESSÃO AO VIVO (KAHOOT) - ADICIONADO AQUI
+   ========================================================================== */
+.rel-btn-live {
+  background: linear-gradient(135deg, #3DAA5C, #2b8043);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 10px rgba(61, 170, 92, 0.3);
+  margin-top: 10px;
+  width: 100%;
+}
+
+.rel-btn-live:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(61, 170, 92, 0.4);
+}
+
+.modal-live-card {
+  background: white;
+  padding: 32px;
+  border-radius: 20px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-live-card h3 {
+  font-size: 22px;
+  font-weight: 900;
+  color: #2A4A6A;
+  margin-bottom: 5px;
+}
+
+.opcoes-modo-live {
+  display: flex;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.modo-btn {
+  flex: 1;
+  padding: 24px 16px;
+  background: #F4F9FD;
+  border: 2px solid #C8DFF0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modo-btn.ativo {
+  background: #FFF;
+  border-color: #F5812A;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(245, 129, 42, 0.15);
+}
+
+.modo-btn h4 { 
+  margin: 12px 0 6px; 
+  color: #2A4A6A; 
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.modo-btn p { 
+  font-size: 12px; 
+  color: #7AAAC8; 
+  margin: 0; 
+  font-weight: 700;
+  line-height: 1.4;
+}
+/* ==========================================================================
+   TEMA SABER+ — RELATÓRIOS
+   ========================================================================== */
+.rel-lista { display: flex; flex-direction: column; gap: 12px; }
+
+.rel-card {
+  background: #fff;
+  border: none;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.rel-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(26, 111, 196, 0.14);
+}
+
+.rel-card-info { display: flex; align-items: center; gap: 16px; }
+
+.rel-tipo-icon {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: var(--r-sm);
+  background: var(--azul-lavado);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--azul);
+}
+
+.rel-card-info h3 {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--tinta);
+  margin-bottom: 3px;
+}
+
+.rel-card-info p {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+  margin-bottom: 7px;
+}
+
+.rel-badge {
+  display: inline-block;
+  background: var(--superficie-2);
+  border: none;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--tinta-media);
+}
+
+.rel-btn-ver {
+  background: var(--azul);
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 11px 18px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(26, 111, 196, 0.25);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.rel-btn-ver:hover { background: var(--azul-escuro); transform: translateY(-2px); }
+
+.rel-vazio {
+  background: rgba(255, 255, 255, 0.7);
+  border: 2px dashed var(--borda);
+  border-radius: var(--r);
+  padding: 60px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--tinta-clara);
+}
+
+.rel-vazio p { font-size: 15px; font-weight: 800; color: var(--tinta-media); }
+
+.rel-voltar {
+  align-self: flex-start;
+  background: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--azul);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: var(--sombra);
+}
+
+.rel-voltar:hover { transform: translateY(-2px); }
+
+.rel-detalhe-header {
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  padding: 22px 26px;
+  border-left: 6px solid var(--azul);
+}
+
+.rel-detalhe-header h2 {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--tinta);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.rel-detalhe-header h2 svg { color: var(--azul); }
+.rel-detalhe-header p { font-size: 13.5px; font-weight: 700; color: var(--tinta-clara); }
+
+/* O nome da turma mais ativa pode ser longo */
+.resumo-texto-curto {
+  font-size: 19px !important;
+  display: block;
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   GRÁFICOS DO RELATÓRIO
+   ========================================================================== */
+.gr-grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.gr-card {
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  padding: 24px 26px 20px;
+}
+
+.gr-card-largo { grid-column: 1 / -1; }
+
+.gr-cabecalho { margin-bottom: 18px; }
+
+.gr-cabecalho h2 {
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--tinta);
+  margin-bottom: 3px;
+}
+
+.gr-cabecalho p {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+}
+
+.gr-sem-dado {
+  padding: 34px 0;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+}
+
+/* Caixinha do mouse */
+.gr-balao {
+  background: var(--tinta);
+  border-radius: 10px;
+  padding: 9px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 6px 18px rgba(42, 74, 106, 0.28);
+}
+
+.gr-balao strong { font-size: 13px; font-weight: 900; color: #fff; }
+.gr-balao span   { font-size: 12.5px; font-weight: 700; color: #B9D4EC; }
+
+/* Barra de parte-do-todo (atividades por tipo) */
+.gr-barra-todo {
+  display: flex;
+  gap: 2px;
+  height: 22px;
+  margin-bottom: 20px;
+}
+
+.gr-fatia {
+  height: 100%;
+  min-width: 4px;
+}
+
+.gr-fatia:first-child { border-radius: 6px 0 0 6px; }
+.gr-fatia:last-child  { border-radius: 0 6px 6px 0; }
+.gr-fatia:only-child  { border-radius: 6px; }
+
+.gr-legenda {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gr-legenda li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1.5px solid var(--superficie-2);
+}
+
+.gr-legenda li:last-child { border-bottom: none; }
+
+.gr-ponto {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.gr-legenda-nome {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--tinta-media);
+}
+
+.gr-legenda-valor {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--tinta);
+}
+
+.gr-legenda-valor em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--tinta-clara);
+  font-size: 12.5px;
+}
+
+/* O recharts injeta linhas de foco que brigam com o visual */
+.recharts-wrapper:focus,
+.recharts-surface:focus { outline: none; }
+
+@media (max-width: 1180px) {
+  .gr-grade { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================
+   FILTROS DA LISTA DE RELATÓRIOS
+   ========================================================================== */
+.rel-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+
+.rel-busca {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--superficie-2);
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 0 14px;
+  color: var(--tinta-clara);
+}
+
+.rel-busca:focus-within { border-color: var(--azul); }
+
+.rel-busca input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: none;
+  padding: 11px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+.rel-filtros select {
+  background: var(--superficie-2);
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta);
+  cursor: pointer;
+  outline: none;
+}
+
+.rel-filtros select:focus { border-color: var(--azul); }
+
+.rel-limpar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--tinta-media);
+  cursor: pointer;
+}
+
+.rel-limpar:hover { border-color: var(--vermelho); color: var(--vermelho); }
+
+/* ==========================================================================
+   ABAS DO RELATÓRIO DE UMA ATIVIDADE
+   ========================================================================== */
+.rel-abas {
+  display: flex;
+  gap: 6px;
+  background: #fff;
+  border-radius: 999px;
+  box-shadow: var(--sombra);
+  padding: 6px;
+  align-self: flex-start;
+}
+
+.rel-aba {
+  background: none;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 22px;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--tinta-media);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.rel-aba:hover:not(:disabled) { color: var(--azul); }
+
+.rel-aba.ativa {
+  background: var(--azul);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(26, 111, 196, 0.25);
+}
+
+.rel-aba:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.rel-aba-num {
+  background: rgba(42, 74, 106, 0.1);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.rel-aba.ativa .rel-aba-num { background: rgba(255, 255, 255, 0.26); }
+
+/* ==========================================================================
+   VISÃO GERAL: UMA PERGUNTA POR CARTÃO
+   ========================================================================== */
+.perguntas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pergunta-card {
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  padding: 24px 26px;
+  border-left: 6px solid var(--borda);
+}
+
+.pergunta-card.dificil { border-left-color: var(--vermelho); }
+
+.pergunta-topo {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.pergunta-num {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: var(--azul-lavado);
+  color: var(--azul);
+  font-size: 14px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pergunta-topo h3 {
+  flex: 1;
+  font-size: 16.5px;
+  font-weight: 900;
+  color: var(--tinta);
+  line-height: 1.4;
+  padding-top: 4px;
+}
+
+.pergunta-acerto {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.pergunta-alerta {
+  background: var(--vermelho-lavado);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #A62F2F;
+  margin-bottom: 16px;
+}
+
+.opcoes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.opcao-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 5px;
+}
+
+.opcao-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta-media);
+}
+
+.opcao-linha.certa .opcao-rotulo { color: var(--tinta); font-weight: 900; }
+
+.opcao-selo {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 50%;
+  background: var(--verde);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.opcao-valor {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--tinta);
+  white-space: nowrap;
+}
+
+.opcao-valor em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--tinta-clara);
+  font-size: 12.5px;
+}
+
+.opcao-trilho {
+  height: 10px;
+  background: var(--superficie-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.opcao-barra {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+  transition: width 0.6s ease;
+}
+
+.opcao-nota {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   POR ALUNO: LISTA E CORREÇÃO
+   ========================================================================== */
+.alunos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aluno-card {
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  overflow: hidden;
+}
+
+.aluno-card.aberto { box-shadow: 0 10px 28px rgba(26, 111, 196, 0.14); }
+
+.aluno-card-topo {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.aluno-card-topo:hover { background: var(--superficie-2); }
+
+.aluno-card-inicial {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 50%;
+  background: var(--azul-lavado);
+  color: var(--azul);
+  font-size: 16px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aluno-card-nome { flex: 1; min-width: 0; }
+.aluno-card-nome strong { display: block; font-size: 15.5px; font-weight: 900; color: var(--tinta); }
+.aluno-card-nome span { font-size: 12.5px; font-weight: 700; color: var(--tinta-clara); }
+
+.aluno-card-acertos {
+  background: var(--superficie-2);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--tinta-media);
+  white-space: nowrap;
+}
+
+.aluno-card-situacao {
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 13px;
+  font-weight: 900;
+  background: var(--amarelo-lavado);
+  color: #9A7500;
+  white-space: nowrap;
+}
+
+.aluno-card-situacao.ok { background: var(--verde-lavado); color: #2F7D47; }
+
+.aluno-card-seta { color: var(--tinta-clara); transition: transform 0.2s; }
+.aluno-card.aberto .aluno-card-seta { transform: rotate(90deg); }
+
+.aluno-card-corpo {
+  padding: 4px 22px 22px;
+  border-top: 2px solid var(--superficie-2);
+}
+
+.prova-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0 20px;
+}
+
+.prova-item {
+  display: flex;
+  gap: 13px;
+  padding: 13px 14px;
+  border-radius: var(--r-sm);
+  background: var(--superficie-2);
+}
+
+.prova-marca {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.prova-item.certo  .prova-marca { background: var(--verde); }
+.prova-item.errado .prova-marca { background: var(--vermelho); }
+.prova-item.branco .prova-marca { background: var(--tinta-fraca); }
+
+.prova-pergunta {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--tinta);
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+
+.prova-resposta { font-size: 13.5px; font-weight: 700; color: var(--tinta-media); }
+.prova-resposta em { color: var(--tinta-clara); }
+
+.prova-gabarito {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--verde);
+  margin-top: 3px;
+}
+
+.resposta-livre { margin: 16px 0 20px; }
+
+.resposta-imagem {
+  max-width: 100%;
+  border-radius: var(--r-sm);
+  border: 2px solid var(--borda);
+}
+
+.resposta-texto {
+  background: var(--superficie-2);
+  border-radius: var(--r-sm);
+  padding: 16px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tinta);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.resposta-bruta {
+  background: var(--superficie-2);
+  border-radius: var(--r-sm);
+  padding: 14px;
+  font-size: 12.5px;
+  color: var(--tinta-media);
+  overflow-x: auto;
+}
+
+/* Barra de nota */
+.correcao-barra {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 2px solid var(--superficie-2);
+}
+
+.correcao-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.correcao-campo span {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--tinta-media);
+}
+
+.correcao-campo input {
+  width: 110px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--tinta);
+  outline: none;
+}
+
+.correcao-campo input:focus { border-color: var(--azul); }
+
+.correcao-erro {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--vermelho);
+  align-self: center;
+}
+
+@media (max-width: 900px) {
+  .rel-filtros select, .rel-limpar { flex: 1; }
+}
+
+/* ==========================================================================
+   PERGUNTAS QUE ABREM E FECHAM
+   Numa prova de 20 perguntas, tudo aberto vira uma rolagem sem fim.
+   ========================================================================== */
+.perguntas-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.perguntas-barra-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--tinta);
+}
+
+.perguntas-barra-titulo em {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+}
+
+.perguntas-barra-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 10px 16px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--tinta-media);
+  cursor: pointer;
+  box-shadow: var(--sombra);
+  transition: transform 0.2s, color 0.2s;
+}
+
+.perguntas-barra-btn:hover { color: var(--azul); transform: translateY(-2px); }
+
+/* O cartão fechado fica baixinho */
+.pergunta-card { padding: 0; overflow: hidden; }
+
+.pergunta-topo {
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+  margin-bottom: 0;
+}
+
+.pergunta-topo:hover { background: var(--superficie-2); }
+
+.pergunta-topo h3 { padding-top: 0; }
+
+.pergunta-seta {
+  color: var(--tinta-clara);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.pergunta-card.aberta .pergunta-seta { transform: rotate(180deg); }
+
+/* Faixinha que resume a divisão da turma quando está fechada */
+.pergunta-resumo {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  margin: 0 24px 18px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--superficie-2);
+}
+
+.pergunta-resumo span {
+  height: 100%;
+  min-width: 3px;
+}
+
+.pergunta-alerta { margin: 0 24px 16px; }
+.pergunta-card .opcoes-lista { padding: 0 24px 24px; }
+
+/* ==========================================================================
+   DATAS NOS RELATÓRIOS
+   ========================================================================== */
+.rel-selos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rel-data {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+}
+
+.rel-datas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px solid var(--superficie-2);
+}
+
+.rel-datas span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+}
+
+.rel-datas svg { color: var(--azul); }

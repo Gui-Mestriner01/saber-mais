@@ -19,6 +19,7 @@
     "helmet": "*",
     "jsonwebtoken": "*",
     "multer": "*",
-    "mysql2": "*"
+    "mysql2": "*",
+    "socket.io": "^4.8.3"
   }
 }

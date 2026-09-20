@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
 
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+*,
+*::before,
+*::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 .aluno-container {
   display: flex;
@@ -31,7 +33,8 @@
 }
 
 .brand-saber { color: #F5812A; }
-.brand-plus  { color: #1A6FC4; }
+
+.brand-plus { color: #1A6FC4; }
 
 .aluno-nav {
   display: flex;
@@ -56,6 +59,7 @@
 }
 
 .aluno-nav-btn:hover { background: rgba(26,111,196,0.08); color: #1A6FC4; }
+
 .aluno-nav-btn.ativo { background: #1A6FC4; color: #fff; }
 
 .aluno-sair {
@@ -145,9 +149,9 @@
   mask-image: linear-gradient(to right, transparent 10%, black 60%);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes fadeIn {from { opacity: 0; }
+
+to { opacity: 1; }
 }
 
 .aluno-header-texto {
@@ -170,15 +174,7 @@
 }
 
 /* --- ANIMAÇÃO DA MÃO ACENANDO --- */
-@keyframes acenar {
-  0% { transform: rotate(0deg); }
-  10% { transform: rotate(14deg); }
-  20% { transform: rotate(-8deg); }
-  30% { transform: rotate(14deg); }
-  40% { transform: rotate(-4deg); }
-  50% { transform: rotate(10deg); }
-  60% { transform: rotate(0deg); }
-  100% { transform: rotate(0deg); }
+@keyframes acenar {0% { transform: rotate(0deg); }10% { transform: rotate(14deg); }20% { transform: rotate(-8deg); }30% { transform: rotate(14deg); }40% { transform: rotate(-4deg); }50% { transform: rotate(10deg); }60% { transform: rotate(0deg); }100% { transform: rotate(0deg); }
 }
 
 .emoji-acenando {
@@ -194,7 +190,7 @@
   gap: 16px;
 }
 
-.stat-card {
+.aluno-container .stat-card {
   background: rgba(255,255,255,0.9);
   border-radius: 16px;
   padding: 20px 24px;
@@ -204,16 +200,16 @@
   box-shadow: 0 4px 16px rgba(26,111,196,0.08);
 }
 
-.stat-icon { font-size: 36px; }
+.aluno-container .stat-icon { font-size: 36px; }
 
-.stat-card strong {
+.aluno-container .stat-card strong {
   font-size: 22px;
   font-weight: 900;
   color: #2A4A6A;
   display: block;
 }
 
-.stat-card p {
+.aluno-container .stat-card p {
   font-size: 13px;
   color: #7AAAC8;
   font-weight: 700;
@@ -246,7 +242,9 @@
 .atv-icon { font-size: 32px; }
 
 .atv-info { flex: 1; }
+
 .atv-info strong { font-size: 15px; font-weight: 900; color: #2A4A6A; display: block; }
+
 .atv-info p { font-size: 13px; color: #7AAAC8; font-weight: 700; }
 
 .atv-btn {
@@ -298,7 +296,8 @@
 }
 
 .aluno-sala-body h3 { font-size: 15px; font-weight: 900; color: #2A4A6A; }
-.aluno-sala-body p  { font-size: 12px; color: #7AAAC8; font-weight: 700; }
+
+.aluno-sala-body p { font-size: 12px; color: #7AAAC8; font-weight: 700; }
 
 .aluno-sala-btn {
   margin: 0 16px 16px;
@@ -335,6 +334,7 @@
 }
 
 .nova-sala:hover { border-color: #1A6FC4; color: #1A6FC4; }
+
 .nova-sala span { font-size: 32px; }
 
 /* RANKING */
@@ -360,7 +360,9 @@
 }
 
 .ranking-pos { font-size: 24px; width: 40px; text-align: center; }
+
 .ranking-nome { flex: 1; font-size: 15px; font-weight: 700; color: #2A4A6A; }
+
 .ranking-pontos { font-size: 15px; font-weight: 900; color: #F5812A; }
 
 /* VAZIO */
@@ -375,10 +377,12 @@
 }
 
 .aluno-vazio span { font-size: 48px; }
+
 .aluno-vazio p { font-size: 16px; font-weight: 700; }
+
 .aluno-vazio small { font-size: 13px; }
 
-/* MODAL AVATAR */
+.aluno-container /* MODAL AVATAR */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -483,6 +487,7 @@
 }
 
 .avatar-opcao:hover { transform: scale(1.05); border-color: #1A6FC4; }
+
 .avatar-opcao.selecionado { border-color: #1A6FC4; }
 
 .avatar-opcao img {
@@ -515,4 +520,1298 @@
 
 .indicador-bolinha.ativo {
   background-color: #1A6FC4;
+}
+
+/* ==========================================================================
+   NOVO — PERFIL NO RODAPÉ DA SIDEBAR
+   ========================================================================== */
+.aluno-perfil-rodape {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(26,111,196,0.07);
+  border: 1.5px solid #DCEBF7;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+  margin-bottom: 8px;
+}
+
+.aluno-perfil-rodape:hover {
+  background: rgba(26,111,196,0.14);
+  border-color: #1A6FC4;
+  transform: translateY(-2px);
+}
+
+.perfil-rodape-foto {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  border: 3px solid #C8DFF0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  box-shadow: 0 2px 8px rgba(26,111,196,0.15);
+}
+
+.perfil-rodape-foto img { width: 100%; height: 100%; object-fit: cover; }
+
+.perfil-rodape-info { flex: 1; overflow: hidden; }
+
+.perfil-rodape-info strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+  color: #2A4A6A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.perfil-rodape-info p { font-size: 11px; font-weight: 700; color: #7AAAC8; }
+
+/* ==========================================================================
+   NOVO — TOP 5 DO PÓDIO NO CANTO DO HEADER
+   ========================================================================== */
+.aluno-header-acoes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.botao-tema {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.header-podio {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.9);
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(26,111,196,0.12);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.header-podio:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(26,111,196,0.2); }
+
+.header-podio-item {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: visible;
+  margin-left: -10px;
+  transition: transform 0.15s;
+}
+
+.header-podio-item:first-child { margin-left: 0; }
+
+.header-podio-item:hover { transform: translateY(-3px); z-index: 5; }
+
+.header-podio-item img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid #fff;
+  background: #EAF3FA;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+
+.header-podio-item.pos-1 img { border-color: #F5C518; width: 100%; }
+
+.header-podio-item.pos-2 img { border-color: #B9C6D2; }
+
+.header-podio-item.pos-3 img { border-color: #D8A25E; }
+
+.header-podio-medalha {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 11px;
+  background: #fff;
+  border-radius: 50%;
+  padding: 1px 3px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  font-weight: 900;
+  color: #2A4A6A;
+}
+
+.header-podio-texto {
+  font-size: 12px;
+  font-weight: 900;
+  color: #2A4A6A;
+  margin-left: 8px;
+}
+
+/* ==========================================================================
+   NOVO — DASHBOARD SIMPLES DO ALUNO
+   ========================================================================== */
+.dash-aluno {
+  display: grid;
+  grid-template-columns: 1.1fr 1.4fr;
+  gap: 16px;
+}
+
+.dash-progresso {
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  padding: 22px 24px;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.dash-progresso-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.dash-progresso-topo h3 { font-size: 16px; font-weight: 900; color: #2A4A6A; }
+
+.dash-progresso-topo strong { font-size: 26px; font-weight: 900; color: #1A6FC4; }
+
+.dash-barra {
+  width: 100%;
+  height: 14px;
+  background: #E3EEF7;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dash-barra-preenchida {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4FBF7A 0%, #1A6FC4 100%);
+  transition: width 0.5s ease;
+}
+
+.dash-progresso-texto { font-size: 13px; font-weight: 700; color: #7AAAC8; }
+
+.dash-progresso-texto strong { color: #2A4A6A; }
+
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.dash-card {
+  background: rgba(255,255,255,0.92);
+  border: 2px solid transparent;
+  border-radius: 18px;
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.08);
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.2s;
+}
+
+.dash-card:hover { transform: translateY(-3px); }
+
+.dash-card.feito:hover { border-color: #4FBF7A; }
+
+.dash-card.pendente:hover { border-color: #F5812A; }
+
+.dash-card.expirada:hover { border-color: #E23F3F; }
+
+.dash-card.posicao { cursor: default; }
+
+.dash-card-icone { font-size: 26px; }
+
+.dash-card strong { font-size: 24px; font-weight: 900; color: #2A4A6A; }
+
+.dash-card p { font-size: 12px; font-weight: 700; color: #7AAAC8; }
+
+.dash-card.feito strong { color: #2E9E5B; }
+
+.dash-card.pendente strong { color: #F5812A; }
+
+.dash-card.expirada strong { color: #E23F3F; }
+
+.dash-card.posicao strong { color: #1A6FC4; }
+
+/* ==========================================================================
+   NOVO — BARRA DE FILTROS
+   ========================================================================== */
+.filtros-barra {
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.filtros-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.filtro-chip {
+  background: #F1F7FC;
+  border: 2px solid #DCEBF7;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: #5A7A9A;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.filtro-chip:hover { border-color: #1A6FC4; color: #1A6FC4; }
+
+.filtro-chip.ativo {
+  background: #1A6FC4;
+  border-color: #1A6FC4;
+  color: #fff;
+}
+
+.filtro-chip-num {
+  background: rgba(0,0,0,0.08);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.filtro-chip.ativo .filtro-chip-num { background: rgba(255,255,255,0.28); }
+
+.filtros-selects { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.filtro-busca,
+.filtro-select {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2A4A6A;
+  background: #F8FBFE;
+  border: 2px solid #DCEBF7;
+  border-radius: 12px;
+  padding: 9px 12px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filtro-busca { flex: 1; min-width: 180px; cursor: text; }
+
+.filtro-busca:focus,
+.filtro-select:focus { border-color: #1A6FC4; }
+
+/* Faixa colorida por status no card de atividade */
+.aluno-atividade-card { border-left: 6px solid transparent; }
+
+.aluno-atividade-card.status-concluida { border-left-color: #4FBF7A; }
+
+.aluno-atividade-card.status-aberta { border-left-color: #F5812A; }
+
+.aluno-atividade-card.status-encerrada { border-left-color: #E23F3F; opacity: 0.75; }
+
+/* ==========================================================================
+   NOVO — SALA DE COLEGAS / PÓDIO VERTICAL
+   ========================================================================== */
+.colegas-titulo { margin-top: 8px; }
+
+.colegas-titulo h2 { font-size: 18px; font-weight: 900; color: #2A4A6A; }
+
+.colegas-titulo p { font-size: 13px; font-weight: 700; color: #7AAAC8; }
+
+.podio-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.podio-degrau {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px;
+  padding: 14px 20px;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.1);
+  border: 2px solid transparent;
+  transition: transform 0.15s;
+}
+
+.podio-degrau:hover { transform: translateY(-2px); }
+
+.podio-degrau.lugar-1 {
+  border-color: #F5C518;
+  background: linear-gradient(90deg, #FFF8E1 0%, rgba(255,255,255,0.95) 60%);
+  padding: 20px;
+}
+
+.podio-degrau.lugar-2 {
+  border-color: #C4D0DB;
+  background: linear-gradient(90deg, #F4F7FA 0%, rgba(255,255,255,0.95) 60%);
+  padding: 17px 20px;
+}
+
+.podio-degrau.lugar-3 {
+  border-color: #D8A25E;
+  background: linear-gradient(90deg, #FDF2E4 0%, rgba(255,255,255,0.95) 60%);
+  padding: 16px 20px;
+}
+
+.podio-degrau.eu { box-shadow: 0 0 0 3px rgba(26,111,196,0.35), 0 4px 16px rgba(26,111,196,0.15); }
+
+.podio-lugar {
+  font-size: 26px;
+  font-weight: 900;
+  color: #5A7A9A;
+  width: 46px;
+  text-align: center;
+}
+
+.podio-foto {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  background: #EAF3FA;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.podio-degrau.lugar-1 .podio-foto { width: 68px; height: 68px; border-color: #F5C518; }
+
+.podio-degrau.lugar-2 .podio-foto { width: 60px; height: 60px; border-color: #C4D0DB; }
+
+.podio-degrau.lugar-3 .podio-foto { width: 56px; height: 56px; border-color: #D8A25E; }
+
+.podio-dados { flex: 1; }
+
+.podio-dados strong { font-size: 15px; font-weight: 900; color: #2A4A6A; display: block; }
+
+.podio-dados p { font-size: 12px; font-weight: 700; color: #7AAAC8; }
+
+.podio-voce { color: #1A6FC4; font-size: 12px; }
+
+.aluno-container .podio-pontos {
+  font-size: 15px;
+  font-weight: 900;
+  color: #F5812A;
+  white-space: nowrap;
+}
+
+/* Grade com a turma toda */
+.turma-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.aluno-container .turma-card {
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 16px rgba(26,111,196,0.08);
+  border: 2px solid transparent;
+  transition: transform 0.15s, border-color 0.2s;
+}
+
+.aluno-container .turma-card:hover { transform: translateY(-3px); border-color: #C8DFF0; }
+
+.aluno-container .turma-card.eu { border-color: #1A6FC4; background: #EBF4FF; }
+
+.aluno-container .turma-card img {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  background: #EAF3FA;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.aluno-container .turma-card strong {
+  font-size: 13px;
+  font-weight: 900;
+  color: #2A4A6A;
+  text-align: center;
+  word-break: break-word;
+}
+
+.aluno-container .turma-card p { font-size: 11px; font-weight: 700; color: #7AAAC8; }
+
+/* Foto no ranking */
+.ranking-foto {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid #fff;
+  background: #EAF3FA;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* ==========================================================================
+   RESPONSIVO
+   ========================================================================== */
+@media (max-width: 1000px) {.dash-aluno { grid-template-columns: 1fr; }
+
+.dash-cards { grid-template-columns: repeat(2, 1fr); }
+
+.header-podio-texto { display: none; }
+
+.podio-degrau { width: 100% !important; }
+}
+
+/* ==========================================================================
+   MODO ESCURO DOS NOVOS BLOCOS
+   ========================================================================== */
+body.modo-escuro .aluno-perfil-rodape,
+body.modo-escuro .header-podio,
+body.modo-escuro .dash-progresso,
+body.modo-escuro .dash-card,
+body.modo-escuro .filtros-barra,
+body.modo-escuro .podio-degrau,
+body.modo-escuro .aluno-container .turma-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+body.modo-escuro .perfil-rodape-info strong,
+body.modo-escuro .dash-progresso-topo h3,
+body.modo-escuro .dash-card strong,
+body.modo-escuro .podio-dados strong,
+body.modo-escuro .aluno-container .turma-card strong,
+body.modo-escuro .colegas-titulo h2,
+body.modo-escuro .header-podio-texto {
+  color: #e2e8f0;
+}
+
+body.modo-escuro .filtro-chip,
+body.modo-escuro .filtro-busca,
+body.modo-escuro .filtro-select {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+body.modo-escuro .filtro-chip.ativo {
+  background: #1A6FC4;
+  border-color: #1A6FC4;
+  color: #fff;
+}
+
+body.modo-escuro .dash-barra { background: #334155; }
+
+body.modo-escuro .aluno-container .turma-card.eu { background: #1e3a5f; border-color: #1A6FC4; }
+
+/* ==========================================================================
+   ==========================================================================
+   TEMA SABER+ — ÁREA DO ALUNO
+   Mesma linguagem do painel do professor e das telas de login: céu azul,
+cartões brancos arredondados,
+azul e laranja da marca.
+   ==========================================================================
+   ========================================================================== */
+
+.aluno-container {
+  background: var(--ceu);
+  background-attachment: fixed;
+  color: var(--tinta);
+}
+
+/* ---------- Barra lateral ---------- */
+.aluno-sidebar {
+  width: 244px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  border-right: 1.5px solid rgba(255, 255, 255, 0.9);
+  padding: 28px 16px;
+  gap: 22px;
+}
+
+.aluno-brand {
+  font-size: 30px;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: -0.5px;
+  filter: drop-shadow(0 2px 4px rgba(26, 111, 196, 0.12));
+}
+
+.brand-saber { color: var(--laranja); }
+
+.brand-plus { color: var(--azul); }
+
+.aluno-nav { gap: 6px; margin-top: 4px; }
+
+.aluno-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: var(--r-sm);
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tinta-media);
+  transition: all 0.2s;
+}
+
+.aluno-nav-btn:hover { background: rgba(26, 111, 196, 0.08); color: var(--azul); }
+
+.aluno-nav-btn.ativo {
+  background: var(--azul);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(26, 111, 196, 0.25);
+}
+
+.aluno-sair {
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--tinta-media);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.aluno-sair:hover { border-color: var(--vermelho); color: var(--vermelho); }
+
+/* ---------- Perfil no rodapé ---------- */
+.aluno-perfil-rodape {
+  background: var(--azul-lavado);
+  border: 2px solid var(--borda);
+  border-radius: var(--r);
+  padding: 12px;
+  gap: 12px;
+  margin-bottom: 4px;
+  transition: all 0.2s;
+}
+
+.aluno-perfil-rodape:hover {
+  border-color: var(--azul);
+  transform: translateY(-2px);
+  background: var(--azul-lavado);
+}
+
+.perfil-rodape-foto {
+  width: 62px;
+  height: 62px;
+  min-width: 62px;
+  border: 3px solid #fff;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(26, 111, 196, 0.14);
+  color: var(--tinta-clara);
+}
+
+.perfil-rodape-info strong { font-size: 14px; font-weight: 900; color: var(--tinta); }
+
+.perfil-rodape-info p { font-size: 12px; font-weight: 700; color: var(--tinta-clara); }
+
+/* ---------- Conteúdo ---------- */
+.aluno-main {
+  margin-left: 244px;
+  padding: 36px 44px 72px;
+  gap: 28px;
+  max-width: 1340px;
+}
+
+.aluno-header-top { padding-bottom: 0; border-bottom: none; }
+
+.aluno-header-pagina {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--tinta);
+  letter-spacing: -0.4px;
+}
+
+.aluno-header-acoes { gap: 14px; }
+
+.botao-tema {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: var(--tinta-media);
+  box-shadow: var(--sombra);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.botao-tema:hover { transform: translateY(-2px) scale(1.05); color: var(--azul); }
+
+/* ---------- Top 5 no canto ---------- */
+.header-podio {
+  background: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 18px 7px 9px;
+  box-shadow: var(--sombra);
+  gap: 2px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.header-podio:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(26, 111, 196, 0.18);
+}
+
+.header-podio-item { width: 36px; height: 36px; margin-left: -9px; }
+
+.header-podio-item img {
+  border: 3px solid #fff;
+  background: var(--azul-lavado);
+  box-shadow: 0 2px 6px rgba(26, 111, 196, 0.12);
+}
+
+.header-podio-item.pos-1 img { border-color: #F5C518; }
+
+.header-podio-item.pos-2 img { border-color: #C9D3DC; }
+
+.header-podio-item.pos-3 img { border-color: #D8A25E; }
+
+.header-podio-medalha {
+  bottom: -2px;
+  right: -2px;
+  width: 17px;
+  height: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  background: var(--azul);
+  border: 2px solid #fff;
+  color: #fff;
+  box-shadow: none;
+  padding: 0;
+}
+
+.header-podio-item.pos-1 .header-podio-medalha { background: #E0A500; }
+
+.header-podio-texto {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--tinta);
+  margin-left: 12px;
+}
+
+/* ---------- Banner de boas-vindas ---------- */
+.aluno-header-card {
+  background: #fff;
+  border: none;
+  border-radius: var(--r-lg);
+  padding: 34px 38px;
+  min-height: 170px;
+  overflow: hidden;
+  box-shadow: var(--sombra);
+}
+
+.aluno-header-texto h1 {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--tinta);
+  letter-spacing: -0.6px;
+  margin-bottom: 8px;
+}
+
+.aluno-header-texto p {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tinta-clara);
+  max-width: 32ch;
+}
+
+/* ---------- Progresso e cartões de resumo ---------- */
+.dash-aluno { gap: 18px; }
+
+.dash-progresso,
+.dash-card,
+.aluno-container .stat-card,
+.filtros-barra,
+.aluno-atividade-card,
+.podio-degrau,
+.turma-card-aluno,
+.ranking-card,
+.aluno-sala-card {
+  background: #fff;
+  border: none;
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+}
+
+.dash-progresso { padding: 24px 26px; gap: 12px; }
+
+.dash-progresso-topo h3 { font-size: 17px; font-weight: 900; color: var(--tinta); }
+
+.dash-progresso-topo strong { font-size: 30px; font-weight: 900; color: var(--azul); letter-spacing: -1px; }
+
+.dash-barra { height: 12px; background: var(--superficie-2); border-radius: 999px; }
+
+.dash-barra-preenchida { background: linear-gradient(90deg, var(--verde) 0%, var(--azul) 100%); }
+
+.dash-progresso-texto { font-size: 14px; font-weight: 700; color: var(--tinta-clara); }
+
+.dash-progresso-texto strong { font-weight: 900; color: var(--tinta); }
+
+.dash-cards { gap: 14px; }
+
+.dash-card {
+  padding: 20px 12px;
+  gap: 4px;
+  border-top: 5px solid var(--borda);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dash-card.feito { border-top-color: var(--verde); }
+
+.dash-card.pendente { border-top-color: var(--laranja); }
+
+.dash-card.expirada { border-top-color: var(--vermelho); }
+
+.dash-card.posicao { border-top-color: #F5C518; }
+
+.dash-card:hover { transform: translateY(-3px); box-shadow: 0 10px 26px rgba(26, 111, 196, 0.14); }
+
+.dash-card-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  margin-bottom: 2px;
+}
+
+.dash-card.feito    .dash-card-icone { color: var(--verde);    background: var(--verde-lavado); }
+
+.dash-card.pendente .dash-card-icone { color: var(--laranja);  background: var(--laranja-lavado); }
+
+.dash-card.expirada .dash-card-icone { color: var(--vermelho); background: var(--vermelho-lavado); }
+
+.dash-card.posicao  .dash-card-icone { color: #B8860B;         background: var(--amarelo-lavado); }
+
+.dash-card strong { font-size: 26px; font-weight: 900; color: var(--tinta) !important; letter-spacing: -0.8px; }
+
+.dash-card p { font-size: 12.5px; font-weight: 700; color: var(--tinta-clara); }
+
+/* ---------- Pontos,
+nível e salas ---------- */
+.aluno-stats { gap: 16px; }
+
+.aluno-container .stat-card { padding: 20px 24px; gap: 16px; }
+
+.aluno-container .stat-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: var(--r-sm);
+  background: var(--amarelo-lavado);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #E0A500;
+  font-size: 0;
+}
+
+.aluno-container .aluno-stats .stat-card:nth-child(2) .stat-icon { background: var(--azul-lavado); color: var(--azul); }
+
+.aluno-container .aluno-stats .stat-card:nth-child(3) .stat-icon { background: var(--verde-lavado); color: var(--verde); }
+
+.aluno-container .stat-card strong { font-size: 22px; font-weight: 900; color: var(--tinta); }
+
+.aluno-container .stat-card p { font-size: 13px; font-weight: 700; color: var(--tinta-clara); }
+
+/* ---------- Filtros ---------- */
+.filtros-barra { padding: 18px 20px; gap: 14px; }
+
+.filtro-chip {
+  background: var(--superficie-2);
+  border: 2px solid var(--borda);
+  border-radius: 999px;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--tinta-media);
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.filtro-chip:hover { border-color: var(--azul); color: var(--azul); }
+
+.filtro-chip.ativo {
+  background: var(--azul);
+  border-color: var(--azul);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(26, 111, 196, 0.25);
+}
+
+.filtro-chip-num {
+  background: rgba(42, 74, 106, 0.1);
+  padding: 1px 8px;
+  font-size: 11.5px;
+  font-weight: 900;
+}
+
+.filtro-chip.ativo .filtro-chip-num { background: rgba(255, 255, 255, 0.26); }
+
+.filtro-busca {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--superficie-2);
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 0 14px;
+  color: var(--tinta-clara);
+}
+
+.filtro-busca:focus-within { border-color: var(--azul); }
+
+.filtro-busca input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: none;
+  padding: 11px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+.filtro-select {
+  background: var(--superficie-2);
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.filtro-select:focus { border-color: var(--azul); }
+
+/* ---------- Lista de atividades ---------- */
+.aluno-atividades-lista { gap: 12px; }
+
+.aluno-atividades-lista h2 {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--tinta);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.aluno-atividade-card {
+  padding: 18px 22px;
+  gap: 16px;
+  border-left: 6px solid var(--borda);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.aluno-atividade-card:hover { transform: translateX(4px); box-shadow: 0 8px 22px rgba(26, 111, 196, 0.12); }
+
+.aluno-atividade-card.status-concluida { border-left-color: var(--verde); }
+
+.aluno-atividade-card.status-aberta { border-left-color: var(--laranja); }
+
+.aluno-atividade-card.status-encerrada { border-left-color: var(--vermelho); opacity: 0.7; }
+
+.atv-icon {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: var(--r-sm);
+  background: var(--azul-lavado);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--azul);
+  font-size: 0;
+}
+
+.status-concluida .atv-icon { background: var(--verde-lavado); color: var(--verde); }
+
+.status-encerrada .atv-icon { background: var(--vermelho-lavado); color: var(--vermelho); }
+
+.atv-info strong { font-size: 16px; font-weight: 900; color: var(--tinta); margin-bottom: 2px; }
+
+.atv-info p { font-size: 13px; font-weight: 700; color: var(--tinta-clara); }
+
+.atv-prazo { margin-top: 4px; font-size: 13px; font-weight: 800; }
+
+.prazo-aberta { color: var(--laranja); }
+
+.prazo-concluida { color: var(--verde); }
+
+.prazo-encerrada { color: var(--vermelho); }
+
+.atv-btn {
+  padding: 12px 24px;
+  border-radius: var(--r-sm);
+  background: var(--azul);
+  font-size: 14.5px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(26, 111, 196, 0.25);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.atv-btn:hover { background: var(--azul-escuro); transform: translateY(-2px); }
+
+.atv-btn.desativado {
+  background: var(--superficie-2);
+  border: 2px solid var(--borda);
+  color: var(--tinta-clara);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.atv-btn.desativado:hover { transform: none; background: var(--superficie-2); }
+
+/* ---------- Salas do aluno ---------- */
+.aluno-sala-card { overflow: hidden; border-top: 6px solid var(--azul); }
+
+.aluno-sala-body { padding: 22px 22px 4px; gap: 5px; }
+
+.aluno-sala-body h3 { font-size: 18px; font-weight: 900; color: var(--tinta); }
+
+.aluno-sala-body p { font-size: 13px; font-weight: 700; color: var(--tinta-clara); }
+
+.aluno-sala-btn {
+  margin: 16px 22px 22px;
+  padding: 12px;
+  border-radius: var(--r-sm);
+  background: var(--azul);
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(26, 111, 196, 0.22);
+}
+
+.aluno-sala-btn:hover { background: var(--azul-escuro); }
+
+/* ---------- Pódio da turma ---------- */
+.colegas-titulo h2 {
+  font-size: 19px;
+  font-weight: 900;
+  color: var(--tinta);
+  padding-bottom: 4px;
+}
+
+.colegas-titulo p { font-size: 13.5px; font-weight: 700; color: var(--tinta-clara); }
+
+.podio-vertical { gap: 10px; align-items: stretch; }
+
+.podio-degrau {
+  padding: 16px 22px !important;
+  gap: 16px;
+  align-self: center;
+  border-top: 5px solid var(--borda);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.podio-degrau:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(26, 111, 196, 0.12); }
+
+.podio-degrau.lugar-1 {
+  border-top-color: #F5C518;
+  background: linear-gradient(180deg, var(--amarelo-lavado) 0%, #fff 60%);
+  padding: 22px !important;
+}
+
+.podio-degrau.lugar-2 { border-top-color: #C9D3DC; }
+
+.podio-degrau.lugar-3 { border-top-color: #D8A25E; }
+
+.podio-degrau.eu { box-shadow: 0 0 0 3px rgba(26, 111, 196, 0.35), var(--sombra); }
+
+.podio-lugar {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--tinta-clara);
+  width: 40px;
+}
+
+.podio-degrau.lugar-1 .podio-lugar { color: #B8860B; }
+
+.podio-foto,
+.podio-degrau.lugar-2 .podio-foto,
+.podio-degrau.lugar-3 .podio-foto {
+  width: 54px;
+  height: 54px;
+  border: 3px solid #fff;
+  background: var(--azul-lavado);
+  box-shadow: 0 2px 8px rgba(26, 111, 196, 0.14);
+}
+
+.podio-degrau.lugar-1 .podio-foto { width: 68px; height: 68px; border-color: #F5C518; }
+
+.podio-dados strong {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--tinta);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.podio-dados p { font-size: 12.5px; font-weight: 700; color: var(--tinta-clara); }
+
+.podio-voce {
+  background: var(--azul);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.aluno-container .podio-pontos {
+  background: var(--amarelo-lavado);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #B8860B;
+}
+
+/* ---------- Grade com a turma toda ---------- */
+.turma-grid { gap: 14px; grid-template-columns: repeat(auto-fill, minmax(134px, 1fr)); }
+
+.turma-card-aluno {
+  padding: 20px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border-top: 5px solid var(--borda);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.turma-card-aluno:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(26, 111, 196, 0.14); }
+
+.turma-card-aluno.eu { border-top-color: var(--azul); background: var(--azul-lavado); }
+
+.turma-card-aluno img {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fff;
+  background: var(--superficie-2);
+  box-shadow: 0 2px 8px rgba(26, 111, 196, 0.12);
+}
+
+.turma-card-aluno strong {
+  font-size: 13.5px;
+  font-weight: 900;
+  color: var(--tinta);
+  text-align: center;
+  word-break: break-word;
+}
+
+.turma-card-aluno p { font-size: 12px; font-weight: 700; color: var(--tinta-clara); }
+
+/* ---------- Ranking ---------- */
+.ranking-lista { gap: 10px; }
+
+.ranking-card { padding: 16px 22px; gap: 16px; }
+
+.ranking-card.eu { background: var(--azul-lavado); box-shadow: 0 0 0 2.5px var(--azul), var(--sombra); }
+
+.ranking-pos {
+  font-size: 17px;
+  font-weight: 900;
+  color: var(--tinta-clara);
+  width: 40px;
+}
+
+.ranking-foto {
+  width: 44px;
+  height: 44px;
+  border: 3px solid #fff;
+  background: var(--azul-lavado);
+  box-shadow: 0 2px 6px rgba(26, 111, 196, 0.12);
+}
+
+.ranking-nome { font-size: 16px; font-weight: 800; color: var(--tinta); }
+
+.ranking-pontos {
+  font-size: 14px;
+  font-weight: 900;
+  color: #B8860B;
+  background: var(--amarelo-lavado);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+
+/* ---------- Estado vazio ---------- */
+.aluno-vazio {
+  background: rgba(255, 255, 255, 0.72);
+  border: 2px dashed var(--borda);
+  border-radius: var(--r);
+  padding: 56px 24px;
+  gap: 12px;
+  color: var(--tinta-clara);
+}
+
+.aluno-vazio p { font-size: 16px; font-weight: 800; color: var(--tinta-media); }
+
+.aluno-vazio small { font-size: 13.5px; font-weight: 700; }
+
+.aluno-container /* ---------- Modal do personagem ---------- */
+.modal-overlay { background: rgba(42, 74, 106, 0.5); backdrop-filter: blur(4px); }
+
+.modal-avatar-card {
+  border-radius: var(--r-lg);
+  border: none;
+  box-shadow: var(--sombra-alta);
+  padding: 36px;
+  gap: 16px;
+}
+
+.modal-avatar-header h3 { font-size: 21px; font-weight: 900; color: var(--tinta); }
+
+.modal-avatar-header button {
+  color: var(--tinta-clara);
+  display: flex;
+  padding: 6px;
+  border-radius: 9px;
+  background: var(--superficie-2);
+}
+
+.modal-avatar-header button:hover { background: var(--vermelho-lavado); color: var(--vermelho); }
+
+.modal-avatar-card p { font-size: 14.5px; font-weight: 700; color: var(--tinta-clara); }
+
+.carrossel-btn {
+  color: var(--tinta-clara);
+  border-radius: 50%;
+  padding: 10px;
+  background: var(--superficie-2);
+}
+
+.carrossel-btn:hover:not(:disabled) { background: var(--azul-lavado); color: var(--azul); }
+
+.avatares-grid { gap: 18px; }
+
+.avatar-opcao { border: 3px solid transparent; }
+
+.avatar-opcao:hover { transform: scale(1.06); border-color: var(--borda); }
+
+.avatar-opcao.selecionado { border-color: var(--azul); }
+
+.indicador-bolinha { background: var(--borda); width: 9px; height: 9px; }
+
+.indicador-bolinha.ativo { background: var(--azul); }
+
+/* ---------- Modo escuro ---------- */
+body.modo-escuro .aluno-container { background: #16202B; color: #DCE7F0; }
+
+body.modo-escuro .aluno-sidebar { background: rgba(28, 42, 56, 0.92); border-right-color: #27394B; }
+
+body.modo-escuro .dash-progresso,
+body.modo-escuro .dash-card,
+body.modo-escuro .aluno-container .stat-card,
+body.modo-escuro .filtros-barra,
+body.modo-escuro .aluno-atividade-card,
+body.modo-escuro .podio-degrau,
+body.modo-escuro .aluno-container .turma-card-aluno,
+body.modo-escuro .ranking-card,
+body.modo-escuro .aluno-sala-card,
+body.modo-escuro .aluno-header-card,
+body.modo-escuro .header-podio,
+body.modo-escuro .botao-tema,
+body.modo-escuro .aluno-vazio {
+  background: #1E2E3E;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+body.modo-escuro .aluno-perfil-rodape { background: #27394B; border-color: #35506A; }
+
+body.modo-escuro .aluno-header-pagina,
+body.modo-escuro .aluno-header-texto h1,
+body.modo-escuro .dash-card strong,
+body.modo-escuro .aluno-container .stat-card strong,
+body.modo-escuro .atv-info strong,
+body.modo-escuro .podio-dados strong,
+body.modo-escuro .aluno-container .turma-card-aluno strong,
+body.modo-escuro .ranking-nome,
+body.modo-escuro .colegas-titulo h2,
+body.modo-escuro .aluno-atividades-lista h2,
+body.modo-escuro .perfil-rodape-info strong,
+body.modo-escuro .aluno-sala-body h3,
+body.modo-escuro .dash-progresso-topo h3,
+body.modo-escuro .header-podio-texto {
+  color: #DCE7F0 !important;
+}
+
+body.modo-escuro .filtro-chip,
+body.modo-escuro .filtro-busca,
+body.modo-escuro .filtro-select,
+body.modo-escuro .atv-icon,
+body.modo-escuro .dash-barra {
+  background: #16202B;
+  border-color: #35506A;
+  color: #A8BCCE;
+}
+
+body.modo-escuro .filtro-busca input,
+body.modo-escuro .filtro-select { color: #DCE7F0; }
+
+body.modo-escuro .filtro-chip.ativo { background: var(--azul); border-color: var(--azul); color: #fff; }
+
+body.modo-escuro .aluno-nav-btn { color: #A8BCCE; }
+
+body.modo-escuro .aluno-nav-btn:hover { background: rgba(26, 111, 196, 0.18); color: #7FB6EE; }
+
+body.modo-escuro .aluno-sair { background: #1E2E3E; border-color: #35506A; color: #A8BCCE; }
+
+/* Em notebooks menores, aperta o respiro em vez de criar barra horizontal */
+@media (max-width: 1080px) {.aluno-main { padding: 28px 24px 56px; min-width: 0; }
+
+.dash-aluno { grid-template-columns: 1fr; }
+
+.dash-cards { grid-template-columns: repeat(2, 1fr); }
 }

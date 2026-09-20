@@ -7,19 +7,36 @@ function LoginAluno() {
   const navigate   = useNavigate();
   const sala       = state?.sala;
 
-  const [etapa, setEtapa]           = useState('lista'); // lista | pin | novo | cadastro-pin
+  // Adicionamos a etapa 'temporaria' para o modo Kahoot
+  const [etapa, setEtapa]           = useState('lista'); // lista | pin | novo | temporaria
   const [alunos, setAlunos]         = useState([]);
   const [alunoSelecionado, setAlunoSelecionado] = useState(null);
+  
+  // Estados para Sala Permanente
   const [pin, setPin]               = useState('');
-  const [novoNome, setNovoNome]     = useState('');
   const [novoPin, setNovoPin]       = useState('');
   const [confirmarPin, setConfirmarPin] = useState('');
+  
+  // Estados compartilhados
+  const [novoNome, setNovoNome]     = useState('');
   const [erro, setErro]             = useState('');
-  const [pinStep, setPinStep]       = useState('digitar'); // digitar | confirmar
+  
+  // Estado para Sala Temporária (Avatares)
+  const [avatarSelecionado, setAvatarSelecionado] = useState(null);
+  const [carregando, setCarregando] = useState(false);
+
+  // Array gerando de img1.PNG até img33.PNG
+  const avataresDisponiveis = Array.from({ length: 33 }, (_, i) => `img${i + 1}.PNG`);
 
   useEffect(() => {
-    if (!sala) { navigate('/aluno'); return; }
-    buscarAlunos();
+    if (!sala) { navigate('/aluno/area'); return; }
+    
+    // Se for temporária, vai direto para a tela de Nome + Avatar
+    if (sala.tipo_sala === 'temporaria') {
+      setEtapa('temporaria');
+    } else {
+      buscarAlunos();
+    }
   }, []);
 
   const buscarAlunos = async () => {
@@ -32,6 +49,7 @@ function LoginAluno() {
     }
   };
 
+  // --- LÓGICA DA SALA PERMANENTE ---
   const handleSelecionarAluno = (aluno) => {
     setAlunoSelecionado(aluno);
     setPin('');
@@ -41,11 +59,11 @@ function LoginAluno() {
 
   const handleDigitarPin = (num) => {
     if (pin.length >= 4) return;
-    const novoPin = pin + num;
-    setPin(novoPin);
+    const novoPinAtualizado = pin + num;
+    setPin(novoPinAtualizado);
 
-    if (novoPin.length === 4) {
-      setTimeout(() => fazerLogin(novoPin), 300);
+    if (novoPinAtualizado.length === 4) {
+      setTimeout(() => fazerLogin(novoPinAtualizado), 300);
     }
   };
 
@@ -91,6 +109,37 @@ function LoginAluno() {
     }
   };
 
+  // --- LÓGICA DA SALA TEMPORÁRIA (KAHOOT) ---
+  const handleEntrarTemporaria = (e) => {
+    e.preventDefault();
+    setErro('');
+
+    if (!novoNome.trim()) {
+      setErro('Digite seu nome!');
+      return;
+    }
+    if (!avatarSelecionado) {
+      setErro('Escolha um avatar!');
+      return;
+    }
+
+    setCarregando(true);
+    
+    // Salva na memória do navegador (Não vai pro banco de dados)
+    const dadosAlunoTemp = {
+      nome: novoNome.trim(),
+      avatar: avatarSelecionado,
+      salaId: sala.id,
+      salaNome: sala.nome,
+      codigoSala: sala.codigo
+    };
+    
+    localStorage.setItem('alunoTemporario', JSON.stringify(dadosAlunoTemp));
+    
+    // Pula para a tela de espera do jogo!
+    navigate('/aluno/lobby');
+  };
+
   return (
     <div className="login-aluno-container">
       <header className="login-aluno-header">
@@ -103,7 +152,10 @@ function LoginAluno() {
 
       <main className="login-aluno-main">
 
-        {/* LISTA DE ALUNOS */}
+        {/* =========================================
+            FLUXOS ORIGINAIS (SALA PERMANENTE)
+            ========================================= */}
+        
         {etapa === 'lista' && (
           <div className="login-aluno-card">
             <h2>👋 Quem é você?</h2>
@@ -111,18 +163,12 @@ function LoginAluno() {
 
             <div className="alunos-grid">
               {alunos.map(aluno => (
-                <button
-                  key={aluno.id}
-                  className="aluno-btn"
-                  onClick={() => handleSelecionarAluno(aluno)}
-                >
+                <button key={aluno.id} className="aluno-btn" onClick={() => handleSelecionarAluno(aluno)}>
                   <div className="aluno-btn-avatar">
                     {aluno.nome_aluno.charAt(0).toUpperCase()}
                   </div>
                   <span>{aluno.nome_aluno}</span>
-                  {aluno.pontos > 0 && (
-                    <span className="aluno-btn-pts">⭐ {aluno.pontos}</span>
-                  )}
+                  {aluno.pontos > 0 && <span className="aluno-btn-pts">⭐ {aluno.pontos}</span>}
                 </button>
               ))}
 
@@ -134,7 +180,6 @@ function LoginAluno() {
           </div>
         )}
 
-        {/* DIGITAR PIN */}
         {etapa === 'pin' && (
           <div className="login-aluno-card">
             <button className="login-voltar" onClick={() => { setEtapa('lista'); setErro(''); }}>← Voltar</button>
@@ -152,9 +197,7 @@ function LoginAluno() {
 
             <div className="pin-teclado">
               {[1,2,3,4,5,6,7,8,9].map(n => (
-                <button key={n} className="pin-tecla" onClick={() => handleDigitarPin(String(n))}>
-                  {n}
-                </button>
+                <button key={n} className="pin-tecla" onClick={() => handleDigitarPin(String(n))}>{n}</button>
               ))}
               <button className="pin-tecla apagar" onClick={() => setPin(prev => prev.slice(0,-1))}>⌫</button>
               <button className="pin-tecla" onClick={() => handleDigitarPin('0')}>0</button>
@@ -163,7 +206,6 @@ function LoginAluno() {
           </div>
         )}
 
-        {/* NOVO ALUNO */}
         {etapa === 'novo' && (
           <div className="login-aluno-card">
             <button className="login-voltar" onClick={() => { setEtapa('lista'); setErro(''); }}>← Voltar</button>
@@ -172,27 +214,17 @@ function LoginAluno() {
 
             <div className="novo-campo">
               <label>Seu nome</label>
-              <input
-                type="text"
-                placeholder="Como você se chama?"
-                value={novoNome}
-                onChange={e => { setNovoNome(e.target.value); setErro(''); }}
-                className="novo-input"
-              />
+              <input type="text" placeholder="Como você se chama?" value={novoNome} onChange={e => { setNovoNome(e.target.value); setErro(''); }} className="novo-input" />
             </div>
 
             <div className="novo-campo">
               <label>Crie um PIN de 4 dígitos</label>
               <div className="pin-dots">
-                {[0,1,2,3].map(i => (
-                  <div key={i} className={`pin-dot ${novoPin.length > i ? 'preenchido' : ''}`} />
-                ))}
+                {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${novoPin.length > i ? 'preenchido' : ''}`} /> )}
               </div>
               <div className="pin-teclado">
                 {[1,2,3,4,5,6,7,8,9].map(n => (
-                  <button key={n} className="pin-tecla" onClick={() => {
-                    if (novoPin.length < 4) setNovoPin(prev => prev + n);
-                  }}>{n}</button>
+                  <button key={n} className="pin-tecla" onClick={() => { if (novoPin.length < 4) setNovoPin(prev => prev + n); }}>{n}</button>
                 ))}
                 <button className="pin-tecla apagar" onClick={() => setNovoPin(prev => prev.slice(0,-1))}>⌫</button>
                 <button className="pin-tecla" onClick={() => { if (novoPin.length < 4) setNovoPin(prev => prev + '0'); }}>0</button>
@@ -203,15 +235,11 @@ function LoginAluno() {
             <div className="novo-campo">
               <label>Confirme seu PIN</label>
               <div className="pin-dots">
-                {[0,1,2,3].map(i => (
-                  <div key={i} className={`pin-dot ${confirmarPin.length > i ? 'preenchido' : ''}`} />
-                ))}
+                {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${confirmarPin.length > i ? 'preenchido' : ''}`} /> )}
               </div>
               <div className="pin-teclado">
                 {[1,2,3,4,5,6,7,8,9].map(n => (
-                  <button key={n} className="pin-tecla" onClick={() => {
-                    if (confirmarPin.length < 4) setConfirmarPin(prev => prev + n);
-                  }}>{n}</button>
+                  <button key={n} className="pin-tecla" onClick={() => { if (confirmarPin.length < 4) setConfirmarPin(prev => prev + n); }}>{n}</button>
                 ))}
                 <button className="pin-tecla apagar" onClick={() => setConfirmarPin(prev => prev.slice(0,-1))}>⌫</button>
                 <button className="pin-tecla" onClick={() => { if (confirmarPin.length < 4) setConfirmarPin(prev => prev + '0'); }}>0</button>
@@ -221,13 +249,64 @@ function LoginAluno() {
 
             {erro && <p className="pin-erro">{erro}</p>}
 
-            <button
-              className="btn-entrar-pin"
-              onClick={handleCadastrarPin}
-              disabled={!novoNome || novoPin.length < 4 || confirmarPin.length < 4}
-            >
+            <button className="btn-entrar-pin" onClick={handleCadastrarPin} disabled={!novoNome || novoPin.length < 4 || confirmarPin.length < 4}>
               Criar conta e entrar! 🚀
             </button>
+          </div>
+        )}
+
+        {/* =========================================
+            NOVO FLUXO: SALA TEMPORÁRIA
+            ========================================= */}
+        {etapa === 'temporaria' && (
+          <div className="login-aluno-card" style={{ maxWidth: '600px' }}>
+            <button className="login-voltar" onClick={() => navigate('/aluno/area')}>← Sair da Sala</button>
+            <h2>✨ Preparar para jogar!</h2>
+            <p>Escolha seu nome e um avatar bem legal!</p>
+
+            <form onSubmit={handleEntrarTemporaria} style={{ width: '100%', marginTop: '20px' }}>
+              
+              <div className="novo-campo" style={{ marginBottom: '20px' }}>
+                <label>Seu nome</label>
+                <input 
+                  type="text" 
+                  placeholder="Como você se chama?" 
+                  value={novoNome} 
+                  onChange={e => { setNovoNome(e.target.value); setErro(''); }} 
+                  className="novo-input" 
+                  maxLength={15}
+                  autoComplete="off"
+                />
+              </div>
+
+              <div className="novo-campo">
+                <label className="login-avatares-titulo">Escolha seu avatar</label>
+                <div className="login-grid-avatares">
+                  {avataresDisponiveis.map((img) => (
+                    <button
+                      key={img}
+                      type="button"
+                      className={`login-avatar-btn ${avatarSelecionado === img ? 'selecionado' : ''}`}
+                      onClick={() => { setAvatarSelecionado(img); setErro(''); }}
+                    >
+                      <img src={`/avatares/${img}`} alt="Avatar" className="login-avatar-img" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {erro && <p className="pin-erro" style={{ marginTop: '15px' }}>{erro}</p>}
+
+              <button 
+                type="submit" 
+                className="btn-entrar-pin" 
+                style={{ marginTop: '20px', background: '#3DAA5C' }}
+                disabled={!novoNome.trim() || !avatarSelecionado || carregando}
+              >
+                {carregando ? 'Entrando...' : 'Entrar na Sala! 🚀'}
+              </button>
+
+            </form>
           </div>
         )}
 

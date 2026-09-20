@@ -19,12 +19,16 @@ import Relatorios from './pages/Relatorios';
 import LigarAluno from './pages/LigarAluno';
 import Salas from './pages/Salas';
 import LoginAluno from './pages/LoginAluno';
-
-
+import CriarVF from "./pages/CriarVF";
+import ResponderVF from './pages/ResponderVF';
+import MinhasAulas from './pages/MinhasAulas';
+import MenuAcessibilidade from './acessibilidade/MenuAcessibilidade';
 
 function App() {
   return (
     <BrowserRouter>
+      <MenuAcessibilidade />
+
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login/professor" element={<LoginProfessor />} />
@@ -43,11 +47,13 @@ function App() {
         <Route path="/aluno/home" element={<AlunoHome />} />
         <Route path="/aluno/atividade/:id" element={<ResponderQuiz />} />
         <Route path="/professor/relatorios" element={<Relatorios />} />
+        <Route path="/professor/minhas-aulas" element={<MinhasAulas />} />
         <Route path="/aluno/ligar/:id" element={<LigarAluno />} />
         <Route path="/professor/salas" element={<Salas />} />
         <Route path="/aluno/login" element={<LoginAluno />} />
-
-
+        <Route path="/professor/criar-v-f" element={<CriarVF />} />
+        <Route path="/aluno/atividade/v_f/:id" element={<ResponderVF />} />
+        
       </Routes>
     </BrowserRouter>
   );

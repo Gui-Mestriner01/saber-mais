@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -7,4 +9,66 @@
 html, body, #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* ==========================================================================
+   PALETA DO SABER+
+   As cores saíram das telas que já existiam (Home, Login, Quiz), para o
+   sistema inteiro falar a mesma língua. Mexendo aqui, muda tudo.
+   ========================================================================== */
+:root {
+  /* O céu do Saber+ — azul em cima, verdinho embaixo */
+  --ceu: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
+
+  --superficie:   #FFFFFF;
+  --superficie-2: #F4F9FD;
+
+  --borda:       #C8DFF0;
+  --borda-forte: #A9CCE6;
+
+  --tinta:       #2A4A6A;
+  --tinta-media: #5A7A9A;
+  --tinta-clara: #7AAAC8;
+  --tinta-fraca: #A0B8CC;
+
+  /* Marca */
+  --azul:        #1A6FC4;
+  --azul-escuro: #155DA0;
+  --azul-lavado: #EBF4FF;
+
+  --laranja:        #F5812A;
+  --laranja-escuro: #D96A16;
+  --laranja-lavado: #FFF1E4;
+
+  /* Sinalização */
+  --verde:           #3DAA5C;
+  --verde-lavado:    #E8F7ED;
+  --vermelho:        #E23F3F;
+  --vermelho-lavado: #FDEDED;
+  --amarelo:         #E0A500;
+  --amarelo-lavado:  #FFF8E1;
+
+  /* Formas */
+  --r:    16px;
+  --r-sm: 12px;
+  --r-lg: 22px;
+
+  --sombra:      0 4px 16px rgba(26, 111, 196, 0.08);
+  --sombra-alta: 0 12px 32px rgba(26, 111, 196, 0.16);
+}
+
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--tinta);
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Ícones da lucide-react alinhados com o texto */
+svg.lucide {
+  flex-shrink: 0;
+  vertical-align: middle;
 }

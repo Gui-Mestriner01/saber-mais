@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from "jwt-decode";
 import '../CSS/Login.css';
 
 function LoginProfessor() {
@@ -35,6 +37,14 @@ function LoginProfessor() {
       localStorage.setItem('nomeUsuario', data.usuario.nome);
       localStorage.setItem('idUsuario', data.usuario.id);
       localStorage.setItem('tipoUsuario', data.usuario.tipo);
+
+      // Limpa a foto antiga (a chave sem id ficava valendo pra qualquer conta)
+      localStorage.removeItem('fotoUsuario');
+      if (data.usuario.fotoUrl) {
+        localStorage.setItem(`fotoUsuario_${data.usuario.id}`, data.usuario.fotoUrl);
+      } else {
+        localStorage.removeItem(`fotoUsuario_${data.usuario.id}`);
+      }
 
       // Redireciona baseado no tipo
       if (data.usuario.tipo === 'admin') {
@@ -89,6 +99,72 @@ function LoginProfessor() {
               {carregando ? 'Entrando...' : 'ENTRAR'}
             </button>
           </form>
+
+          {/* DIVISOR E BOTÃO DO GOOGLE ADICIONADOS AQUI */}
+          <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+            <div style={{ flex: 1, height: '1px', backgroundColor: '#e0e0e0' }}></div>
+            <span style={{ margin: '0 10px', color: '#666', fontSize: '13px', fontWeight: '500' }}>ou entre com</span>
+            <div style={{ flex: 1, height: '1px', backgroundColor: '#e0e0e0' }}></div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              const dadosGoogle = jwtDecode(credentialResponse.credential);
+              console.log("Usuário do Google:", dadosGoogle);
+              setCarregando(true);
+
+              try {
+                const response = await fetch('http://localhost:3001/login/google', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    email: dadosGoogle.email, 
+                    nome: dadosGoogle.name,
+                    fotoUrl: dadosGoogle.picture,
+                    tipo: 'professor'
+                  }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                  setErro(data.erro || 'Erro ao logar com o Google.');
+                  setCarregando(false);
+                  return;
+                }
+
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('nomeUsuario', data.usuario.nome);
+                localStorage.setItem('idUsuario', data.usuario.id);
+                localStorage.setItem('tipoUsuario', data.usuario.tipo);
+
+                // A foto do Google fica salva com o id do professor, assim ela
+                // nunca aparece na conta de outra pessoa
+                localStorage.removeItem('fotoUsuario');
+                if (data.usuario.fotoUrl) {
+                  localStorage.setItem(`fotoUsuario_${data.usuario.id}`, data.usuario.fotoUrl);
+                } else {
+                  localStorage.removeItem(`fotoUsuario_${data.usuario.id}`);
+                }
+
+                navigate('/professor/dashboard');
+
+              } catch (error) {
+                console.error("Erro na requisição pro Node:", error);
+                setErro('Não foi possível conectar ao servidor.');
+              } finally {
+                setCarregando(false);
+              }
+            }}
+            onError={() => {
+              console.log('Falha no Login do Google');
+              setErro('O login com o Google falhou.');
+            }}
+            theme="outline" 
+            size="large"    
+          />
+          </div>
 
           <p className="cadastro-link">
             Não tem login? <span onClick={() => navigate('/cadastro/professor')}>Cadastrar-se &gt;</span>

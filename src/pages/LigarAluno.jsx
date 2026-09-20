@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/LigarAluno.css';
+import '../CSS/ResponderVF.css'; // <-- Importando o CSS para usarmos as telas bonitas de troféu e confirmação
 
 function embaralhar(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
@@ -142,15 +143,26 @@ function LigarAluno() {
     return cores[parIdA % cores.length];
   };
 
+  // ==========================================
+  // 1. TELA DE CONCLUSÃO (Com Design do Troféu)
+  // ==========================================
   if (finalizado && resultado) return (
-    <div className="ligar-container">
-      <div className="ligar-finalizado">
-        <span>🎉</span>
-        <h1>Atividade finalizada!</h1>
-        <p>Você acertou <strong>{resultado.acertos}</strong> de <strong>{resultado.total}</strong> pares!</p>
-        <div className="ligar-pts-badge">⭐ {resultado.pontos} pts</div>
-        <button className="ligar-btn-voltar" onClick={() => navigate('/aluno/home', { state: { sala, nomeAluno } })}>
-          Voltar para a sala
+    <div className="vf-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <div className="vf-conclusion-card">
+        <div className="vf-trophy">🏆</div>
+        <h2 className="vf-conclusion-title">Você terminou!</h2>
+        
+        <div style={{ marginBottom: '32px' }}>
+            <p style={{ fontSize: '1.2rem', color: '#64748b', margin: '0 0 8px 0' }}>Você fez</p>
+            <strong style={{ fontSize: '3rem', color: '#f59e0b', display: 'block', marginBottom: '8px' }}>{resultado.pontos}</strong>
+            <p style={{ fontSize: '1.2rem', color: '#64748b', margin: 0 }}>de {resultado.total * 10} pontos!</p>
+        </div>
+
+        <button 
+          className="vf-btn-back"
+          onClick={() => navigate('/aluno/home', { state: { sala, nomeAluno } })}
+        >
+          ← Voltar para as Atividades
         </button>
       </div>
     </div>
@@ -159,21 +171,40 @@ function LigarAluno() {
   return (
     <div className="ligar-container">
 
+      {/* ==========================================
+          2. TELA DE CONFIRMAÇÃO (Sobreposta ao jogo)
+          ========================================== */}
       {modalEnviar && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Enviar atividade?</h3>
-            <p>Após enviar você não poderá mais editar.</p>
-            <div className="modal-btns">
-              <button className="modal-btn-salvar" onClick={handleEnviar} disabled={enviando}>
-                {enviando ? 'Enviando...' : '✅ Enviar'}
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(5px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+          <div className="vf-conclusion-card" style={{ animation: 'none' }}>
+            <h2 style={{ fontSize: '2rem', color: '#1e293b', marginBottom: '16px' }}>Enviar atividade?</h2>
+            <p style={{ fontSize: '1.1rem', color: '#64748b', marginBottom: '32px' }}>
+              Após enviar você não poderá mais editar.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
+              <button 
+                onClick={handleEnviar}
+                disabled={enviando}
+                style={{ width: '100%', maxWidth: '300px', padding: '16px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.2rem', fontWeight: 'bold', cursor: enviando ? 'not-allowed' : 'pointer', transition: 'background-color 0.2s' }}
+              >
+                {enviando ? 'Enviando...' : '✓ Enviar'}
               </button>
-              <button className="modal-btn-cancelar" onClick={() => setModalEnviar(false)}>Cancelar</button>
+              
+              {!enviando && (
+                <button 
+                  onClick={() => setModalEnviar(false)}
+                  style={{ width: '100%', maxWidth: '300px', padding: '16px', backgroundColor: 'transparent', color: '#3b82f6', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
+      {/* Restante do jogo intocado */}
       <header className="ligar-header">
         <div className="ligar-brand">
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>

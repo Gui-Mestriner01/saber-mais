@@ -280,3 +280,100 @@
 }
 
 .modal-btn-cancelar:hover { color: #2A4A6A; }
+/* ==========================================================================
+   TEMA SABER+ — MONTADOR DE LIGAR CORRESPONDENTES
+   Só aparência: a lógica dos pares não foi tocada.
+   ========================================================================== */
+.ligar-builder { background: var(--ceu); background-attachment: fixed; }
+
+.ligar-sidebar {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  border-color: var(--borda);
+}
+
+.ligar-titulo-ativ {
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  color: var(--tinta);
+  background: #fff;
+}
+
+.ligar-titulo-ativ:focus {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 4px rgba(26, 111, 196, 0.1);
+  outline: none;
+}
+
+.ligar-header-colunas {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--tinta-clara);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.par-num {
+  background: var(--azul);
+  color: #fff;
+  font-weight: 900;
+  border-radius: 10px;
+}
+
+.par-input {
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  color: var(--tinta);
+  background: #fff;
+}
+
+.par-input:focus {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 4px rgba(26, 111, 196, 0.1);
+  outline: none;
+}
+
+.par-img-area {
+  border: 2px dashed var(--borda);
+  border-radius: var(--r);
+  background: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s;
+}
+
+.par-img-area:hover { border-color: var(--azul); background: var(--azul-lavado); }
+
+.par-conector { color: var(--tinta-clara); }
+
+.par-tipo-toggle {
+  border-radius: 999px;
+  overflow: hidden;
+  border: 2px solid var(--borda);
+  background: var(--superficie-2);
+}
+
+.par-tipo-toggle button {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 12.5px;
+  border-radius: 999px;
+}
+
+.btn-add-par {
+  border: 2px dashed var(--borda);
+  border-radius: var(--r-sm);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  color: var(--tinta-media);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.btn-add-par:hover { border-color: var(--azul); color: var(--azul); }
+
+/* O botão flutuante de acessibilidade tapava o Salvar */
+.ligar-builder > aside:last-child { padding-bottom: 96px; }
+.ligar-builder > aside:last-child button[class*="salvar"],
+.ligar-builder > aside:last-child .btn-salvar-quiz { margin-right: 64px; }

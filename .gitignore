@@ -22,3 +22,17 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Variáveis de ambiente — segredos do banco, do JWT e do Cloudinary.
+# Nunca devem ir para o GitHub.
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+
+# Imagens que os alunos enviaram nas atividades
+backend/uploads/
+
+# Pasta de trabalho gerada fora do projeto
+Claude outputs/

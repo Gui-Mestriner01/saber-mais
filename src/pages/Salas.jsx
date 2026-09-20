@@ -1,14 +1,54 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { School, Plus, Eye, EyeOff, Copy, Check, ArrowRight, Trash2, Users, X, KeyRound, Inbox, Search, Power, RotateCcw } from 'lucide-react';
+import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import '../CSS/Salas.css';
 
+// Cada matéria ganha uma cor sóbria, sempre a mesma
+const CORES_MATERIA = [
+  { fundo: '#EDF3FA', traco: '#1A6FC4' },
+  { fundo: '#FBF0E4', traco: '#C4661B' },
+  { fundo: '#EBF3ED', traco: '#3C8659' },
+  { fundo: '#F3EEF8', traco: '#6B4C9A' },
+  { fundo: '#FAF3E0', traco: '#A07508' },
+  { fundo: '#FAEDEC', traco: '#B8453C' },
+];
+
+function corDaMateria(materia = '') {
+  let soma = 0;
+  for (let i = 0; i < materia.length; i++) soma += materia.charCodeAt(i);
+  return CORES_MATERIA[soma % CORES_MATERIA.length];
+}
+
 function Salas() {
   const navigate = useNavigate();
+
+  const nomeProfessor = localStorage.getItem('nomeUsuario') || 'Professor(a)';
+  const idProfessor   = localStorage.getItem('idUsuario');
+  const fotoProfessor = idProfessor ? localStorage.getItem(`fotoUsuario_${idProfessor}`) : null;
+
+  const iniciais = nomeProfessor
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(p => p[0])
+    .join('')
+    .toUpperCase();
+
   const [salas, setSalas]           = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [salaSelecionada, setSalaSelecionada] = useState(null);
   const [alunos, setAlunos]         = useState([]);
+  const [senhasVisiveis, setSenhasVisiveis] = useState({});
+  const [codigoCopiado, setCodigoCopiado]   = useState(null);
+  const [mudandoStatus, setMudandoStatus]   = useState(null);
+
+  // Filtros da lista
+  const [busca, setBusca]                 = useState('');
+  const [filtroStatus, setFiltroStatus]   = useState('todas');
+  const [filtroSerie, setFiltroSerie]     = useState('todas');
+  const [filtroMateria, setFiltroMateria] = useState('todas');
 
   useEffect(() => {
     buscarSalas();
@@ -41,7 +81,6 @@ function Salas() {
     }
   };
 
-  // --- FUNÇÃO PARA REMOVER ALUNO ---
   const removerAluno = async (idAluno) => {
     if (!window.confirm("Tem certeza que deseja remover este aluno da sala?")) return;
 
@@ -61,58 +100,163 @@ function Salas() {
     }
   };
 
-  const temaCor = (tema) => ({
-    frutas:   'linear-gradient(135deg, #FF6B6B, #FF8E53)',
-    animais:  'linear-gradient(135deg, #4ECDC4, #44A08D)',
-    esportes: 'linear-gradient(135deg, #45B7D1, #2980B9)',
-  }[tema] || 'linear-gradient(135deg, #1A6FC4, #2980B9)');
+  // Mostra ou esconde a senha de uma sala específica
+  const alternarSenha = (idSala) => {
+    setSenhasVisiveis(atual => ({ ...atual, [idSala]: !atual[idSala] }));
+  };
 
-  const temaIcone = (tema) => ({
-    frutas: '🍎', animais: '🐶', esportes: '⚽'
-  }[tema] || '🏫');
+  // Encerrar tira a sala do ar: o aluno não consegue mais entrar nem fazer login
+  const alternarStatus = async (sala) => {
+    const encerrada = sala.status === 'encerrada';
+    const acao = encerrada ? 'reativar' : 'encerrar';
+
+    if (!encerrada) {
+      const ok = window.confirm(
+        `Encerrar a sala "${sala.nome}"?\n\n` +
+        `Os alunos não conseguirão mais entrar nem responder atividades. ` +
+        `As respostas e os pontos ficam guardados, e você pode reabrir quando quiser.`
+      );
+      if (!ok) return;
+    }
+
+    setMudandoStatus(sala.id);
+    try {
+      const res = await fetch(`http://localhost:3001/professor/sala/${sala.id}/${acao}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+
+      if (res.ok) {
+        setSalas(atuais => atuais.map(s =>
+          s.id === sala.id ? { ...s, status: encerrada ? 'ativa' : 'encerrada' } : s
+        ));
+      } else {
+        alert('Não foi possível mudar o status da sala.');
+      }
+    } catch {
+      alert('Sem conexão com o servidor.');
+    } finally {
+      setMudandoStatus(null);
+    }
+  };
+
+  const copiarCodigo = (codigo, idSala) => {
+    navigator.clipboard?.writeText(codigo);
+    setCodigoCopiado(idSala);
+    setTimeout(() => setCodigoCopiado(null), 1800);
+  };
+
+  const seriesDisponiveis   = [...new Set(salas.map(s => s.serie).filter(Boolean))].sort();
+  const materiasDisponiveis = [...new Set(salas.map(s => s.materia).filter(Boolean))].sort();
+
+  const estaEncerrada = (s) => s.status === 'encerrada';
+
+  const filtroLigado =
+    busca.trim() !== '' || filtroStatus !== 'todas' || filtroSerie !== 'todas' || filtroMateria !== 'todas';
+
+  const salasFiltradas = salas.filter(s => {
+    if (filtroStatus === 'ativas' && estaEncerrada(s)) return false;
+    if (filtroStatus === 'encerradas' && !estaEncerrada(s)) return false;
+    if (filtroSerie !== 'todas' && s.serie !== filtroSerie) return false;
+    if (filtroMateria !== 'todas' && s.materia !== filtroMateria) return false;
+
+    if (busca.trim()) {
+      const t = busca.trim().toLowerCase();
+      const achou = (s.nome || '').toLowerCase().includes(t) || (s.codigo || '').toLowerCase().includes(t);
+      if (!achou) return false;
+    }
+    return true;
+  });
+
+  const limparFiltros = () => {
+    setBusca('');
+    setFiltroStatus('todas');
+    setFiltroSerie('todas');
+    setFiltroMateria('todas');
+  };
+
+  const totalEncerradas = salas.filter(estaEncerrada).length;
 
   return (
     <div className="dashboard-container">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
-        </div>
-        <nav className="sidebar-nav">
-          <button className="nav-item" onClick={() => navigate('/professor/dashboard')}>🏠 Página Inicial</button>
-          <button className="nav-item active">🏫 Salas</button>
-          <button className="nav-item" onClick={() => navigate('/professor/criar-atividade')}>📝 Atividades</button>
-          <button className="nav-item" onClick={() => navigate('/professor/relatorios')}>📊 Relatórios</button>
-        </nav>
-      </aside>
+      <BarraLateralProfessor ativo="salas" />
 
       <main className="dashboard-main">
-        <header className="dashboard-header">
-          <h1>🏫 Minhas Salas</h1>
-          <div className="header-avatar" onClick={() => navigate('/professor/perfil')} style={{cursor:'pointer'}}>👨‍🏫</div>
+        <header className="dashboard-header-painel">
+          <div className="header-boas-vindas">
+            <h1>Minhas salas</h1>
+            <p>Suas turmas, com o código e a senha que os alunos usam para entrar.</p>
+          </div>
+
+          <div className="header-acoes">
+            <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-sala')}>
+              <Plus size={17} strokeWidth={2} /> Nova sala
+            </button>
+
+            <div className="header-avatar-prof" onClick={() => navigate('/professor/perfil')} title="Meu perfil">
+              {fotoProfessor
+                ? <img src={fotoProfessor} alt={nomeProfessor} />
+                : <span>{iniciais}</span>
+              }
+            </div>
+          </div>
         </header>
 
         {salaSelecionada && (
           <div className="modal-overlay" onClick={() => setSalaSelecionada(null)}>
             <div className="salas-modal" onClick={e => e.stopPropagation()}>
-              <div className="salas-modal-header" style={{background: temaCor(salaSelecionada.tema_senha)}}>
-                <span className="salas-modal-icon">{temaIcone(salaSelecionada.tema_senha)}</span>
+              <div className="salas-modal-header">
                 <div>
                   <h2>{salaSelecionada.nome}</h2>
-                  <p>{salaSelecionada.serie} · {salaSelecionada.materia} · {salaSelecionada.ano_letivo}</p>
+                  <p>{salaSelecionada.serie} · {salaSelecionada.materia}</p>
                 </div>
-                <button className="salas-modal-fechar" onClick={() => setSalaSelecionada(null)}>✕</button>
+                <button className="salas-modal-fechar" onClick={() => setSalaSelecionada(null)}>
+                  <X size={18} strokeWidth={2} />
+                </button>
               </div>
 
               <div className="salas-modal-body">
                 <div className="salas-modal-info">
-                  <div className="salas-info-card"><span>🔑</span><div><strong>Código</strong><p>{salaSelecionada.codigo}</p></div></div>
-                  <div className="salas-info-card"><span>🔒</span><div><strong>Senha</strong><p>{salaSelecionada.senha_emojis}</p></div></div>
-                  <div className="salas-info-card"><span>👥</span><div><strong>Alunos</strong><p>{alunos.length} aluno(s)</p></div></div>
+                  <div className="salas-info-card">
+                    <KeyRound size={18} strokeWidth={1.75} />
+                    <div><strong>Código</strong><p>{salaSelecionada.codigo}</p></div>
+                  </div>
+
+                  <div className="salas-info-card">
+                    <Eye size={18} strokeWidth={1.75} />
+                    <div>
+                      <strong>Senha</strong>
+                      <p>
+                        {senhasVisiveis[salaSelecionada.id]
+                          ? salaSelecionada.senha_emojis
+                          : <span className="senha-oculta">••••</span>
+                        }
+                      </p>
+                    </div>
+                    <button
+                      className="btn-icone"
+                      onClick={() => alternarSenha(salaSelecionada.id)}
+                      title={senhasVisiveis[salaSelecionada.id] ? 'Esconder a senha' : 'Mostrar a senha'}
+                    >
+                      {senhasVisiveis[salaSelecionada.id]
+                        ? <EyeOff size={16} strokeWidth={1.75} />
+                        : <Eye size={16} strokeWidth={1.75} />
+                      }
+                    </button>
+                  </div>
+
+                  <div className="salas-info-card">
+                    <Users size={18} strokeWidth={1.75} />
+                    <div><strong>Alunos</strong><p>{alunos.length}</p></div>
+                  </div>
                 </div>
 
-                <h3 className="salas-alunos-titulo">👥 Alunos da Sala</h3>
+                <h3 className="salas-alunos-titulo">Alunos da sala</h3>
                 {alunos.length === 0 ? (
-                  <div className="salas-vazio"><span>📭</span><p>Nenhum aluno entrou ainda.</p></div>
+                  <div className="salas-vazio">
+                    <Inbox size={26} strokeWidth={1.5} />
+                    <p>Nenhum aluno entrou ainda.</p>
+                  </div>
                 ) : (
                   <div className="salas-alunos-lista">
                     {alunos.map((aluno, i) => (
@@ -124,7 +268,9 @@ function Salas() {
                             <p>Entrou em {new Date(aluno.entrou_em).toLocaleDateString('pt-BR')}</p>
                           </div>
                         </div>
-                        <button className="btn-remover-aluno" onClick={() => removerAluno(aluno.id)} title="Remover da sala">🗑️</button>
+                        <button className="btn-remover-aluno" onClick={() => removerAluno(aluno.id)} title="Remover da sala">
+                          <Trash2 size={16} strokeWidth={1.75} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -135,32 +281,151 @@ function Salas() {
         )}
 
         {carregando ? (
-          <div className="salas-loading">⏳ Carregando salas...</div>
+          <div className="salas-loading">Carregando salas...</div>
         ) : salas.length === 0 ? (
-          <div className="salas-empty"><span>🏫</span><p>Você ainda não criou nenhuma sala.</p>
-            <button className="btn-card-blue" onClick={() => navigate('/professor/criar-sala')}>+ Criar primeira sala</button>
+          <div className="salas-empty">
+            <School size={34} strokeWidth={1.3} />
+            <p>Você ainda não criou nenhuma sala.</p>
+            <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-sala')}>
+              <Plus size={17} strokeWidth={2} /> Criar primeira sala
+            </button>
           </div>
         ) : (
-          <div className="salas-banner-grid">
-            {salas.map(sala => (
-              <div key={sala.id} className="sala-banner">
-                <div className="sala-banner-topo" style={{background: temaCor(sala.tema_senha)}}>
-                  <span className="sala-banner-codigo">{sala.codigo}</span>
-                </div>
-                <div className="sala-banner-avatar"><span className="sala-banner-icon">{temaIcone(sala.tema_senha)}</span></div>
-                <div className="sala-banner-corpo">
-                  <h3>{sala.nome}</h3>
-                  <p className="sala-disciplina">{sala.serie} • {sala.materia}</p>
-                  <div className="sala-banner-metricas"><span>👨‍🎓 Turma Ativa</span><span>📝 Acompanhar</span></div>
-                  <div className="sala-banner-senha"><span className="senha-label">Senha da Sala</span><div className="senha-emojis">{sala.senha_emojis}</div></div>
-                </div>
-                <button className="sala-banner-btn" onClick={() => verDetalhes(sala)}>Ver Detalhes →</button>
-              </div>
-            ))}
-            <div className="sala-banner-nova" onClick={() => navigate('/professor/criar-sala')}>
-              <div className="nova-sala-icon">➕</div><p>Criar Nova Sala</p>
+          <>
+            <div className="rel-filtros">
+              <label className="rel-busca">
+                <Search size={16} strokeWidth={1.75} />
+                <input
+                  type="text"
+                  placeholder="Buscar pelo nome da turma ou pelo código..."
+                  value={busca}
+                  onChange={e => setBusca(e.target.value)}
+                />
+              </label>
+
+              <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}>
+                <option value="todas">Ativas e encerradas</option>
+                <option value="ativas">Só as ativas</option>
+                <option value="encerradas">Só as encerradas{totalEncerradas > 0 ? ` (${totalEncerradas})` : ''}</option>
+              </select>
+
+              <select value={filtroSerie} onChange={e => setFiltroSerie(e.target.value)}>
+                <option value="todas">Todas as séries</option>
+                {seriesDisponiveis.map(serie => <option key={serie} value={serie}>{serie}</option>)}
+              </select>
+
+              <select value={filtroMateria} onChange={e => setFiltroMateria(e.target.value)}>
+                <option value="todas">Todas as matérias</option>
+                {materiasDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+
+              {filtroLigado && (
+                <button className="rel-limpar" onClick={limparFiltros}>
+                  <X size={15} strokeWidth={2} /> Limpar
+                </button>
+              )}
             </div>
+
+            {salasFiltradas.length === 0 ? (
+              <div className="salas-empty">
+                <Search size={30} strokeWidth={1.4} />
+                <p>Nenhuma sala bate com esse filtro.</p>
+                <button className="btn-acao-rapida" onClick={limparFiltros}>Limpar filtros</button>
+              </div>
+            ) : (
+          <div className="salas-grade">
+            {salasFiltradas.map(sala => {
+              const cor = corDaMateria(sala.materia);
+              const visivel = senhasVisiveis[sala.id];
+              const encerrada = estaEncerrada(sala);
+
+              return (
+                <article key={sala.id} className={`sala-cartao ${encerrada ? 'encerrada' : ''}`}>
+                  <span className="sala-faixa" style={{ background: encerrada ? '#A0B8CC' : cor.traco }} />
+
+                  <div className="sala-cartao-topo">
+                    <span
+                      className="sala-marca"
+                      style={{ background: cor.fundo, color: cor.traco }}
+                    >
+                      {(sala.materia || sala.nome || '?').charAt(0).toUpperCase()}
+                    </span>
+                    <div className="sala-cartao-titulo">
+                      <h3>{sala.nome}</h3>
+                      <p>{sala.serie} · {sala.materia}</p>
+                    </div>
+
+                    <span className={`sala-selo ${encerrada ? 'off' : 'on'}`}>
+                      {encerrada ? 'Encerrada' : 'Ativa'}
+                    </span>
+                  </div>
+
+                  <div className="sala-dados">
+                    <div className="sala-dado">
+                      <span className="sala-dado-rotulo">Código</span>
+                      <span className="sala-dado-valor">
+                        <code>{sala.codigo}</code>
+                        <button
+                          className="btn-icone"
+                          onClick={() => copiarCodigo(sala.codigo, sala.id)}
+                          title="Copiar código"
+                        >
+                          {codigoCopiado === sala.id
+                            ? <Check size={15} strokeWidth={2} />
+                            : <Copy size={15} strokeWidth={1.75} />
+                          }
+                        </button>
+                      </span>
+                    </div>
+
+                    <div className="sala-dado">
+                      <span className="sala-dado-rotulo">Senha</span>
+                      <span className="sala-dado-valor">
+                        {visivel
+                          ? <span className="senha-emojis">{sala.senha_emojis}</span>
+                          : <span className="senha-oculta">••••</span>
+                        }
+                        <button
+                          className="btn-icone"
+                          onClick={() => alternarSenha(sala.id)}
+                          title={visivel ? 'Esconder a senha' : 'Mostrar a senha'}
+                        >
+                          {visivel
+                            ? <EyeOff size={15} strokeWidth={1.75} />
+                            : <Eye size={15} strokeWidth={1.75} />
+                          }
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+
+                  {encerrada && (
+                    <p className="sala-aviso">Os alunos não conseguem entrar nesta sala.</p>
+                  )}
+
+                  <div className="sala-cartao-acoes">
+                    <button className="sala-cartao-link" onClick={() => verDetalhes(sala)}>
+                      Ver detalhes <ArrowRight size={15} strokeWidth={1.75} />
+                    </button>
+
+                    <button
+                      className={`sala-btn-status ${encerrada ? 'reativar' : ''}`}
+                      onClick={() => alternarStatus(sala)}
+                      disabled={mudandoStatus === sala.id}
+                      title={encerrada ? 'Reabrir a sala para os alunos' : 'Encerrar a sala'}
+                    >
+                      {encerrada
+                        ? <><RotateCcw size={15} strokeWidth={2} /> Reativar</>
+                        : <><Power size={15} strokeWidth={2} /> Encerrar</>
+                      }
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
+            )}
+          </>
         )}
       </main>
     </div>
