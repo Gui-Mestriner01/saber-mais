@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/LoginAluno.css';
+import { API } from '../api';
 
 function LoginAluno() {
   const { state }  = useLocation();
@@ -41,7 +42,7 @@ function LoginAluno() {
 
   const buscarAlunos = async () => {
     try {
-      const res  = await fetch(`http://localhost:3001/sala/${sala.id}/alunos`);
+      const res  = await fetch(`${API}/sala/${sala.id}/alunos`);
       const data = await res.json();
       setAlunos(data);
     } catch {
@@ -69,7 +70,7 @@ function LoginAluno() {
 
   const fazerLogin = async (pinDigitado) => {
     try {
-      const res = await fetch('http://localhost:3001/aluno/login', {
+      const res = await fetch(`${API}/aluno/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aluno_id: alunoSelecionado.id, pin: pinDigitado })
@@ -95,7 +96,7 @@ function LoginAluno() {
     if (novoPin !== confirmarPin) { setErro('PINs não coincidem!'); return; }
 
     try {
-      const res = await fetch('http://localhost:3001/aluno/cadastrar', {
+      const res = await fetch(`${API}/aluno/cadastrar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome_aluno: novoNome, sala_id: sala.id, pin: novoPin })

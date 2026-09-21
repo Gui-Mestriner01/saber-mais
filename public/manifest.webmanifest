@@ -1,0 +1,22 @@
+{
+  "name": "Saber+ — aprender brincando",
+  "short_name": "Saber+",
+  "description": "Plataforma de aulas gamificadas: o professor cria atividades e os alunos jogam.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#D9EEF8",
+  "theme_color": "#1A6FC4",
+  "categories": ["education", "kids"],
+  "icons": [
+    { "src": "/icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icones/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Sou aluno", "url": "/aluno/area", "icons": [{ "src": "/icones/icone-192.png", "sizes": "192x192" }] },
+    { "name": "Sou professor", "url": "/login/professor", "icons": [{ "src": "/icones/icone-192.png", "sizes": "192x192" }] }
+  ]
+}

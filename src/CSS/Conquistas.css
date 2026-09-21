@@ -1,0 +1,417 @@
+/* ==========================================================================
+   CONQUISTAS E INSÍGNIAS
+
+   A medalha é feita só com CSS: duas fitas, um disco com borda metálica e o
+   ícone no meio. A cor do metal vem das variáveis --metal-*, que mudam
+   conforme o nível (bronze, prata, ouro).
+   ========================================================================== */
+
+.insignia {
+  --metal-claro: #F1C58F;
+  --metal: #CD7F32;
+  --metal-escuro: #8F5520;
+  --fita-a: #1A6FC4;
+  --fita-b: #F5812A;
+
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--tinta);
+}
+
+.insignia.nivel-prata {
+  --metal-claro: #F2F5F8;
+  --metal: #AEB9C5;
+  --metal-escuro: #6F7E8E;
+}
+
+.insignia.nivel-ouro {
+  --metal-claro: #FFE9A3;
+  --metal: #E8B21A;
+  --metal-escuro: #A87800;
+}
+
+/* ---------- a medalha ---------- */
+.insignia-medalha {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  height: 76px;
+}
+
+.insignia-fita {
+  position: absolute;
+  top: 0;
+  width: 18px;
+  height: 30px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+}
+.insignia-fita.esquerda { left: 14px; background: var(--fita-a); transform: rotate(14deg);  transform-origin: top; }
+.insignia-fita.direita  { right: 14px; background: var(--fita-b); transform: rotate(-14deg); transform-origin: top; }
+
+.insignia-disco {
+  position: absolute;
+  left: 4px;
+  bottom: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 32% 28%, var(--metal-claro) 0 22%, transparent 55%),
+    var(--metal);
+  border: 4px solid var(--metal-escuro);
+  box-shadow: inset 0 0 0 3px var(--metal-claro), 0 4px 10px rgba(42, 74, 106, .18);
+  color: var(--metal-escuro);
+}
+.insignia-disco svg { width: 24px; height: 24px; }
+
+/* ---------- bloqueada: cinza, com cadeado ---------- */
+.insignia.bloqueada .insignia-fita,
+.insignia.bloqueada .insignia-disco { filter: grayscale(1); opacity: .45; }
+
+.insignia-cadeado {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--superficie);
+  border: 2px solid var(--borda-forte);
+  color: var(--tinta-media);
+}
+.insignia-cadeado svg { width: 12px; height: 12px; }
+
+/* ---------- o texto ao lado ---------- */
+.insignia-texto { min-width: 0; flex: 1; }
+.insignia-texto strong { display: block; font-size: 1rem; font-weight: 900; line-height: 1.2; }
+
+.insignia-nivel {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--metal-escuro);
+}
+.insignia.bloqueada .insignia-nivel { color: var(--tinta-fraca); }
+
+.insignia-texto p {
+  margin: 4px 0 0;
+  font-size: .86rem;
+  line-height: 1.4;
+  color: var(--tinta-media);
+}
+
+.insignia-progresso { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.insignia-barra {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  border: 1px solid var(--borda);
+  overflow: hidden;
+}
+.insignia-barra i { display: block; height: 100%; background: var(--azul); border-radius: 999px; }
+.insignia-progresso small { font-size: .74rem; font-weight: 800; color: var(--tinta-media); white-space: nowrap; }
+
+.insignia-data { display: block; margin-top: 6px; font-size: .74rem; font-weight: 700; color: var(--verde); }
+
+/* ---------- tamanhos ---------- */
+.insignia.tam-mini .insignia-medalha { width: 40px; height: 48px; }
+.insignia.tam-mini .insignia-fita { width: 11px; height: 19px; }
+.insignia.tam-mini .insignia-fita.esquerda { left: 9px; }
+.insignia.tam-mini .insignia-fita.direita  { right: 9px; }
+.insignia.tam-mini .insignia-disco { left: 3px; width: 34px; height: 34px; border-width: 3px; box-shadow: inset 0 0 0 2px var(--metal-claro); }
+.insignia.tam-mini .insignia-disco svg { width: 15px; height: 15px; }
+
+.insignia.tam-grande { flex-direction: column; align-items: center; text-align: center; }
+.insignia.tam-grande .insignia-medalha { width: 112px; height: 134px; }
+.insignia.tam-grande .insignia-fita { width: 30px; height: 54px; }
+.insignia.tam-grande .insignia-fita.esquerda { left: 26px; }
+.insignia.tam-grande .insignia-fita.direita  { right: 26px; }
+.insignia.tam-grande .insignia-disco { left: 6px; width: 100px; height: 100px; border-width: 6px; box-shadow: inset 0 0 0 5px var(--metal-claro), 0 8px 22px rgba(42, 74, 106, .22); }
+.insignia.tam-grande .insignia-disco svg { width: 44px; height: 44px; }
+.insignia.tam-grande .insignia-texto strong { font-size: 1.3rem; }
+
+/* ==========================================================================
+   PÁGINA "CONQUISTAS" DO ALUNO
+   ========================================================================== */
+
+.conquistas-resumo {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+
+.conquistas-contador { font-size: 2.2rem; font-weight: 900; line-height: 1; color: var(--laranja); }
+.conquistas-contador small { font-size: 1rem; color: var(--tinta-media); font-weight: 800; }
+
+.conquistas-resumo-texto { flex: 1; }
+.conquistas-resumo-texto h3 { margin: 0; font-size: 1.1rem; font-weight: 900; color: var(--tinta); }
+.conquistas-resumo-texto p { margin: 4px 0 10px; color: var(--tinta-media); font-size: .9rem; }
+
+.conquistas-barra {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  border: 1px solid var(--borda);
+  overflow: hidden;
+}
+.conquistas-barra i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--laranja), var(--amarelo));
+}
+
+.conquistas-grupo { margin-bottom: 24px; }
+.conquistas-grupo h3 {
+  margin: 0 0 12px;
+  font-size: .82rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--tinta-media);
+}
+
+.conquistas-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.conquistas-cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r);
+  padding: 16px;
+  box-shadow: var(--sombra);
+}
+.conquistas-cartao.conquistada { border-color: var(--borda-forte); }
+
+/* O cartão do resumo na página inicial */
+/* É um botão, então zera o visual padrão de botão e herda o do cartão */
+.aluno-container .stat-card.stat-insignias {
+  width: 100%;
+  border: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.aluno-container .stat-card.stat-insignias:hover { transform: translateY(-2px); box-shadow: var(--sombra-alta); }
+.aluno-container .stat-card.stat-insignias .stat-icon { color: var(--laranja); }
+.aluno-container .stat-card.stat-insignias.tem-nova { box-shadow: 0 0 0 3px var(--amarelo), var(--sombra); }
+
+/* Contador de insígnias na sala de colegas */
+.colegas-insignias {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--laranja-lavado);
+  color: var(--laranja-escuro);
+  font-size: .72rem;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+/* ==========================================================================
+   COMEMORAÇÃO: "VOCÊ GANHOU UMA INSÍGNIA!"
+   ========================================================================== */
+
+.festa-insignia-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 1900;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(26, 111, 196, .45);
+  backdrop-filter: blur(5px);
+  animation: festa-aparecer .25s ease both;
+}
+
+.festa-insignia {
+  position: relative;
+  width: min(480px, 100%);
+  background: var(--superficie);
+  border: 3px solid var(--amarelo);
+  border-radius: var(--r-lg);
+  box-shadow: 0 24px 60px rgba(26, 74, 106, .35);
+  padding: 30px 26px 24px;
+  text-align: center;
+  overflow: hidden;
+  font-family: 'Nunito', system-ui, sans-serif;
+  color: var(--tinta);
+  animation: festa-chegar .55s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+
+/* Raios de luz girando atrás da medalha */
+.festa-insignia::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  width: 520px;
+  height: 520px;
+  margin-left: -260px;
+  background: repeating-conic-gradient(rgba(224, 165, 0, .14) 0 10deg, transparent 10deg 20deg);
+  animation: festa-girar 14s linear infinite;
+  pointer-events: none;
+}
+.festa-insignia > * { position: relative; }
+
+.festa-insignia h2 { margin: 0 0 4px; font-size: 1.6rem; font-weight: 900; }
+.festa-subtitulo { margin: 0 0 20px; color: var(--tinta-media); font-weight: 700; }
+
+.festa-medalhas {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 8px;
+}
+.festa-medalhas .insignia { animation: festa-pular .6s cubic-bezier(.2, 1.6, .4, 1) both; }
+.festa-medalhas .insignia:nth-child(2) { animation-delay: .15s; }
+.festa-medalhas .insignia:nth-child(3) { animation-delay: .3s; }
+.festa-medalhas .insignia:nth-child(n+4) { animation-delay: .45s; }
+
+/* Com várias de uma vez, a medalha fica menor e o texto fica curto */
+.festa-medalhas.varias .insignia.tam-grande .insignia-medalha { width: 84px; height: 100px; }
+.festa-medalhas.varias .insignia.tam-grande .insignia-fita { width: 22px; height: 40px; }
+.festa-medalhas.varias .insignia.tam-grande .insignia-fita.esquerda { left: 20px; }
+.festa-medalhas.varias .insignia.tam-grande .insignia-fita.direita  { right: 20px; }
+.festa-medalhas.varias .insignia.tam-grande .insignia-disco { left: 5px; width: 74px; height: 74px; border-width: 5px; }
+.festa-medalhas.varias .insignia.tam-grande .insignia-disco svg { width: 32px; height: 32px; }
+.festa-medalhas.varias .insignia.tam-grande .insignia-texto strong { font-size: .95rem; }
+.festa-medalhas.varias .insignia-texto p { display: none; }
+.festa-medalhas.varias .insignia { width: 120px; }
+
+.festa-botao {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  border: none;
+  border-radius: var(--r);
+  background: var(--laranja);
+  color: #fff;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .18);
+}
+.festa-botao:hover  { background: var(--laranja-escuro); }
+.festa-botao:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, .18); }
+
+@keyframes festa-aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes festa-chegar {
+  from { opacity: 0; transform: scale(.8) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes festa-pular {
+  0%   { opacity: 0; transform: scale(.3) rotate(-18deg); }
+  70%  { opacity: 1; transform: scale(1.12) rotate(4deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes festa-girar { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   MODO ESCURO DA PÁGINA DO ALUNO
+   ========================================================================== */
+
+body.modo-escuro .conquistas-resumo,
+body.modo-escuro .conquistas-cartao,
+body.modo-escuro .festa-insignia { background: #1e293b; border-color: #334155; }
+body.modo-escuro .festa-insignia { border-color: var(--amarelo); }
+body.modo-escuro .insignia-texto strong,
+body.modo-escuro .conquistas-resumo-texto h3,
+body.modo-escuro .festa-insignia h2 { color: #e2e8f0; }
+body.modo-escuro .insignia-texto p,
+body.modo-escuro .conquistas-resumo-texto p,
+body.modo-escuro .festa-subtitulo { color: #94a3b8; }
+body.modo-escuro .insignia-barra,
+body.modo-escuro .conquistas-barra { background: #0f172a; border-color: #334155; }
+body.modo-escuro .insignia-cadeado { background: #0f172a; border-color: #475569; color: #94a3b8; }
+
+/* ==========================================================================
+   MENOS ANIMAÇÃO
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .festa-insignia-fundo,
+  .festa-insignia,
+  .festa-insignia::before,
+  .festa-medalhas .insignia { animation: none !important; }
+}
+
+body.a11y-sem-animacao .festa-insignia-fundo,
+body.a11y-sem-animacao .festa-insignia,
+body.a11y-sem-animacao .festa-insignia::before,
+body.a11y-sem-animacao .festa-medalhas .insignia { animation: none !important; }
+
+@media (max-width: 620px) {
+  .conquistas-resumo { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .conquistas-grade { grid-template-columns: 1fr; }
+  .festa-insignia h2 { font-size: 1.35rem; }
+}
+
+/* ==========================================================================
+   PÁGINA DE CONQUISTAS DO PROFESSOR
+   ========================================================================== */
+
+.conquistas-carregando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 50px 0;
+  color: var(--tinta-media);
+  font-weight: 700;
+}
+
+.conquistas-erro {
+  background: var(--vermelho-lavado);
+  border: 1px solid var(--vermelho);
+  color: var(--vermelho);
+  border-radius: var(--r-sm);
+  padding: 10px 16px;
+  font-weight: 700;
+}
+
+/* Lembrete de correção atrasada: clicável, leva para os Relatórios */
+.conquistas-lembrete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: -6px 0 22px;
+  padding: 12px 16px;
+  border: 1px solid var(--amarelo);
+  border-radius: var(--r-sm);
+  background: var(--amarelo-lavado);
+  color: var(--tinta);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.conquistas-lembrete svg { color: var(--amarelo); flex-shrink: 0; }
+.conquistas-lembrete strong { color: var(--azul); text-decoration: underline; }
+.conquistas-lembrete:hover { border-color: var(--laranja); }

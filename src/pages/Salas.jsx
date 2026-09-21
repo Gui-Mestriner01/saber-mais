@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { School, Plus, Eye, EyeOff, Copy, Check, ArrowRight, Trash2, Users, X, KeyRound, Inbox, Search, Power, RotateCcw } from 'lucide-react';
+import { School, Plus, Eye, EyeOff, Copy, Check, ArrowRight, Trash2, Users, X, KeyRound, Inbox, Search, Power, RotateCcw, Radio } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import '../CSS/Salas.css';
+import { API } from '../api';
 
 // Cada matéria ganha uma cor sóbria, sempre a mesma
 const CORES_MATERIA = [
@@ -56,7 +57,7 @@ function Salas() {
 
   const buscarSalas = async () => {
     try {
-      const res = await fetch('http://localhost:3001/professor/salas', {
+      const res = await fetch(`${API}/professor/salas`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -71,7 +72,7 @@ function Salas() {
   const verDetalhes = async (sala) => {
     setSalaSelecionada(sala);
     try {
-      const res = await fetch(`http://localhost:3001/professor/sala/${sala.id}/alunos`, {
+      const res = await fetch(`${API}/professor/sala/${sala.id}/alunos`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -85,7 +86,7 @@ function Salas() {
     if (!window.confirm("Tem certeza que deseja remover este aluno da sala?")) return;
 
     try {
-      const res = await fetch(`http://localhost:3001/professor/sala/${salaSelecionada.id}/aluno/${idAluno}`, {
+      const res = await fetch(`${API}/professor/sala/${salaSelecionada.id}/aluno/${idAluno}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -121,7 +122,7 @@ function Salas() {
 
     setMudandoStatus(sala.id);
     try {
-      const res = await fetch(`http://localhost:3001/professor/sala/${sala.id}/${acao}`, {
+      const res = await fetch(`${API}/professor/sala/${sala.id}/${acao}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -355,9 +356,14 @@ function Salas() {
                       <p>{sala.serie} · {sala.materia}</p>
                     </div>
 
-                    <span className={`sala-selo ${encerrada ? 'off' : 'on'}`}>
-                      {encerrada ? 'Encerrada' : 'Ativa'}
-                    </span>
+                    <div className="sala-selos">
+                      {sala.tipo_sala === 'temporaria' && (
+                        <span className="sala-selo tempo">Temporária</span>
+                      )}
+                      <span className={`sala-selo ${encerrada ? 'off' : 'on'}`}>
+                        {encerrada ? 'Encerrada' : 'Ativa'}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="sala-dados">
@@ -401,6 +407,16 @@ function Salas() {
 
                   {encerrada && (
                     <p className="sala-aviso">Os alunos não conseguem entrar nesta sala.</p>
+                  )}
+
+                  {!encerrada && (
+                    <button
+                      className="sala-btn-aovivo"
+                      onClick={() => navigate(`/professor/ao-vivo/${sala.id}`)}
+                      title="Abrir a sala de espera e jogar com a turma em tempo real"
+                    >
+                      <Radio size={16} strokeWidth={2.2} /> Começar aula ao vivo
+                    </button>
                   )}
 
                   <div className="sala-cartao-acoes">

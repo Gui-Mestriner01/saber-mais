@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { School, Plus, Users, Inbox, Trophy, Star } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
+import { API } from '../api';
 
 function DashboardProfessor() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ function DashboardProfessor() {
     const token = localStorage.getItem('token');
 
     try {
-      const resSalas = await fetch('http://localhost:3001/professor/salas', {
+      const resSalas = await fetch(`${API}/professor/salas`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (resSalas.ok) {
@@ -37,7 +38,7 @@ function DashboardProfessor() {
         setSalas(dataSalas);
       }
 
-      const resDash = await fetch('http://localhost:3001/professor/dashboard-resumo', {
+      const resDash = await fetch(`${API}/professor/dashboard-resumo`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 

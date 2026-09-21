@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
 import '../CSS/Login.css';
+import { API } from '../api';
 
 function LoginProfessor() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ function LoginProfessor() {
     setCarregando(true);
 
     try {
-      const response = await fetch('http://localhost:3001/login/professor', {
+      const response = await fetch(`${API}/login/professor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha }),
@@ -115,7 +116,7 @@ function LoginProfessor() {
               setCarregando(true);
 
               try {
-                const response = await fetch('http://localhost:3001/login/google', {
+                const response = await fetch(`${API}/login/google`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ 

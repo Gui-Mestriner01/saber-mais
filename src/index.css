@@ -17,7 +17,6 @@ html, body, #root {
    sistema inteiro falar a mesma língua. Mexendo aqui, muda tudo.
    ========================================================================== */
 :root {
-  /* O céu do Saber+ — azul em cima, verdinho embaixo */
   --ceu: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
 
   --superficie:   #FFFFFF;
@@ -67,7 +66,6 @@ button, input, select, textarea {
   font-family: inherit;
 }
 
-/* Ícones da lucide-react alinhados com o texto */
 svg.lucide {
   flex-shrink: 0;
   vertical-align: middle;

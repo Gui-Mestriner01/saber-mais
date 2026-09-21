@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/LigarAluno.css';
 import '../CSS/ResponderVF.css'; // <-- Importando o CSS para usarmos as telas bonitas de troféu e confirmação
+import { API } from '../api';
 
 function embaralhar(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
@@ -35,7 +36,7 @@ function LigarAluno() {
 
   const buscarAtividade = async () => {
     try {
-      const res  = await fetch(`http://localhost:3001/atividade/${atividade.id}`);
+      const res  = await fetch(`${API}/atividade/${atividade.id}`);
       const data = await res.json();
       const pares = data.conteudo?.pares || [];
       setParesA(embaralhar(pares.map((p, i) => ({ ...p.ladoA, parId: i }))));
@@ -120,7 +121,7 @@ function LigarAluno() {
     setResultado(res);
 
     try {
-      await fetch(`http://localhost:3001/atividade/${atividade.id}/resposta`, {
+      await fetch(`${API}/atividade/${atividade.id}/resposta`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

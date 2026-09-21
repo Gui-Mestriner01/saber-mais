@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Admin.css';
+import { API } from '../api';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ function AdminDashboard() {
   const buscarProfessores = async () => {
     setCarregando(true);
     try {
-      const res = await fetch(`http://localhost:3001/admin/professores?status=${filtro}`, {
+      const res = await fetch(`${API}/admin/professores?status=${filtro}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -29,7 +30,7 @@ function AdminDashboard() {
 
   const handleAcao = async (id, acao) => {
     try {
-      await fetch(`http://localhost:3001/admin/professor/${id}/${acao}`, {
+      await fetch(`${API}/admin/professor/${id}/${acao}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });

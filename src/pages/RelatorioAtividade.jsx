@@ -2,8 +2,10 @@ import { useState } from 'react';
 import {
   ArrowLeft, Check, X, Minus, Users, Percent, ChevronRight, ChevronDown, Save,
   Maximize2, Minimize2, Calendar, Clock,
-  ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList
+  ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList,
+  ArrowDownUp, LayoutGrid, Shapes
 } from 'lucide-react';
+import { API } from '../api';
 
 /* ==========================================================================
    RELATÓRIO DE UMA ATIVIDADE
@@ -15,9 +17,11 @@ import {
      correção manual.
    ========================================================================== */
 
-const VERDE    = '#3DAA5C';
-const VERMELHO = '#E23F3F';
-const AZUL     = '#1A6FC4';
+// Lidas dos tokens em index.css, para que o modo daltonismo do menu de
+// acessibilidade também troque a cor de "certo" e "errado" aqui.
+const VERDE    = 'var(--verde)';
+const VERMELHO = 'var(--vermelho)';
+const AZUL     = 'var(--azul)';
 
 function IconeDoTipo({ tipo, size = 20 }) {
   const props = { size, strokeWidth: 1.75 };
@@ -26,6 +30,9 @@ function IconeDoTipo({ tipo, size = 20 }) {
   if (tipo === 'ligar')           return <Link2 {...props} />;
   if (tipo === 'pintura')         return <Palette {...props} />;
   if (tipo === 'resposta_aberta') return <PenLine {...props} />;
+  if (tipo === 'ordenar')         return <ArrowDownUp {...props} />;
+  if (tipo === 'memoria')         return <LayoutGrid {...props} />;
+  if (tipo === 'grupos')          return <Shapes {...props} />;
   return <ClipboardList {...props} />;
 }
 
@@ -304,7 +311,7 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
                       <span
                         className="pergunta-acerto"
                         style={{
-                          background: pctAcerto >= 60 ? '#E8F7ED' : '#FDEDED',
+                          background: pctAcerto >= 60 ? 'var(--verde-lavado)' : 'var(--vermelho-lavado)',
                           color: pctAcerto >= 60 ? VERDE : VERMELHO
                         }}
                       >
@@ -433,7 +440,7 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
 
     setSalvando(true);
     try {
-      const res = await fetch(`http://localhost:3001/professor/resposta/${resposta.id}/corrigir`, {
+      const res = await fetch(`${API}/professor/resposta/${resposta.id}/corrigir`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -502,6 +509,27 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
       });
     }
 
+    // Colocar em ordem: cada item com a posição que o aluno deu e a certa
+    if (tipo === 'ordenar' && Array.isArray(resposta.resposta?.itens)) {
+      return resposta.resposta.itens.map(it => ({
+        pergunta: it.texto,
+        escolha: `${it.posicaoAluno}º lugar`,
+        correto: `${it.posicaoCerta}º lugar`,
+        estado: it.posicaoAluno === it.posicaoCerta ? 'certo' : 'errado',
+      }));
+    }
+
+    // Separar em grupos: cada item com o grupo escolhido e o certo
+    if (tipo === 'grupos' && Array.isArray(resposta.resposta?.itens)) {
+      const nomes = resposta.resposta.grupos || [];
+      return resposta.resposta.itens.map(it => ({
+        pergunta: it.texto,
+        escolha: nomes[it.grupoAluno] ?? `Grupo ${Number(it.grupoAluno) + 1}`,
+        correto: nomes[it.grupoCerto] ?? `Grupo ${Number(it.grupoCerto) + 1}`,
+        estado: it.grupoAluno === it.grupoCerto ? 'certo' : 'errado',
+      }));
+    }
+
     return [];
   };
 
@@ -519,6 +547,16 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
       return <img className="resposta-imagem" src={r.url || r.imagem} alt="Resposta do aluno" />;
     }
     if (r.texto) return <p className="resposta-texto">{r.texto}</p>;
+    // Jogo da memória: não tem certo ou errado, tem quantas tentativas
+    if (typeof r.tentativas === 'number') {
+      return (
+        <p className="resposta-texto">
+          Achou os {r.pares} pares em {r.tentativas} tentativas
+          ({r.estrelas} {r.estrelas === 1 ? 'estrela' : 'estrelas'}).
+          O mínimo possível seria {r.pares}.
+        </p>
+      );
+    }
     return <pre className="resposta-bruta">{JSON.stringify(r, null, 2)}</pre>;
   };
 

@@ -4,11 +4,12 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   AreaChart, Area
 } from 'recharts';
-import { FileText, ArrowRight, Inbox, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, Flame, Send, Search, X, Calendar } from 'lucide-react';
+import { FileText, ArrowRight, Inbox, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, Flame, Send, Search, X, Calendar, ArrowDownUp, LayoutGrid, Shapes } from 'lucide-react';
 import RelatorioAtividade from './RelatorioAtividade';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import '../CSS/Relatorios.css';
+import { API } from '../api';
 
 /* --------------------------------------------------------------------------
    Paleta dos gráficos.
@@ -24,6 +25,11 @@ const CORES_TIPO = {
   ligar:           '#1BAF7A',
   pintura:         '#6B4C9A',
   resposta_aberta: '#E87BA4',
+  // Os três tipos novos. A paleta de 8 foi validada de novo para daltonismo
+  // (script do dataviz: separação entre vizinhas ≥ 9 ΔE em protan).
+  ordenar:         '#9C7A00',
+  memoria:         '#0098B8',
+  grupos:          '#C0392B',
 };
 
 const NOMES_TIPO = {
@@ -32,6 +38,9 @@ const NOMES_TIPO = {
   ligar: 'Ligar correspondentes',
   pintura: 'Pintura',
   resposta_aberta: 'Resposta aberta',
+  ordenar: 'Colocar em ordem',
+  memoria: 'Jogo da memória',
+  grupos: 'Separar em grupos',
 };
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
@@ -64,7 +73,7 @@ function Relatorios() {
 
   const buscarAtividades = async () => {
     try {
-      const res = await fetch('http://localhost:3001/professor/atividades', {
+      const res = await fetch(`${API}/professor/atividades`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -88,10 +97,10 @@ function Relatorios() {
     setAtvSelecionada(atv);
     try {
       const [resRes, atvRes] = await Promise.all([
-        fetch(`http://localhost:3001/professor/atividade/${atv.id}/respostas`, {
+        fetch(`${API}/professor/atividade/${atv.id}/respostas`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }),
-        fetch(`http://localhost:3001/atividade/${atv.id}`)
+        fetch(`${API}/atividade/${atv.id}`)
       ]);
       const respostasData = await resRes.json();
       const atvData       = await atvRes.json();
@@ -115,6 +124,9 @@ function Relatorios() {
     if (tipo === 'ligar')           return <Link2 {...props} />;
     if (tipo === 'pintura')         return <Palette {...props} />;
     if (tipo === 'resposta_aberta') return <PenLine {...props} />;
+    if (tipo === 'ordenar')         return <ArrowDownUp {...props} />;
+    if (tipo === 'memoria')         return <LayoutGrid {...props} />;
+    if (tipo === 'grupos')          return <Shapes {...props} />;
     return <ClipboardList {...props} />;
   };
 

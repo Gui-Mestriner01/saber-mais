@@ -3,9 +3,15 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, School, Target, Users, Trophy, Sun, Moon, UserRound, Star, Shield,
   CheckCircle2, Clock, Lock, Search, ListChecks, Link2, Palette, PenLine,
-  ClipboardList, Inbox, LogOut, X, ChevronLeft, ChevronRight
+  ClipboardList, Inbox, LogOut, X, ChevronLeft, ChevronRight, Radio, Award,
+  ArrowDownUp, LayoutGrid, Shapes
 } from 'lucide-react';
+import Insignia from '../components/Insignia';
+import FestaInsignias from '../components/FestaInsignias';
 import '../CSS/AlunoHome.css';
+import '../CSS/AoVivo.css';
+import '../CSS/Conquistas.css';
+import { API } from '../api';
 
 // Avatares para os alunos
 const AVATARES = [
@@ -22,10 +28,10 @@ const AVATARES = [
 
 // Banners de boas vindas
 const ILUSTRACOES_BEM_VINDO = [
-  '/ilustracoes/banner1.png',
-  '/ilustracoes/banner2.png',
-  '/ilustracoes/banner3.png',
-  '/ilustracoes/banner4.png',
+  '/ilustracoes/banner1.webp',
+  '/ilustracoes/banner2.webp',
+  '/ilustracoes/banner3.webp',
+  '/ilustracoes/banner4.webp',
 ];
 
 // Cada tipo de atividade tem seu ícone
@@ -36,6 +42,9 @@ function IconeTipo({ tipo, size = 20 }) {
   if (tipo === 'ligar')           return <Link2 {...props} />;
   if (tipo === 'pintura')         return <Palette {...props} />;
   if (tipo === 'resposta_aberta') return <PenLine {...props} />;
+  if (tipo === 'ordenar')         return <ArrowDownUp {...props} />;
+  if (tipo === 'memoria')         return <LayoutGrid {...props} />;
+  if (tipo === 'grupos')          return <Shapes {...props} />;
   return <ClipboardList {...props} />;
 }
 
@@ -44,12 +53,17 @@ function AlunoHome() {
   const navigate = useNavigate();
   const sala = state?.sala;
   const nomeAluno = state?.nomeAluno;
+  // Algumas telas de atividade antigas voltam para cá só com sala e nome.
+  // Quando o id não vem, ele é descoberto pela lista da turma (colegas),
+  // senão as insígnias e o aviso da aula ao vivo não saberiam quem é o aluno.
+  const alunoIdDoEstado = state?.alunoId;
 
   const [atividades, setAtividades]               = useState([]);
   const [pontos, setPontos]                       = useState(0);
   const [pagina, setPagina]                       = useState('home');
   const [salas]                                   = useState([sala]);
   const [colegas, setColegas]                     = useState([]);
+  const alunoId = alunoIdDoEstado ?? colegas.find(c => c.nome_aluno === nomeAluno)?.id;
   const [avatarSelecionado, setAvatarSelecionado] = useState(null);
   const [modalAvatar, setModalAvatar]             = useState(false);
 
@@ -61,6 +75,13 @@ function AlunoHome() {
   const [filtroMateria, setFiltroMateria] = useState('todas');
   const [filtroTipo, setFiltroTipo]       = useState('todos');
   const [busca, setBusca]                 = useState('');
+
+  // Aviso de aula ao vivo: o professor chamou a turma
+  const [convite, setConvite] = useState(null);
+
+  // Insígnias do aluno nesta turma, e as que ele acabou de ganhar
+  const [conquistas, setConquistas]   = useState(null);
+  const [insigniasColegas, setInsigniasColegas] = useState({});
 
   // Relógio rodando a cada 1 segundo para atualizar os segundos na tela
   const [horaAtual, setHoraAtual] = useState(new Date());
@@ -97,9 +118,110 @@ function AlunoHome() {
     return () => clearInterval(timerCronometro);
   }, []);
 
+  /* --------------------------------------------------------------------
+     O professor chamou para a aula ao vivo?
+
+     Perguntamos ao servidor de 5 em 5 segundos. A rota é de propósito bem
+     leve (responde da memória, sem tocar no banco), porque isso roda o
+     tempo todo enquanto o aluno está na plataforma.
+
+     Cada chamada do professor tem um número que só cresce. Guardamos o
+     último número que o aluno dispensou: assim, se ele fechar o aviso e o
+     professor chamar de novo, o aviso volta a aparecer.
+     -------------------------------------------------------------------- */
+  useEffect(() => {
+    if (!sala?.id) return;
+
+    const chave = `saberPlusConviteVisto_${sala.id}`;
+    let vivo = true;
+
+    const consultar = async () => {
+      try {
+        const res = await fetch(
+          `${API}/live/convite/${sala.id}?aluno=${alunoId || ''}`
+        );
+        const dados = await res.json();
+        if (!vivo) return;
+
+        const dispensado = Number(localStorage.getItem(chave) || 0);
+        setConvite(dados.chamando && dados.conviteId > dispensado ? dados : null);
+      } catch {
+        /* sem internet agora: tenta de novo na próxima volta */
+      }
+    };
+
+    consultar();
+    const id = setInterval(consultar, 5000);
+    return () => { vivo = false; clearInterval(id); };
+  }, [sala?.id, alunoId]);
+
+  const entrarAoVivo = () => {
+    const avatar = avatarDoAluno(nomeAluno).replace('/avatares/', '');
+
+    localStorage.setItem('alunoTemporario', JSON.stringify({
+      nome: nomeAluno,
+      avatar,
+      salaId: sala.id,
+      salaNome: sala.nome,
+      codigoSala: sala.codigo,
+      alunoId,
+      // Guardado para o botão "Sair" da aula trazer o aluno de volta para
+      // esta página do jeito que ela estava, sem pedir login de novo.
+      voltar: { sala, nomeAluno, alunoId, pontos }
+    }));
+    localStorage.removeItem('jogadorLive');
+    navigate('/aluno/lobby');
+  };
+
+  const dispensarConvite = () => {
+    if (convite) localStorage.setItem(`saberPlusConviteVisto_${sala.id}`, convite.conviteId);
+    setConvite(null);
+  };
+
+  /* --------------------------------------------------------------------
+     Insígnias. O servidor mede tudo e já grava o que o aluno conquistou,
+     então aqui é só buscar e mostrar. As marcadas como "nova" são as que
+     ainda não ganharam comemoração.
+     -------------------------------------------------------------------- */
+  const buscarConquistas = async () => {
+    if (!alunoId) return;
+    try {
+      const res = await fetch(`${API}/aluno/${alunoId}/conquistas?t=${Date.now()}`);
+      if (res.ok) setConquistas(await res.json());
+    } catch {
+      /* sem conquistas por enquanto: a página continua funcionando */
+    }
+
+    // Quantas insígnias cada colega tem, para a sala de colegas
+    try {
+      const res = await fetch(`${API}/sala/${sala.id}/conquistas`);
+      if (res.ok) {
+        const dados = await res.json();
+        setInsigniasColegas(Object.fromEntries(
+          (dados.porAluno || []).map(l => [String(l.aluno_id), Number(l.total)])
+        ));
+      }
+    } catch { /* tudo bem */ }
+  };
+
+  useEffect(() => {
+    if (alunoId) buscarConquistas();
+  }, [alunoId]);
+
+  const fecharFesta = async () => {
+    // Some da tela na hora; o servidor é avisado em seguida
+    setConquistas(atual => atual && ({
+      ...atual,
+      lista: atual.lista.map(c => ({ ...c, nova: false }))
+    }));
+    try {
+      await fetch(`${API}/aluno/${alunoId}/conquistas/vistas`, { method: 'POST' });
+    } catch { /* se falhar, a festa só aparece de novo na próxima visita */ }
+  };
+
   const buscarAtividades = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/sala/${sala.id}/atividades?aluno=${encodeURIComponent(nomeAluno)}&t=${Date.now()}`);
+      const res = await fetch(`${API}/sala/${sala.id}/atividades?aluno=${encodeURIComponent(nomeAluno)}&t=${Date.now()}`);
       const data = await res.json();
       if (Array.isArray(data)) setAtividades(data);
     } catch (error) {
@@ -110,7 +232,7 @@ function AlunoHome() {
   // Busca a turma inteira (nome + pontos) para montar o pódio
   const buscarColegas = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/sala/${sala.id}/alunos?t=${Date.now()}`);
+      const res = await fetch(`${API}/sala/${sala.id}/alunos?t=${Date.now()}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setColegas(data);
@@ -152,7 +274,7 @@ function AlunoHome() {
   // PÓDIO / RANKING (dados reais da sala)
   // ==========================================
   const ranking = [...colegas]
-    .map(c => ({ nome: c.nome_aluno, pontos: Number(c.pontos) || 0 }))
+    .map(c => ({ id: c.id, nome: c.nome_aluno, pontos: Number(c.pontos) || 0 }))
     .sort((a, b) => b.pontos - a.pontos)
     .map((a, i) => ({ ...a, posicao: i + 1 }));
 
@@ -278,8 +400,11 @@ function AlunoHome() {
               atv.tipo === 'pintura' ? `/aluno/pintura` :
               atv.tipo === 'ligar'   ? `/aluno/ligar/${atv.id}` :
               atv.tipo === 'v_f'     ? `/aluno/atividade/v_f/${atv.id}` :
+              atv.tipo === 'ordenar' ? `/aluno/ordenar/${atv.id}` :
+              atv.tipo === 'memoria' ? `/aluno/memoria/${atv.id}` :
+              atv.tipo === 'grupos'  ? `/aluno/grupos/${atv.id}` :
               `/aluno/atividade/${atv.id}`,
-              { state: { atividade: atv, nomeAluno, sala } }
+              { state: { atividade: atv, nomeAluno, sala, alunoId } }
             )}
           >
             {status.textoBotao}
@@ -294,10 +419,57 @@ function AlunoHome() {
     salas: 'Minhas salas',
     atividades: 'Atividades',
     colegas: 'Sala de colegas',
+    conquistas: 'Minhas conquistas',
   }[pagina] || '';
+
+  const novasInsignias = conquistas?.lista.filter(c => c.nova) || [];
+
+  // Agrupa o catálogo na ordem em que o servidor mandou
+  const gruposInsignias = [];
+  (conquistas?.lista || []).forEach(c => {
+    let grupo = gruposInsignias.find(g => g.nome === c.grupo);
+    if (!grupo) { grupo = { nome: c.grupo, itens: [] }; gruposInsignias.push(grupo); }
+    grupo.itens.push(c);
+  });
 
   return (
     <div className="aluno-container">
+
+      {/* AVISO DE AULA AO VIVO */}
+      {convite && (
+        <div className="aovivo-chamado-fundo">
+          <div className="aovivo-chamado">
+            <span className="chamado-luz" aria-hidden="true"><Radio size={30} strokeWidth={2} /></span>
+
+            <h2>Sua aula ao vivo começou!</h2>
+            <p className="chamado-sala">{convite.salaNome}</p>
+            <p className="chamado-texto">
+              {convite.estado === 'lobby'
+                ? 'O professor está esperando a turma na sala. Entre para participar!'
+                : 'A turma já está jogando — entre agora para não perder o resto!'}
+            </p>
+
+            {convite.naSala > 0 && (
+              <p className="chamado-quantos">
+                {convite.naSala} {convite.naSala === 1 ? 'colega já entrou' : 'colegas já entraram'}
+              </p>
+            )}
+
+            <button className="chamado-entrar" onClick={entrarAoVivo}>Entrar na aula</button>
+            <button className="chamado-depois" onClick={dispensarConvite}>Agora não</button>
+          </div>
+        </div>
+      )}
+
+      {/* COMEMORAÇÃO DE INSÍGNIA NOVA
+          Espera o aviso da aula ao vivo sair da tela, para não empilhar. */}
+      {!convite && (
+        <FestaInsignias
+          novas={novasInsignias}
+          subtitulo={`Conquistada em ${sala?.nome}`}
+          aoFechar={fecharFesta}
+        />
+      )}
 
       {/* MODAL AVATAR */}
       {modalAvatar && (
@@ -360,16 +532,29 @@ function AlunoHome() {
 
         <nav className="aluno-nav">
           <button className={`aluno-nav-btn ${pagina === 'home' ? 'ativo' : ''}`} onClick={() => setPagina('home')}>
-            <Home size={18} strokeWidth={1.75} /> Página inicial
+            <Home size={18} strokeWidth={1.75} />
+            <span className="rotulo-longo">Página inicial</span>
+            <span className="rotulo-curto">Início</span>
           </button>
           <button className={`aluno-nav-btn ${pagina === 'salas' ? 'ativo' : ''}`} onClick={() => setPagina('salas')}>
-            <School size={18} strokeWidth={1.75} /> Minhas salas
+            <School size={18} strokeWidth={1.75} />
+            <span className="rotulo-longo">Minhas salas</span>
+            <span className="rotulo-curto">Salas</span>
           </button>
           <button className={`aluno-nav-btn ${pagina === 'atividades' ? 'ativo' : ''}`} onClick={() => setPagina('atividades')}>
-            <Target size={18} strokeWidth={1.75} /> Atividades
+            <Target size={18} strokeWidth={1.75} />
+            <span className="rotulo-longo">Atividades</span>
+            <span className="rotulo-curto">Atividades</span>
           </button>
           <button className={`aluno-nav-btn ${pagina === 'colegas' ? 'ativo' : ''}`} onClick={() => setPagina('colegas')}>
-            <Users size={18} strokeWidth={1.75} /> Sala de colegas
+            <Users size={18} strokeWidth={1.75} />
+            <span className="rotulo-longo">Sala de colegas</span>
+            <span className="rotulo-curto">Colegas</span>
+          </button>
+          <button className={`aluno-nav-btn ${pagina === 'conquistas' ? 'ativo' : ''}`} onClick={() => setPagina('conquistas')}>
+            <Award size={18} strokeWidth={1.75} />
+            <span className="rotulo-longo">Conquistas</span>
+            <span className="rotulo-curto">Conquistas</span>
           </button>
         </nav>
 
@@ -388,7 +573,7 @@ function AlunoHome() {
         </div>
 
         <button className="aluno-sair" onClick={sair}>
-          <LogOut size={15} strokeWidth={1.75} /> Sair
+          <LogOut size={15} strokeWidth={1.75} /> <span className="rotulo-botao">Sair</span>
         </button>
       </aside>
 
@@ -496,13 +681,17 @@ function AlunoHome() {
                   <p>{titulo}</p>
                 </div>
               </div>
-              <div className="stat-card">
-                <span className="stat-icon"><School size={22} strokeWidth={1.75} /></span>
+              <button
+                className={`stat-card stat-insignias ${novasInsignias.length > 0 ? 'tem-nova' : ''}`}
+                onClick={() => setPagina('conquistas')}
+                title="Ver minhas conquistas"
+              >
+                <span className="stat-icon"><Award size={22} strokeWidth={1.75} /></span>
                 <div>
-                  <strong>{salas.length}</strong>
-                  <p>{salas.length === 1 ? 'sala' : 'salas'}</p>
+                  <strong>{conquistas ? `${conquistas.conquistadas} de ${conquistas.total}` : '—'}</strong>
+                  <p>insígnias</p>
                 </div>
-              </div>
+              </button>
             </div>
 
             {atividades.length === 0 ? (
@@ -575,6 +764,52 @@ function AlunoHome() {
           </div>
         )}
 
+        {/* CONQUISTAS */}
+        {pagina === 'conquistas' && (
+          <div className="aluno-secao">
+            {!conquistas ? (
+              <div className="aluno-vazio">
+                <Award size={30} strokeWidth={1.4} />
+                <p>Carregando suas insígnias…</p>
+              </div>
+            ) : (
+              <>
+                <div className="conquistas-resumo">
+                  <div className="conquistas-contador">
+                    {conquistas.conquistadas}<small> / {conquistas.total}</small>
+                  </div>
+                  <div className="conquistas-resumo-texto">
+                    <h3>Suas insígnias em {sala?.nome}</h3>
+                    <p>
+                      {conquistas.conquistadas === 0
+                        ? 'Faça sua primeira atividade para ganhar a primeira!'
+                        : conquistas.conquistadas === conquistas.total
+                          ? 'Você conquistou todas. Que demais!'
+                          : 'Cada turma tem as suas: aqui você coleciona as desta.'}
+                    </p>
+                    <div className="conquistas-barra">
+                      <i style={{ width: `${Math.round((conquistas.conquistadas / conquistas.total) * 100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                {gruposInsignias.map(grupo => (
+                  <section key={grupo.nome} className="conquistas-grupo">
+                    <h3>{grupo.nome}</h3>
+                    <div className="conquistas-grade">
+                      {grupo.itens.map(c => (
+                        <div key={c.codigo} className={`conquistas-cartao ${c.conquistada ? 'conquistada' : ''}`}>
+                          <Insignia insignia={c} />
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
         {/* SALA DE COLEGAS — PÓDIO DE CIMA PARA BAIXO */}
         {pagina === 'colegas' && (
           <div className="aluno-secao">
@@ -601,7 +836,14 @@ function AlunoHome() {
                       <span className="podio-lugar">{a.posicao}º</span>
                       <img className="podio-foto" src={avatarDoAluno(a.nome)} alt={a.nome} />
                       <div className="podio-dados">
-                        <strong>{a.nome}{a.nome === nomeAluno && <span className="podio-voce">você</span>}</strong>
+                        <strong>
+                          {a.nome}{a.nome === nomeAluno && <span className="podio-voce">você</span>}
+                          {insigniasColegas[String(a.id)] > 0 && (
+                            <span className="colegas-insignias" title="Insígnias nesta turma">
+                              <Award size={11} strokeWidth={2.4} /> {insigniasColegas[String(a.id)]}
+                            </span>
+                          )}
+                        </strong>
                         <p>Nível {calcularNivel(a.pontos).nivel} · {calcularNivel(a.pontos).titulo}</p>
                       </div>
                       <span className="podio-pontos">{a.pontos} pts</span>
@@ -640,7 +882,10 @@ function tipoNome(tipo) {
     resposta_aberta: 'Resposta aberta',
     ligar: 'Ligar correspondentes',
     pintura: 'Pintar cenário',
-    v_f: 'Verdadeiro ou falso'
+    v_f: 'Verdadeiro ou falso',
+    ordenar: 'Colocar em ordem',
+    memoria: 'Jogo da memória',
+    grupos: 'Separar em grupos'
   }[tipo] || tipo;
 }
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { School, ArrowLeft, Camera, UserRound, AtSign, Phone, Building2, BookOpen, Users, ClipboardList, Check, KeyRound, Save } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
+import { API } from '../api';
 
 function PerfilProfessor() {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ function PerfilProfessor() {
 
   const buscarPerfil = async () => {
     try {
-      const res = await fetch('http://localhost:3001/professor/perfil', {
+      const res = await fetch(`${API}/professor/perfil`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -52,7 +53,7 @@ function PerfilProfessor() {
 
   const buscarSalas = async () => {
     try {
-      const res = await fetch('http://localhost:3001/professor/salas', {
+      const res = await fetch(`${API}/professor/salas`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -65,7 +66,7 @@ function PerfilProfessor() {
   // Quantidade real de alunos e de atividades — nada de número estimado
   const buscarTotais = async () => {
     try {
-      const res = await fetch('http://localhost:3001/professor/dashboard-resumo', {
+      const res = await fetch(`${API}/professor/dashboard-resumo`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -79,7 +80,7 @@ function PerfilProfessor() {
     e.preventDefault();
     setSalvando(true);
     try {
-      const res = await fetch('http://localhost:3001/professor/perfil', {
+      const res = await fetch(`${API}/professor/perfil`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

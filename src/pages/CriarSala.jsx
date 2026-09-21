@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
+import { API } from '../api';
 
 // Gera o código que o aluno digita para achar a sala
 const gerarCodigo = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -34,7 +35,7 @@ function CriarSala() {
     setSalvando(true);
 
     try {
-      const response = await fetch('http://localhost:3001/professor/sala', {
+      const response = await fetch(`${API}/professor/sala`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ function CriarSala() {
       id: 'temporaria',
       Icone: Timer,
       titulo: 'Sala temporária',
-      descricao: 'Expira em 10 horas. Acesso rápido, sem senha — boa para uma atividade pontual ou uma aula avulsa.',
+      descricao: 'Expira em 6 horas. Acesso rápido, sem senha — boa para uma atividade pontual ou uma aula avulsa.',
     },
   ];
 
@@ -159,7 +160,7 @@ function CriarSala() {
 
             <p className="criar-sucesso-dica">
               {tipoSala === 'temporaria'
-                ? 'Passe o código para a turma. A sala fica no ar por 10 horas.'
+                ? 'Passe o código para a turma. A sala fica no ar por 6 horas.'
                 : 'Passe o código e a senha para a turma. Você reencontra os dois em Minhas salas.'}
             </p>
 

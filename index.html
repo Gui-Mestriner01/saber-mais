@@ -2,8 +2,21 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: usa a tela toda nos celulares com "notch";
+         as barras do app respeitam a área segura (env(safe-area-inset-*)) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title> Saber+ </title>
+    <meta name="description" content="Saber+: aulas gamificadas. O professor cria atividades e os alunos aprendem jogando." />
+
+    <!-- App instalável (PWA) -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1A6FC4" />
+    <link rel="icon" type="image/png" href="/icones/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/icones/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Saber+" />
   </head>
   
   <body>

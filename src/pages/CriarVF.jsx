@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/CriarVF.css'; 
+import { API } from '../api';
 
 function CriarVF() {
   const navigate = useNavigate();
@@ -98,7 +99,7 @@ function CriarVF() {
     });
 
     try {
-      const res = await fetch('http://localhost:3001/professor/atividades/v_f', {
+      const res = await fetch(`${API}/professor/atividades/v_f`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`

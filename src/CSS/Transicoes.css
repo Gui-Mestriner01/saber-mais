@@ -1,0 +1,97 @@
+/* ==========================================================================
+   ANIMAÇÕES DE NAVEGAÇÃO
+
+   Toda vez que a página muda, o conteúdo entra suave: aparece subindo um
+   pouquinho, e os blocos da página chegam um depois do outro, em cascata.
+
+   Dois cuidados:
+   - A animação usa `animation-fill-mode: backwards`. Assim, quando ela
+     acaba, não sobra nenhum `transform` no elemento — um transform parado
+     faria as janelas com `position: fixed` (avisos, modais) medirem pelo
+     elemento em vez da tela.
+   - Quem ligou "Reduzir animações" no menu de acessibilidade, ou pediu isso
+     no sistema, vê a página pronta na hora: duração e atraso vão a zero.
+   ========================================================================== */
+
+@keyframes pagina-entrar {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes bloco-entrar {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* A página inteira */
+.pagina-animada {
+  animation: pagina-entrar .35s cubic-bezier(.2, .8, .2, 1) backwards;
+}
+
+/* Os blocos de dentro das páginas do professor e do aluno, em cascata */
+.pagina-animada .dashboard-main > *,
+.pagina-animada .aluno-main > *,
+.pagina-animada .aluno-secao > *,
+.pagina-animada .nova-atividade > * {
+  animation: bloco-entrar .45s cubic-bezier(.2, .8, .2, 1) backwards;
+}
+
+.pagina-animada .dashboard-main > *:nth-child(2),
+.pagina-animada .aluno-main > *:nth-child(2),
+.pagina-animada .aluno-secao > *:nth-child(2),
+.pagina-animada .nova-atividade > *:nth-child(2) { animation-delay: .06s; }
+
+.pagina-animada .dashboard-main > *:nth-child(3),
+.pagina-animada .aluno-main > *:nth-child(3),
+.pagina-animada .aluno-secao > *:nth-child(3),
+.pagina-animada .nova-atividade > *:nth-child(3) { animation-delay: .12s; }
+
+.pagina-animada .dashboard-main > *:nth-child(4),
+.pagina-animada .aluno-main > *:nth-child(4),
+.pagina-animada .aluno-secao > *:nth-child(4),
+.pagina-animada .nova-atividade > *:nth-child(4) { animation-delay: .18s; }
+
+.pagina-animada .dashboard-main > *:nth-child(n+5),
+.pagina-animada .aluno-main > *:nth-child(n+5),
+.pagina-animada .aluno-secao > *:nth-child(n+5),
+.pagina-animada .nova-atividade > *:nth-child(n+5) { animation-delay: .24s; }
+
+/* Pequenos retornos ao passar o mouse e clicar.
+   :where() deixa essas regras com peso zero: qualquer regra específica
+   que um botão ou cartão já tenha continua valendo por cima destas. */
+:where(button, .sala-cartao, .tipo-card, .dash-card, .conquistas-cartao) {
+  transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+:where(.sala-cartao, .tipo-card, .conquistas-cartao):hover { transform: translateY(-3px); }
+
+:where(button):active:not(:disabled) { transform: scale(.97); }
+
+/* O item ativo do menu lateral "acende" quando a página abre */
+.sidebar .nav-item.active { animation: item-acender .35s ease backwards; }
+
+@keyframes item-acender {
+  from { opacity: .4; transform: scale(.94); }
+  to   { opacity: 1;  transform: none; }
+}
+
+/* ---------- menos animação ---------- */
+body.a11y-sem-animacao .pagina-animada,
+body.a11y-sem-animacao .pagina-animada * {
+  animation-delay: 0s !important;
+  animation-duration: .001s !important;
+}
+body.a11y-sem-animacao :where(.sala-cartao, .tipo-card, .conquistas-cartao):hover,
+body.a11y-sem-animacao :where(button):active { transform: none; }
+body.a11y-sem-animacao .sidebar .nav-item.active { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pagina-animada,
+  .pagina-animada * {
+    animation-delay: 0s !important;
+    animation-duration: .001s !important;
+  }
+  :where(.sala-cartao, .tipo-card, .conquistas-cartao):hover,
+  :where(button):active { transform: none; }
+  .sidebar .nav-item.active { animation: none; }
+}

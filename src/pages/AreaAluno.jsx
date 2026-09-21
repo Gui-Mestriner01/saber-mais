@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/AreaAluno.css';
+import { API } from '../api';
 
 const TEMAS = {
   frutas:   ['🍎','🍌','🍇','🍓','🍊','🍋','🍉','🍑','🍒','🥭','🍍','🥝'],
@@ -25,7 +26,7 @@ function AreaAluno() {
 
   const buscarSalas = async () => {
     try {
-      const res  = await fetch('http://localhost:3001/salas');
+      const res  = await fetch(`${API}/salas`);
       const data = await res.json();
       setSalas(data);
     } catch {

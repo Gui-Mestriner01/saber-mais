@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/Ligar.css';
+import { API } from '../api';
 
 const novoPar = () => ({
   id: Date.now() + Math.random(),
@@ -87,7 +88,7 @@ function CriarLigar() {
 
     setSalvando(true);
     try {
-      const res = await fetch('http://localhost:3001/professor/atividade', {
+      const res = await fetch(`${API}/professor/atividade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

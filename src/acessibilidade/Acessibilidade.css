@@ -1,192 +1,537 @@
-/* --- acessibilidade/Acessibilidade.css --- */
+/* Fonte desenhada para leitura fácil: cada letra tem forma própria, o que
+   reduz a troca de b/d/p/q — uma das dificuldades comuns na dislexia. */
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap');
 
-@import url('https://fonts.cdnfonts.com/css/opendyslexic');
+/* ==========================================================================
+   ==========================================================================
+   ACESSIBILIDADE DO SABER+
 
-/* =========================================
-   1. MODO DISLEXIA (Aplicado em toda a tela)
-   ========================================= */
-body.modo-fonte-dislexia,
-body.modo-fonte-dislexia * {
-  font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif !important;
-  letter-spacing: 0.5px !important;
-  line-height: 1.6 !important;
-}
+   Duas partes:
+   1. O menu flutuante (o botão e o painel).
+   2. As classes que o menu liga no <body> e que mudam o site inteiro.
+   ==========================================================================
+   ========================================================================== */
 
-/* =========================================
-   2. MODO ESCURO (DARK MODE ELEGANTE)
-   ========================================= */
-
-/* Fundo Geral da Aplicação */
-body.modo-escuro {
-  background-color: #0f172a !important; 
-  background-image: none !important;
-  color: #f8fafc !important; 
-}
-
-/* Áreas de fundo */
-body.modo-escuro .aluno-container,
-body.modo-escuro .aluno-main,
-body.modo-escuro .aluno-secao,
-body.modo-escuro .vf-container,
-body.modo-escuro .rq-container {
-  background-color: #0f172a !important;
-  background-image: none !important;
-}
-
-/* Barra Lateral (Sidebar) */
-body.modo-escuro .aluno-sidebar {
-  background-color: #020617 !important; 
-  border-right: 1px solid #1e293b !important;
-}
-
-/* Todos os Textos Principais */
-body.modo-escuro h1, 
-body.modo-escuro h2, 
-body.modo-escuro h3, 
-body.modo-escuro p,
-body.modo-escuro span:not(.brand-plus):not(.brand-saber):not(.ranking-pos) {
-  color: #f8fafc !important;
-}
-
-/* Textos de Destaque */
-body.modo-escuro .aluno-header-texto h1 { color: #facc15 !important; } 
-body.modo-escuro .stat-card strong, 
-body.modo-escuro .vf-conclusion-title { color: #38bdf8 !important; } 
-
-/* Botões de Navegação Lateral */
-body.modo-escuro .aluno-nav-btn { color: #94a3b8 !important; }
-body.modo-escuro .aluno-nav-btn:hover { color: #f8fafc !important; background-color: #1e293b !important; }
-body.modo-escuro .aluno-nav-btn.ativo { background-color: #3b82f6 !important; color: #ffffff !important; }
-
-/* Cards Flutuantes */
-body.modo-escuro .stat-card,
-body.modo-escuro .aluno-atividade-card,
-body.modo-escuro .aluno-sala-card,
-body.modo-escuro .vf-conclusion-card,
-body.modo-escuro .rq-pergunta-card,
-body.modo-escuro .ranking-card {
-  background-color: #1e293b !important; 
-  border: 1px solid #334155 !important; 
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-}
-
-/* Banner Principal ("Olá Teste") */
-body.modo-escuro .aluno-header-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
-  border: 1px solid #334155 !important;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
-}
-
-body.modo-escuro .aluno-header-imagem-bg {
-  opacity: 0.9 !important; 
-  filter: brightness(0.75) contrast(1.1) !important;
-}
-
-/* =========================================
-   3. MENU FLUTUANTE DE ACESSIBILIDADE
-   ========================================= */
-.menu-acessibilidade-container {
+/* ==========================================================================
+   1. O BOTÃO E O PAINEL
+   ========================================================================== */
+.menu-a11y {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 99999;
+  font-family: 'Nunito', sans-serif;
+}
+
+.a11y-botao {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: #1A6FC4;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(26, 111, 196, 0.4);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.a11y-botao:hover { transform: scale(1.06); background: #155DA0; }
+.a11y-botao:focus-visible { outline: 3px solid #E0A500; outline-offset: 3px; }
+
+/* Uma bolinha laranja avisa que existe algum ajuste ligado */
+.a11y-botao.com-ajuste::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #F5812A;
+  border: 3px solid #fff;
+}
+
+.a11y-painel {
+  position: absolute;
+  bottom: 70px;
+  right: 0;
+  width: 370px;
+  max-width: calc(100vw - 32px);
+  max-height: min(78vh, 640px);
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 18px 48px rgba(42, 74, 106, 0.28);
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
+  overflow: hidden;
+  animation: a11ySobe 0.18s ease-out;
 }
 
-.menu-acessibilidade-botao {
-  width: 56px; 
-  height: 56px; 
-  border-radius: 50%;
-  background-color: #3b82f6; 
-  color: white; 
+@keyframes a11ySobe {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.a11y-painel-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: #1A6FC4;
+  color: #fff;
+}
+
+.a11y-painel-topo h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 17px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.a11y-fechar {
+  background: rgba(255, 255, 255, 0.18);
   border: none;
-  font-size: 1.8rem; 
-  cursor: pointer; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  display: flex; 
-  align-items: center; 
+  border-radius: 9px;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-}
-.menu-acessibilidade-botao:hover { 
-  transform: scale(1.1); 
-  background-color: #2563eb; 
+  cursor: pointer;
 }
 
-.menu-acessibilidade-painel {
-  background-color: white; 
-  border-radius: 16px; 
-  padding: 20px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15); 
-  border: 2px solid #e2e8f0;
-  width: 280px;
-  animation: subir 0.3s ease-out forwards;
+.a11y-fechar:hover { background: rgba(255, 255, 255, 0.32); }
+
+.a11y-conteudo {
+  overflow-y: auto;
+  padding: 6px 16px 16px;
 }
 
-.acessibilidade-opcao { 
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between; 
+/* ---------- Grupos ---------- */
+.a11y-grupo { padding: 14px 0 6px; border-bottom: 2px solid #F4F9FD; }
+.a11y-grupo:last-of-type { border-bottom: none; }
+
+.a11y-grupo h3 {
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #7AAAC8;
+  margin: 0 0 8px 4px;
 }
 
-.acessibilidade-label { 
-  font-size: 1rem; 
-  color: #475569; 
-  font-weight: 600; 
-  display: flex; 
-  gap: 8px; 
+.a11y-grupo-nota {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #7AAAC8;
+  line-height: 1.5;
+  margin: 0 4px 12px;
 }
 
-.toggle-switch { 
-  position: relative; 
-  width: 48px; 
-  height: 24px; 
-  background-color: #cbd5e1; 
-  border-radius: 12px; 
-  cursor: pointer; 
-  transition: 0.3s; 
-}
-.toggle-switch.ativo { background-color: #22c55e; }
-
-.toggle-bolinha { 
-  position: absolute; 
-  top: 2px; 
-  left: 2px; 
-  width: 20px; 
-  height: 20px; 
-  background-color: white; 
-  border-radius: 50%; 
-  transition: 0.3s; 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-.toggle-switch.ativo .toggle-bolinha { transform: translateX(24px); }
-
-/* Adaptação do Menu de Acessibilidade para o Modo Escuro */
-body.modo-escuro .menu-acessibilidade-painel {
-  background-color: #1e293b !important;
-  border: 1px solid #334155 !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+/* ---------- Linha com chave ---------- */
+.a11y-linha {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 10px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
 }
 
-body.modo-escuro .menu-acessibilidade-painel h3 {
-  color: #f8fafc !important;
+.a11y-linha:hover { background: #F4F9FD; }
+.a11y-linha:focus-visible { outline: none; border-color: #1A6FC4; }
+.a11y-linha.sem-clique { cursor: default; }
+.a11y-linha.sem-clique:hover { background: none; }
+
+.a11y-linha-icone {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
+  background: #EBF4FF;
+  color: #1A6FC4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-body.modo-escuro .acessibilidade-label {
-  color: #cbd5e1 !important;
+.a11y-linha-texto { flex: 1; min-width: 0; }
+
+.a11y-linha-texto strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #2A4A6A;
 }
 
-body.modo-escuro .toggle-switch {
-  background-color: #475569 !important; 
-}
-body.modo-escuro .toggle-switch.ativo {
-  background-color: #3b82f6 !important; 
+.a11y-linha-texto small {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7AAAC8;
+  line-height: 1.4;
+  margin-top: 1px;
 }
 
-@keyframes subir {
-  from { opacity: 0; transform: translateY(20px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+/* A chavinha */
+.a11y-chave {
+  width: 46px;
+  height: 26px;
+  min-width: 46px;
+  border-radius: 999px;
+  background: #C8DFF0;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.a11y-chave.ligada { background: #3DAA5C; }
+
+.a11y-chave-bola {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+
+.a11y-chave.ligada .a11y-chave-bola { transform: translateX(20px); }
+
+/* Os botõezinhos de menos e mais */
+.a11y-passos { display: flex; gap: 6px; }
+
+.a11y-passos button {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 2px solid #C8DFF0;
+  background: #fff;
+  color: #1A6FC4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.a11y-passos button:hover:not(:disabled) { background: #EBF4FF; border-color: #1A6FC4; }
+.a11y-passos button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---------- Escolha das cores ---------- */
+.a11y-cores { display: flex; flex-direction: column; gap: 8px; }
+
+.a11y-cor-opcao {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #F8FBFE;
+  border: 2px solid #C8DFF0;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.a11y-cor-opcao:hover { border-color: #1A6FC4; }
+
+.a11y-cor-opcao.ativa {
+  border-color: #1A6FC4;
+  background: #EBF4FF;
+  box-shadow: 0 0 0 3px rgba(26, 111, 196, 0.12);
+}
+
+.a11y-cor-amostras { display: flex; gap: 4px; }
+
+.a11y-cor-amostras i {
+  width: 18px;
+  height: 30px;
+  border-radius: 5px;
+  display: block;
+}
+
+.amostra-certo  { background: var(--verde, #3DAA5C); }
+.amostra-errado { background: var(--vermelho, #E23F3F); }
+
+.a11y-cor-texto { flex: 1; }
+
+.a11y-cor-texto strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #2A4A6A;
+}
+
+.a11y-cor-texto small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #7AAAC8;
+  line-height: 1.4;
+  margin-top: 2px;
+}
+
+.a11y-cor-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #1A6FC4;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.a11y-restaurar {
+  width: 100%;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: none;
+  border: 2px solid #C8DFF0;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #5A7A9A;
+  cursor: pointer;
+}
+
+.a11y-restaurar:hover { border-color: #E23F3F; color: #E23F3F; }
+
+/* ==========================================================================
+   2. O QUE CADA AJUSTE FAZ NO SITE
+   ========================================================================== */
+
+/* ---------- Tamanho do texto ----------
+   Mexe na raiz, então tudo que usa rem acompanha. O painel de acessibilidade
+   fica de fora, senão ele cresce junto e não cabe mais na tela. */
+body.a11y-texto-menor  { font-size: 93%; }
+body.a11y-texto-grande { font-size: 112%; }
+body.a11y-texto-maior  { font-size: 125%; }
+
+body.a11y-texto-grande .menu-a11y,
+body.a11y-texto-maior .menu-a11y,
+body.a11y-texto-menor .menu-a11y { font-size: 16px; }
+
+/* ---------- Espaçamento (WCAG 1.4.12) ---------- */
+body.a11y-espacamento p,
+body.a11y-espacamento span,
+body.a11y-espacamento li,
+body.a11y-espacamento label,
+body.a11y-espacamento strong,
+body.a11y-espacamento h1,
+body.a11y-espacamento h2,
+body.a11y-espacamento h3 {
+  letter-spacing: 0.09em !important;
+  word-spacing: 0.17em !important;
+  line-height: 1.7 !important;
+}
+
+body.a11y-espacamento .menu-a11y * {
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+}
+
+/* ---------- Fonte mais fácil de ler ---------- */
+body.a11y-fonte-legivel,
+body.a11y-fonte-legivel button,
+body.a11y-fonte-legivel input,
+body.a11y-fonte-legivel select,
+body.a11y-fonte-legivel textarea {
+  font-family: 'Atkinson Hyperlegible', 'Nunito', sans-serif !important;
+}
+
+body.a11y-fonte-legivel { letter-spacing: 0.02em; }
+
+/* ---------- Alto contraste ---------- */
+body.a11y-alto-contraste {
+  --papel: #0B0F14;
+  --superficie: #161C23;
+  --superficie-2: #1F2833;
+  --borda: #3A4756;
+  --borda-forte: #55677C;
+  --tinta: #FFFFFF;
+  --tinta-media: #D6E2EE;
+  --tinta-clara: #AFC2D4;
+  --tinta-fraca: #8FA6BB;
+  --azul: #5CB3FF;
+  --azul-escuro: #8CCBFF;
+  --azul-lavado: #16293C;
+  --laranja: #FFB055;
+  --laranja-lavado: #33230F;
+  --verde: #5BE08A;
+  --verde-lavado: #10301C;
+  --vermelho: #FF8A8A;
+  --vermelho-lavado: #3A1616;
+  --amarelo: #FFD24D;
+  --amarelo-lavado: #322A0C;
+  --ceu: #0B0F14;
+  --sombra: none;
+  --sombra-alta: 0 12px 32px rgba(0, 0, 0, 0.7);
+}
+
+body.a11y-alto-contraste .dashboard-container,
+body.a11y-alto-contraste .aluno-container,
+body.a11y-alto-contraste .quiz-builder,
+body.a11y-alto-contraste .criar-vf-container,
+body.a11y-alto-contraste .ligar-builder,
+body.a11y-alto-contraste .home-container,
+body.a11y-alto-contraste .login-container {
+  background: #0B0F14 !important;
+}
+
+body.a11y-alto-contraste .form-card,
+body.a11y-alto-contraste .sidebar,
+body.a11y-alto-contraste .aluno-sidebar,
+body.a11y-alto-contraste .resumo-card,
+body.a11y-alto-contraste .progresso-card,
+body.a11y-alto-contraste .card-feed,
+body.a11y-alto-contraste .card-podio,
+body.a11y-alto-contraste .sala-cartao,
+body.a11y-alto-contraste .rel-card,
+body.a11y-alto-contraste .gr-card,
+body.a11y-alto-contraste .pergunta-card,
+body.a11y-alto-contraste .aluno-card,
+body.a11y-alto-contraste .turma-card,
+body.a11y-alto-contraste .stat-card,
+body.a11y-alto-contraste .dash-card,
+body.a11y-alto-contraste .dash-progresso,
+body.a11y-alto-contraste .filtros-barra,
+body.a11y-alto-contraste .aluno-atividade-card,
+body.a11y-alto-contraste .perfil-capa,
+body.a11y-alto-contraste .criar-sucesso {
+  background: #161C23 !important;
+  border-color: #3A4756 !important;
+  color: #FFFFFF;
+}
+
+body.a11y-alto-contraste h1,
+body.a11y-alto-contraste h2,
+body.a11y-alto-contraste h3,
+body.a11y-alto-contraste strong { color: #FFFFFF !important; }
+
+body.a11y-alto-contraste p,
+body.a11y-alto-contraste span,
+body.a11y-alto-contraste small,
+body.a11y-alto-contraste label { color: #D6E2EE !important; }
+
+body.a11y-alto-contraste input,
+body.a11y-alto-contraste select,
+body.a11y-alto-contraste textarea {
+  background: #0B0F14 !important;
+  color: #FFFFFF !important;
+  border-color: #55677C !important;
+}
+
+/* ---------- Daltonismo ----------
+   Não adianta "simular" a cor: o que resolve é trocar o par confuso por um
+   par que a pessoa enxerga separado. Os valores vêm da paleta de Okabe e Ito,
+   pensada justamente para isso. */
+
+/* Protanopia e deuteranopia: verde e vermelho se embaralham */
+body.a11y-cores-verde-vermelho {
+  --verde:           #0072B2;   /* azul */
+  --verde-lavado:    #E2EFF8;
+  --vermelho:        #D55E00;   /* laranja queimado */
+  --vermelho-lavado: #FBEDE3;
+}
+
+/* Tritanopia: azul e verde se aproximam, amarelo puxa para o rosa */
+body.a11y-cores-azul-amarelo {
+  --verde:        #7B3294;      /* roxo */
+  --verde-lavado: #F1E9F5;
+  --amarelo:        #D55E00;    /* laranja */
+  --amarelo-lavado: #FBEDE3;
+}
+
+/* ---------- Destacar links e botões ---------- */
+body.a11y-destacar-links a,
+body.a11y-destacar-links button:not(.a11y-linha):not(.a11y-passos button) {
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+  outline: 2px solid var(--azul, #1A6FC4);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+body.a11y-destacar-links .menu-a11y button {
+  text-decoration: none !important;
+  outline: none;
+}
+
+/* ---------- Reduzir animações ---------- */
+body.a11y-sem-animacao *,
+body.a11y-sem-animacao *::before,
+body.a11y-sem-animacao *::after {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+  scroll-behavior: auto !important;
+}
+
+body.a11y-sem-animacao .emoji-acenando { animation: none !important; }
+
+/* Respeita quem já pediu isso no sistema operacional */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}
+
+/* ---------- Régua de leitura ---------- */
+.a11y-regua {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 48px;
+  pointer-events: none;
+  z-index: 99998;
+  background: rgba(255, 210, 77, 0.16);
+  border-top: 2px solid rgba(224, 165, 0, 0.55);
+  border-bottom: 2px solid rgba(224, 165, 0, 0.55);
+}
+
+/* ---------- Foco sempre visível ----------
+   Vale para todo mundo, o tempo todo: quem navega pelo teclado precisa
+   enxergar onde está. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="switch"]:focus-visible,
+[role="radio"]:focus-visible {
+  outline: 3px solid #E0A500;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- Telas pequenas ---------- */
+@media (max-width: 480px) {
+  .menu-a11y { bottom: 16px; right: 16px; }
+  .a11y-painel { width: calc(100vw - 32px); }
 }

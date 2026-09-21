@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
 import '../CSS/ResponderVF.css'; 
+import { API } from '../api';
 
 function ResponderVF() {
   const { id } = useParams();
@@ -31,7 +32,7 @@ function ResponderVF() {
 
   const buscarAtividade = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/atividade/${id}`);
+      const res = await fetch(`${API}/atividade/${id}`);
       if (res.ok) {
         const data = await res.json();
         setAtividade(data);
@@ -93,7 +94,7 @@ function ResponderVF() {
     };
 
     try {
-      const res = await fetch(`http://localhost:3001/atividade/${id}/resposta`, {
+      const res = await fetch(`${API}/atividade/${id}/resposta`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

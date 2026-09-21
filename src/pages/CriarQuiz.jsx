@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/Quiz.css';
+import { API } from '../api';
 
 const CORES = [
   { bg: '#E23F3F', icon: '▲' },
@@ -90,7 +91,7 @@ function CriarQuiz() {
 
     setSalvando(true);
     try {
-      const response = await fetch('http://localhost:3001/professor/atividade', {
+      const response = await fetch(`${API}/professor/atividade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../CSS/Quiz.css';
 import '../CSS/Pintura.css';
+import { API } from '../api';
 
 function CriarPintura() {
   const navigate  = useNavigate();
@@ -43,7 +44,7 @@ function CriarPintura() {
       const formData = new FormData();
       formData.append('imagem', imagemFile);
 
-      const uploadRes = await fetch('http://localhost:3001/professor/pintura/upload', {
+      const uploadRes = await fetch(`${API}/professor/pintura/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: formData
@@ -53,7 +54,7 @@ function CriarPintura() {
       if (!uploadRes.ok) throw new Error(uploadData.erro);
 
       // 2. Salva a atividade com a URL da imagem
-      const atvRes = await fetch('http://localhost:3001/professor/atividade', {
+      const atvRes = await fetch(`${API}/professor/atividade`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

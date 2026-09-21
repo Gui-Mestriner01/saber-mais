@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/Pintura.css';
+import { API } from '../api';
 
 const CORES = [
   '#E23F3F', '#E07820', '#D89E00', '#3DAA5C',
@@ -34,7 +35,7 @@ function PinturaAluno() {
 
   const carregarImagem = async () => {
     try {
-      const res  = await fetch(`http://localhost:3001/atividade/${atividade.id}`);
+      const res  = await fetch(`${API}/atividade/${atividade.id}`);
       const data = await res.json();
       const urlImagem = data.conteudo?.url_imagem;
 
@@ -118,7 +119,7 @@ function PinturaAluno() {
       formData.append('nome_aluno', nomeAluno);
       formData.append('sala_id', sala.id);
 
-      const res = await fetch(`http://localhost:3001/atividade/${atividade.id}/resposta/pintura`, {
+      const res = await fetch(`${API}/atividade/${atividade.id}/resposta/pintura`, {
         method: 'POST',
         body: formData
       });

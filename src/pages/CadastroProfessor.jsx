@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Cadastro.css';
+import { API } from '../api';
 
 export default function CadastroProfessor() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ nome: '', email: '', senha: '', confirmarSenha: '' });
-  const [cndb, setCndb]       = useState(null);
   const [erro, setErro]       = useState('');
   const [sucesso, setSucesso] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,15 +27,10 @@ export default function CadastroProfessor() {
       return;
     }
 
-    if (!cndb) {
-      setErro('Por favor, anexe sua Carteira Nacional Docente (CNDB).');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:3001/cadastro/professor', {
+      const res = await fetch(`${API}/cadastro/professor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,9 +43,11 @@ export default function CadastroProfessor() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.erro);
 
+      // Não tem mais fila de aprovação: a conta já nasce liberada,
+      // então é só levar o professor para o login.
       setSucesso(data.mensagem);
       setForm({ nome: '', email: '', senha: '', confirmarSenha: '' });
-      setCndb(null);
+      setTimeout(() => navigate('/login/professor'), 1500);
 
     } catch (err) {
       setErro(err.message);
@@ -99,40 +96,6 @@ export default function CadastroProfessor() {
             <div className="input-group">
               <span className="input-icon">🔒</span>
               <input name="confirmarSenha" type="password" value={form.confirmarSenha} onChange={handleChange} required placeholder="Repita sua senha" />
-            </div>
-
-            <span className="campo-label">
-              Carteira Nacional Docente (CNDB)
-              <span style={{color:'#E23F3F', marginLeft:4}}>*</span>
-            </span>
-            <div
-              className={`cndb-upload ${cndb ? 'cndb-ok' : ''}`}
-              onClick={() => document.getElementById('cndb-input').click()}
-            >
-              {cndb ? (
-                <>
-                  <span>✅</span>
-                  <p>{cndb.name}</p>
-                  <small>Clique para trocar</small>
-                </>
-              ) : (
-                <>
-                  <span>📄</span>
-                  <p>Clique para anexar sua CNDB</p>
-                  <small>PDF, JPG ou PNG</small>
-                </>
-              )}
-            </div>
-            <input
-              id="cndb-input"
-              type="file"
-              accept=".pdf,image/*"
-              style={{display:'none'}}
-              onChange={e => setCndb(e.target.files[0])}
-            />
-
-            <div className="cndb-aviso">
-              🔐 Seu cadastro será analisado por um administrador antes de ser aprovado.
             </div>
 
             <button type="submit" className="btn-cadastrar-professor" disabled={loading}>

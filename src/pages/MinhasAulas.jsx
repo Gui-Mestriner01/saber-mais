@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, ClipboardList, ChevronDown, Maximize2, Minimize2 } from 'lucide-react';
+import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, ChevronDown, Maximize2, Minimize2, ArrowDownUp, LayoutGrid, Shapes } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
+import { API } from '../api';
 
 function MinhasAulas() {
   const navigate = useNavigate();
@@ -27,13 +28,13 @@ function MinhasAulas() {
     setCarregando(true);
     const token = localStorage.getItem('token');
     try {
-      const resSalas = await fetch('http://localhost:3001/professor/salas', {
+      const resSalas = await fetch(`${API}/professor/salas`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const dataSalas = await resSalas.json();
       setSalas(dataSalas);
 
-      const resAtividades = await fetch('http://localhost:3001/professor/atividades', {
+      const resAtividades = await fetch(`${API}/professor/atividades`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const dataAtividades = await resAtividades.json();
@@ -56,6 +57,10 @@ function MinhasAulas() {
     if (tipo === 'v_f') return 'Quiz (V/F)';
     if (tipo === 'ligar') return 'Ligue os Animais';
     if (tipo === 'pintura') return 'Pintura Livre';
+    if (tipo === 'resposta_aberta') return 'Resposta aberta';
+    if (tipo === 'ordenar') return 'Colocar em ordem';
+    if (tipo === 'memoria') return 'Jogo da memória';
+    if (tipo === 'grupos') return 'Separar em grupos';
     return tipo;
   };
 
@@ -66,6 +71,10 @@ function MinhasAulas() {
     if (tipo === 'v_f')     return <CheckCircle2 {...props} />;
     if (tipo === 'ligar')   return <Link2 {...props} />;
     if (tipo === 'pintura') return <Palette {...props} />;
+    if (tipo === 'resposta_aberta') return <PenLine {...props} />;
+    if (tipo === 'ordenar') return <ArrowDownUp {...props} />;
+    if (tipo === 'memoria') return <LayoutGrid {...props} />;
+    if (tipo === 'grupos')  return <Shapes {...props} />;
     return <ClipboardList {...props} />;
   };
 
@@ -91,7 +100,7 @@ function MinhasAulas() {
 
     setClonando(true);
     try {
-      const res = await fetch(`http://localhost:3001/professor/atividade/${atividadeSelecionada.id}/clonar`, {
+      const res = await fetch(`${API}/professor/atividade/${atividadeSelecionada.id}/clonar`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useLayoutEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import LoginProfessor from './pages/LoginProfessor';
 import CadastroProfessor from './pages/CadastroProfessor';
@@ -22,14 +23,37 @@ import LoginAluno from './pages/LoginAluno';
 import CriarVF from "./pages/CriarVF";
 import ResponderVF from './pages/ResponderVF';
 import MinhasAulas from './pages/MinhasAulas';
+import SalaAoVivoAluno from './pages/SalaAoVivoAluno';
+import SalaAoVivoProfessor from './pages/SalaAoVivoProfessor';
+import ConquistasProfessor from './pages/ConquistasProfessor';
+import CriarOrdenar from './pages/CriarOrdenar';
+import CriarMemoria from './pages/CriarMemoria';
+import CriarGrupos from './pages/CriarGrupos';
+import OrdenarAluno from './pages/OrdenarAluno';
+import MemoriaAluno from './pages/MemoriaAluno';
+import GruposAluno from './pages/GruposAluno';
 import MenuAcessibilidade from './acessibilidade/MenuAcessibilidade';
+import './CSS/Transicoes.css';
+import './CSS/ModoEscuroProfessor.css';
+import './CSS/Celular.css';
+import { temaEscuroProfessorLigado } from './components/BarraLateralProfessor';
 
-function App() {
+/* A cada troca de endereço a <div> ganha uma "key" nova, o React monta a
+   página de novo e a animação de entrada (Transicoes.css) toca outra vez. */
+function RotasAnimadas() {
+  const location = useLocation();
+
+  /* Modo escuro do professor: só vale nas telas /professor/*. Ao sair delas
+     (login, telas do aluno) a classe é tirada e tudo volta ao normal.
+     useLayoutEffect evita piscar a tela clara antes de escurecer. */
+  useLayoutEffect(() => {
+    const ligado = location.pathname.startsWith('/professor') && temaEscuroProfessorLigado();
+    document.body.classList.toggle('modo-escuro-prof', ligado);
+  }, [location.pathname]);
+
   return (
-    <BrowserRouter>
-      <MenuAcessibilidade />
-
-      <Routes>
+    <div key={location.pathname} className="pagina-animada">
+      <Routes location={location}>
         <Route path="/" element={<Home />} />
         <Route path="/login/professor" element={<LoginProfessor />} />
         <Route path="/cadastro/professor" element={<CadastroProfessor />} />
@@ -53,8 +77,30 @@ function App() {
         <Route path="/aluno/login" element={<LoginAluno />} />
         <Route path="/professor/criar-v-f" element={<CriarVF />} />
         <Route path="/aluno/atividade/v_f/:id" element={<ResponderVF />} />
+
+        {/* Modo ao vivo: a sala temporária em que todo mundo joga junto */}
+        <Route path="/aluno/lobby" element={<SalaAoVivoAluno />} />
+        <Route path="/professor/ao-vivo/:salaId" element={<SalaAoVivoProfessor />} />
+        <Route path="/professor/conquistas" element={<ConquistasProfessor />} />
+
+        {/* Atividades novas: colocar em ordem, jogo da memória, separar em grupos */}
+        <Route path="/professor/criar-ordenar" element={<CriarOrdenar />} />
+        <Route path="/professor/criar-memoria" element={<CriarMemoria />} />
+        <Route path="/professor/criar-grupos" element={<CriarGrupos />} />
+        <Route path="/aluno/ordenar/:id" element={<OrdenarAluno />} />
+        <Route path="/aluno/memoria/:id" element={<MemoriaAluno />} />
+        <Route path="/aluno/grupos/:id" element={<GruposAluno />} />
         
       </Routes>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <MenuAcessibilidade />
+      <RotasAnimadas />
     </BrowserRouter>
   );
 }

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
 import '../CSS/ResponderQuiz.css';
 import '../CSS/ResponderVF.css'; 
+import { API } from '../api';
 
 function ResponderQuiz() {
   const { state } = useLocation();
@@ -48,7 +49,7 @@ function ResponderQuiz() {
 
   const buscarAtividade = async () => {
     try {
-      const res = await fetch(`http://localhost:3001/atividade/${atividade.id}`);
+      const res = await fetch(`${API}/atividade/${atividade.id}`);
       const data = await res.json();
       const lista = data.conteudo?.perguntas || data.conteudo || [];
       setPerguntas(Array.isArray(lista) ? lista : []);
@@ -115,7 +116,7 @@ function ResponderQuiz() {
     setPontos(pts);
 
     try {
-      await fetch(`http://localhost:3001/atividade/${atividade.id}/resposta`, {
+      await fetch(`${API}/atividade/${atividade.id}/resposta`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -810,3 +810,43 @@
 
 /* O cabeçalho do card precisa acomodar o selo */
 .sala-cartao-topo { align-items: flex-start; }
+
+/* ==========================================================================
+   SALA TEMPORÁRIA — BOTÃO DA PARTIDA AO VIVO
+   ========================================================================== */
+
+/* Os dois selos (tipo da sala e situação) ficam empilhados no canto do card */
+.sala-selos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.sala-selo.tempo {
+  background: var(--laranja-lavado);
+  color: var(--laranja-escuro);
+}
+
+/* Fica acima do rodapé porque é a ação principal de uma sala temporária */
+.sala-btn-aovivo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--azul);
+  border-radius: var(--r-sm);
+  background: var(--azul);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.12s;
+}
+
+.sala-btn-aovivo:hover { background: var(--azul-escuro); transform: translateY(-1px); }
+.sala-btn-aovivo:active { transform: translateY(1px); }

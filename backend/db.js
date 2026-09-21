@@ -1,5 +1,5 @@
 const mysql = require('mysql2');
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') }); // acha o .env mesmo rodando de outra pasta
 
 const db = mysql.createPool({
   host: process.env.DB_HOST,

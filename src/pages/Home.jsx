@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Home.css';
+import BotaoInstalar from '../components/BotaoInstalar';
 
 function Home() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ function Home() {
           <div className="access-card">
             <div className="avatar">
               {/* Substitua pelo nome exato da imagem que você salvou na pasta public */}
-              <img src="/imagens/professor.png" alt="Avatar Professor" className="avatar-img" />
+              <img src="/imagens/professor.webp" alt="Avatar Professor" className="avatar-img" />
             </div>
             <button className="btn-blue" onClick={() => navigate('/login/professor')}>
               ACESSO PROFESSOR
@@ -25,13 +26,15 @@ function Home() {
           <div className="access-card">
             <div className="avatar">
               {/* Substitua pelo nome exato da imagem que você salvou na pasta public */}
-              <img src="/imagens/aluno.png" alt="Avatar Aluno" className="avatar-img" />
+              <img src="/imagens/aluno.webp" alt="Avatar Aluno" className="avatar-img" />
             </div>
             <button className="btn-green" onClick={() => navigate('/aluno/area')}>
               ACESSO ALUNO
             </button>
           </div>
         </div>
+
+        <BotaoInstalar />
       </div>
     </div>
   );

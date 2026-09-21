@@ -1,0 +1,519 @@
+/* ==========================================================================
+   ==========================================================================
+   SABER+ NO CELULAR
+
+   Tudo que muda quando a tela é estreita fica aqui, num arquivo só, e é
+   carregado por último (App.jsx). No computador nada disso vale: as regras
+   estão dentro de @media (max-width: 860px) — tablet em pé e celular.
+
+   A ideia geral:
+   - O menu lateral (professor e aluno) vira uma barra fina no topo, com a
+     marca e os botões de tema/sair, e os itens do menu descem para uma
+     barra de abas embaixo, como nos apps.
+   - Grades de 2 ou 3 colunas viram 1 coluna.
+   - Os editores antigos de atividade (três colunas) ficam empilhados.
+   - Botões e áreas de toque com pelo menos 44px de altura.
+   ==========================================================================
+   ========================================================================== */
+
+/* Nomes curtos do menu: só aparecem na barra de abas do celular */
+.rotulo-curto { display: none; }
+
+/* Cartãozinho "Instalar o Saber+" da tela inicial (BotaoInstalar.jsx) */
+.instalar-app {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 440px;
+  margin: 26px auto 0;
+  padding: 12px 12px 12px 14px;
+  background: #fff;
+  border: 2px solid var(--borda);
+  border-radius: 18px;
+  box-shadow: var(--sombra);
+  text-align: left;
+}
+.instalar-app img { width: 44px; height: 44px; border-radius: 11px; flex: none; }
+.instalar-app p { flex: 1; font-size: 13.5px; font-weight: 700; color: var(--tinta-media); line-height: 1.35; }
+.instalar-app p strong { display: block; font-size: 15px; font-weight: 900; color: var(--tinta); }
+.instalar-app p svg { vertical-align: -2px; color: var(--azul); }
+.instalar-app-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 14px; min-height: 44px;
+  border: none; border-radius: 12px;
+  background: var(--azul); color: #fff;
+  font-size: 14px; font-weight: 900; cursor: pointer;
+}
+.instalar-app-fechar {
+  width: 36px; height: 36px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: var(--superficie-2); color: var(--tinta-clara); cursor: pointer;
+}
+
+@media (max-width: 860px) {
+
+  /* ------------------------------------------------------------------------
+     0. BASE
+     ------------------------------------------------------------------------ */
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    overflow-x: hidden;
+    /* sem o "flash" azul ao tocar em botões no Android */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Campo com letra menor que 16px faz o iPhone dar zoom sozinho ao tocar */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* A animação de troca de página usa só a opacidade no celular:
+     um transform, mesmo de passagem, desgruda as barras fixas da tela */
+  .pagina-animada { animation-name: pagina-entrar-cel; }
+  .pagina-animada .dashboard-main > *,
+  .pagina-animada .aluno-main > *,
+  .pagina-animada .aluno-secao > *,
+  .pagina-animada .nova-atividade > * { animation-name: pagina-entrar-cel; }
+
+  /* O botão de acessibilidade sobe para não cobrir a barra de abas */
+  .menu-a11y { right: 14px; bottom: 18px; }
+  body:has(.sidebar) .menu-a11y,
+  body:has(.aluno-sidebar) .menu-a11y {
+    bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+  .a11y-botao { width: 48px; height: 48px; }
+
+
+  /* ------------------------------------------------------------------------
+     1. MENU DO PROFESSOR E DO ALUNO → barra no topo + abas embaixo
+     ------------------------------------------------------------------------ */
+  .sidebar,
+  .aluno-sidebar {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: auto;
+    width: 100%;
+    height: calc(58px + env(safe-area-inset-top));
+    min-height: 0;
+    padding: env(safe-area-inset-top) 12px 0 16px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    border-right: none;
+    border-bottom: 1.5px solid var(--borda);
+    background: var(--superficie);
+    /* Sem blur aqui: o blur faria a barra de abas (que fica dentro) medir
+       a posição pela barra do topo em vez da tela */
+    backdrop-filter: none;
+    z-index: 900;
+    box-shadow: 0 2px 12px rgba(26, 111, 196, 0.08);
+  }
+
+  /* No tema escuro o fundo dessas barras também precisa ser opaco */
+  body.modo-escuro-prof .sidebar,
+  body.modo-escuro-prof .sidebar-nav {
+    background: var(--superficie);
+    border-color: var(--borda);
+  }
+  body.modo-escuro .aluno-sidebar,
+  body.modo-escuro .aluno-nav {
+    background: #1E293B;
+    border-color: #334155;
+  }
+  body.modo-escuro .aluno-nav-btn.ativo {
+    background: rgba(59, 139, 224, 0.2);
+    color: #7DD3FC;
+  }
+
+  .sidebar-brand,
+  .aluno-brand {
+    flex: 1;
+    font-size: 24px;
+    text-align: left;
+  }
+
+  /* Barra de abas */
+  .sidebar-nav,
+  .aluno-nav {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    margin: 0;
+    flex: none;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    background: var(--superficie);
+    border-top: 1.5px solid var(--borda);
+    box-shadow: 0 -4px 16px rgba(26, 111, 196, 0.08);
+    z-index: 900;
+  }
+
+  .nav-item,
+  .aluno-nav-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 7px 2px;
+    min-height: 56px;
+    font-size: 11.5px;
+    line-height: 1.15;
+    text-align: center;
+    border-radius: 14px;
+  }
+
+  .nav-item svg,
+  .aluno-nav-btn svg { width: 22px; height: 22px; }
+
+  .nav-item .rotulo-longo,
+  .aluno-nav-btn .rotulo-longo { display: none; }
+
+  .nav-item .rotulo-curto,
+  .aluno-nav-btn .rotulo-curto {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* No celular o item ativo não fica azul cheio: só o ícone e o texto */
+  .nav-item.active,
+  .aluno-nav-btn.ativo {
+    background: var(--azul-lavado);
+    color: var(--azul);
+    box-shadow: none;
+  }
+
+  /* Tema, sair e perfil viram botões redondos na barra do topo */
+  .sidebar-tema,
+  .sidebar-sair,
+  .aluno-sair {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    margin: 0;
+    flex: none;
+    border-radius: 50%;
+  }
+
+  .sidebar-tema svg,
+  .sidebar-sair svg,
+  .aluno-sair svg { width: 19px; height: 19px; }
+
+  .rotulo-botao {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .aluno-perfil-rodape {
+    order: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    flex: none;
+  }
+  .aluno-perfil-rodape:hover { transform: none; background: none; }
+  .perfil-rodape-foto { width: 42px; height: 42px; min-width: 42px; border-width: 2px; }
+  .perfil-rodape-info { display: none; }
+
+  /* Conteúdo entre as duas barras */
+  .dashboard-main,
+  .aluno-main {
+    margin-left: 0;
+    max-width: 100%;
+    min-width: 0;
+    padding: calc(76px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom));
+    gap: 20px;
+  }
+
+  .dashboard-container,
+  .aluno-container { display: block; }
+
+
+  /* ------------------------------------------------------------------------
+     2. CABEÇALHOS DAS PÁGINAS
+     ------------------------------------------------------------------------ */
+  .dashboard-header,
+  .dashboard-header-painel,
+  .aluno-header-top {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .dashboard-header h1,
+  .header-boas-vindas h1 { font-size: 23px; }
+
+  .header-boas-vindas p { font-size: 14px; }
+
+  .header-acoes {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn-acao-rapida { padding: 11px 14px; font-size: 14px; min-height: 44px; }
+
+  .aluno-header-pagina { font-size: 20px; }
+  .aluno-header-acoes { gap: 10px; margin-left: auto; }
+  .header-podio-texto { display: none; }
+
+
+  /* ------------------------------------------------------------------------
+     3. GRADES E CARTÕES: uma coluna
+     ------------------------------------------------------------------------ */
+  .form-row,
+  .tipos-grid,
+  .perfil-grid,
+  .stats-grid,
+  .progresso-grid,
+  .dashboard-grid-duplo,
+  .resumo-grid,
+  .gr-grade,
+  .prof-palco { grid-template-columns: 1fr !important; }
+
+  .form-card,
+  .form-card-lg {
+    max-width: 100%;
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+
+  .salas-grid,
+  .conquistas-grade { grid-template-columns: 1fr !important; }
+
+
+  /* ------------------------------------------------------------------------
+     4. TABELAS E GRÁFICOS: rolam de lado dentro do cartão, a página não
+     ------------------------------------------------------------------------ */
+  .dashboard-main table,
+  .aluno-main table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .recharts-responsive-container { min-width: 0; }
+
+
+  /* ------------------------------------------------------------------------
+     5. JANELAS (modais) ocupam quase a tela toda
+     ------------------------------------------------------------------------ */
+  .modal-card,
+  .festa-insignia {
+    width: calc(100vw - 32px) !important;
+    max-width: none;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 860px) {
+
+  /* ------------------------------------------------------------------------
+     6. ÁREA DO ALUNO (AlunoHome)
+     ------------------------------------------------------------------------ */
+  .aluno-header-card { min-height: 0; }
+  .aluno-header-texto h1 { font-size: 24px; }
+  .aluno-header-texto p { font-size: 14px; max-width: 70%; }
+
+  /* Pontos / nível / insígnias: três cartõezinhos em pé, lado a lado */
+  .aluno-stats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
+  .aluno-container .aluno-stats .stat-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 12px 6px;
+    gap: 6px;
+    min-width: 0;
+  }
+  .aluno-container .aluno-stats .stat-icon { width: 38px; height: 38px; }
+  .aluno-container .aluno-stats .stat-card strong { font-size: 17px; }
+  .aluno-container .aluno-stats .stat-card p { font-size: 11.5px; }
+
+  .aluno-salas-grid { grid-template-columns: 1fr !important; }
+  .avatares-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; }
+  .turma-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+
+  .filtros-barra { flex-direction: column; align-items: stretch; }
+  .filtros-chips { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .filtros-chips > * { flex: none; }
+  .filtros-selects { flex-wrap: wrap; }
+  .filtros-selects > * { flex: 1 1 140px; }
+
+
+  /* ------------------------------------------------------------------------
+     7. TELA INICIAL, LOGINS E ÁREA DE ENTRADA DO ALUNO
+     ------------------------------------------------------------------------ */
+  .home-container { padding: 32px 16px 104px; align-items: flex-start; }
+  .home-content { width: 100%; }
+  .brand { font-size: 56px; margin-bottom: 8px; }
+  .subtitle { font-size: 17px; margin-bottom: 22px; }
+  .cards-row { flex-direction: column; align-items: center; gap: 18px; }
+  .access-card { width: 100%; max-width: 380px; padding: 18px 18px 22px; gap: 14px; border-radius: 22px; }
+  .avatar { height: 150px; }
+  .btn-blue, .btn-green { padding: 16px; font-size: 16px; }
+
+
+  /* ------------------------------------------------------------------------
+     8. ATIVIDADES DO ALUNO (Verdadeiro/Falso, Ligar, Pintura)
+     ------------------------------------------------------------------------ */
+  /* V/F: um botão embaixo do outro */
+  .vf-container { width: 100%; min-height: 100vh; height: auto; }
+  .vf-header { padding: 14px 16px; gap: 10px; }
+  .vf-title { font-size: 1.15rem; }
+  .vf-main { padding: 16px; align-items: flex-start; }
+  .vf-question-text { font-size: 1.6rem; }
+  .vf-image { max-height: 220px; max-width: 100%; }
+  .vf-buttons-container { flex-direction: column; gap: 14px; }
+  .vf-btn { padding: 18px; border-radius: 22px; flex-direction: row; justify-content: center; }
+  .vf-btn-icon { font-size: 2.2rem; }
+  .vf-btn-text { font-size: 1.3rem; }
+
+  /* Ligar: as duas colunas continuam lado a lado, só mais estreitas */
+  .ligar-header { padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+  .ligar-brand { font-size: 20px; }
+  .ligar-header h2 { font-size: 15px; flex: 1; min-width: 0; }
+  .ligar-workspace { gap: 36px; padding: 18px 14px; overflow: visible; }
+  .ligar-coluna { flex: 1 1 0; min-width: 0; }
+  .ligar-item { width: 100%; min-height: 84px; font-size: 14px; }
+  .ligar-item-img { height: 64px; }
+
+  /* Pintura: ferramentas numa faixa em cima, desenho embaixo */
+  .pintura-container { height: auto; min-height: 100vh; }
+  .pintura-header { padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+  .pintura-brand { font-size: 20px; }
+  .pintura-titulo { font-size: 15px; }
+  .pintura-header-acoes { width: 100%; }
+  .pintura-header-acoes > * { flex: 1; }
+  .pintura-workspace { flex-direction: column; overflow: visible; }
+  .pintura-toolbar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px 18px;
+    padding: 12px 14px;
+    border-right: none;
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.9);
+    overflow: visible;
+  }
+  .toolbar-secao { flex: 1 1 auto; }
+  .pintura-canvas-wrap { padding: 12px; }
+  .pintura-canvas { width: 100%; height: auto; }
+
+
+  /* ------------------------------------------------------------------------
+     9. EDITORES ANTIGOS DO PROFESSOR (Quiz, V/F, Ligar, Pintura, Aberta)
+     As três colunas (lista | pergunta | propriedades) ficam empilhadas.
+     ------------------------------------------------------------------------ */
+  .quiz-builder,
+  .ligar-builder,
+  .criar-vf-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .quiz-sidebar,
+  .ligar-sidebar,
+  .criar-vf-sidebar-left {
+    width: 100%;
+    min-height: 0;
+    padding: 14px 16px;
+    gap: 10px;
+    border-right: none;
+    border-bottom: 1.5px solid var(--borda);
+    overflow: visible;
+  }
+
+  .quiz-brand,
+  .criar-vf-brand { font-size: 22px; text-align: left; margin: 0; }
+
+  /* Lista de perguntas vira uma fileira que rola de lado */
+  .perguntas-lista,
+  .criar-vf-question-list {
+    flex-direction: row;
+    overflow-x: auto;
+    flex: none;
+    gap: 8px;
+    padding-bottom: 4px;
+    max-height: none;
+  }
+  .perguntas-lista > *,
+  .criar-vf-question-list > * { flex: 0 0 auto; max-width: 180px; }
+
+  .criar-vf-spacer { display: none; }
+
+  .quiz-main,
+  .ligar-main,
+  .criar-vf-main {
+    padding: 18px 14px;
+    overflow: visible;
+    flex: none;
+  }
+
+  .quiz-props,
+  .criar-vf-sidebar-right {
+    width: 100%;
+    padding: 16px;
+    gap: 14px;
+    border-left: none;
+    border-top: 1.5px solid var(--borda);
+  }
+
+  .quiz-pergunta-input,
+  .criar-vf-main-input { font-size: 18px !important; padding: 16px; }
+
+  .alternativas-grid,
+  .alternativas-grid.tres { grid-template-columns: 1fr !important; }
+
+  .criar-vf-choices-wrapper { flex-direction: column; gap: 12px; }
+
+  /* Ligar (professor): cada par vira um cartãozinho com A em cima e B embaixo */
+  .ligar-header-colunas { display: none; }
+  .par-row {
+    grid-template-columns: 28px minmax(0, 1fr) 36px;
+    grid-template-areas: "num a del" ". b .";
+    row-gap: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 14px;
+    padding: 10px;
+  }
+  .par-row > .par-num { grid-area: num; }
+  .par-row > :nth-child(2) { grid-area: a; }
+  .par-row > .par-conector { display: none; }
+  .par-row > :nth-child(4) { grid-area: b; }
+  .par-row > .par-del { grid-area: del; }
+  .par-lado { min-width: 0; }
+}
+
+@media (max-width: 860px) {
+  /* Ajustes pequenos */
+  .login-content { width: 100%; padding: 0 14px; }
+  .login-card { padding: 28px 20px; }
+
+  .turma-header { flex-wrap: wrap; gap: 10px; }
+  .turma-header-botao { margin-left: auto; }
+  .atividade-item-row { flex-wrap: wrap; gap: 10px; }
+  .atividade-item-row .btn-clonar { margin-left: auto; }
+
+  .par-lado .par-input,
+  .par-lado .par-img-area { width: 100%; }
+
+  .pincel-preview { display: none; }
+
+  .modal-content { width: calc(100vw - 32px) !important; max-width: none; }
+}
+
+@keyframes pagina-entrar-cel {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

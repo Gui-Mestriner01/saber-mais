@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, School, Check,
-  ListChecks, PenLine, Link2, Palette, CircleCheck
+  ListChecks, PenLine, Link2, Palette, CircleCheck,
+  ArrowDownUp, LayoutGrid, Shapes
 } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
+import { API } from '../api';
 
 const tiposAtividade = [
   { id: 'quiz',            Icone: ListChecks,  nome: 'Quiz',                  desc: 'Perguntas de múltipla escolha' },
@@ -13,7 +15,22 @@ const tiposAtividade = [
   { id: 'ligar',           Icone: Link2,       nome: 'Ligar correspondentes', desc: 'Conectar as duas colunas' },
   { id: 'pintar',          Icone: Palette,     nome: 'Pintar cenário',        desc: 'O aluno pinta os elementos da cena' },
   { id: 'v_f',             Icone: CircleCheck, nome: 'Verdadeiro ou falso',   desc: 'Julgar se a afirmação está certa' },
+  { id: 'ordenar',         Icone: ArrowDownUp, nome: 'Colocar em ordem',      desc: 'Arrumar os itens na sequência certa' },
+  { id: 'memoria',         Icone: LayoutGrid,  nome: 'Jogo da memória',       desc: 'Virar as cartas e achar os pares' },
+  { id: 'grupos',          Icone: Shapes,      nome: 'Separar em grupos',     desc: 'Colocar cada item no grupo dele' },
 ];
+
+// Para onde cada tipo leva. Os tipos novos têm a rota com o mesmo nome do id.
+const ROTA_DO_EDITOR = {
+  quiz: '/professor/criar-quiz',
+  ligar: '/professor/criar-ligar',
+  pintar: '/professor/criar-pintura',
+  resposta_aberta: '/professor/criar-resposta-aberta',
+  v_f: '/professor/criar-v-f',
+  ordenar: '/professor/criar-ordenar',
+  memoria: '/professor/criar-memoria',
+  grupos: '/professor/criar-grupos',
+};
 
 function CriarAtividade() {
   const navigate = useNavigate();
@@ -27,7 +44,7 @@ function CriarAtividade() {
 
   const buscarSalas = async () => {
     try {
-      const res = await fetch('http://localhost:3001/professor/salas', {
+      const res = await fetch(`${API}/professor/salas`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -38,16 +55,8 @@ function CriarAtividade() {
   };
 
   const handleContinuar = () => {
-    if (tipoSelecionado === 'quiz')
-      navigate('/professor/criar-quiz', { state: { salaId: salaSelecionada } });
-    if (tipoSelecionado === 'ligar')
-      navigate('/professor/criar-ligar', { state: { salaId: salaSelecionada } });
-    if (tipoSelecionado === 'pintar')
-      navigate('/professor/criar-pintura', { state: { salaId: salaSelecionada } });
-    if (tipoSelecionado === 'resposta_aberta')
-      navigate('/professor/criar-resposta-aberta', { state: { salaId: salaSelecionada } });
-    if (tipoSelecionado === 'v_f')
-      navigate('/professor/criar-v-f', { state: { salaId: salaSelecionada } });
+    const rota = ROTA_DO_EDITOR[tipoSelecionado];
+    if (rota) navigate(rota, { state: { salaId: salaSelecionada } });
   };
 
   const salaAtual = salas.find(s => String(s.id) === String(salaSelecionada));
