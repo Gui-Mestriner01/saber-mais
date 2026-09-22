@@ -74,25 +74,25 @@ function MemoriaAluno() {
   };
 
   const terminar = async (totalTentativas) => {
+    // Prévia local (caso a internet caia); quem manda nas estrelas e nos
+    // pontos de verdade é o servidor, a partir do número de tentativas.
     const estrelas = estrelasDaMemoria(totalTentativas, pares.length);
-    const pontos = pares.length * PONTOS_POR_ESTRELAS[estrelas];
-    const resposta = {
+    const previa = {
       tentativas: totalTentativas,
       pares: pares.length,
       estrelas,
-      acertos: pares.length,
-      total: pares.length,
-      pontos
+      pontos: pares.length * PONTOS_POR_ESTRELAS[estrelas]
     };
 
     // Deixa o último par aparecer antes de trocar de tela
     setTimeout(async () => {
       try {
-        await enviar(resposta, pontos);
-      } catch {
-        setErroEnvio('Seu jogo terminou, mas não consegui salvar. Avise o professor.');
+        const corrigido = await enviar({ tentativas: totalTentativas });
+        setResultado(corrigido || previa);
+      } catch (e) {
+        setErroEnvio(e.message || 'Seu jogo terminou, mas não consegui salvar. Avise o professor.');
+        setResultado(previa);
       }
-      setResultado(resposta);
     }, 700);
   };
 

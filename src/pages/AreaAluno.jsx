@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/AreaAluno.css';
-import { API } from '../api';
+import { API, salvarAcessoSala } from '../api';
 
 const TEMAS = {
   frutas:   ['🍎','🍌','🍇','🍓','🍊','🍋','🍉','🍑','🍒','🥭','🍍','🥝'],
@@ -30,7 +30,7 @@ function AreaAluno() {
       const data = await res.json();
       setSalas(data);
     } catch {
-      console.error('Erro ao buscar salas');
+      setSalas([]);
     } finally {
       setCarregando(false);
     }
@@ -56,16 +56,27 @@ function AreaAluno() {
     setSenhaDigitada(nova);
 
     if (nova.length === 4) {
-      setTimeout(() => {
-        const senhaCorreta    = salaSelecionada.senha_emojis?.trim();
-        const senhaDigitadaStr = nova.join('').trim();
-        if (senhaCorreta === senhaDigitadaStr) {
-          navigate('/aluno/login', { state: { sala: salaSelecionada } });
-        } else {
-          setErroSenha(true);
+      // Quem confere a senha é o servidor: ela não vem mais para o navegador.
+      setTimeout(async () => {
+        try {
+          const res = await fetch(`${API}/aluno/sala/entrar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sala_id: salaSelecionada.id, senha: nova.join('') })
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setErroSenha(data.erro || true);
+            setSenhaDigitada([]);
+            return;
+          }
+          salvarAcessoSala(data.sala.id, data.token);
+          navigate('/aluno/login', { state: { sala: data.sala } });
+        } catch {
+          setErroSenha('Não consegui falar com o servidor.');
           setSenhaDigitada([]);
         }
-      }, 400);
+      }, 300);
     }
   };
 
@@ -146,7 +157,7 @@ function AreaAluno() {
               ))}
             </div>
 
-            {erroSenha && <p className="senha-erro">❌ Senha errada! Tente de novo.</p>}
+            {erroSenha && <p className="senha-erro">❌ {typeof erroSenha === 'string' ? erroSenha : 'Senha errada! Tente de novo.'}</p>}
 
             <div className="teclado-virtual">
               {TEMAS[salaSelecionada.tema_senha]?.map((emoji, i) => (

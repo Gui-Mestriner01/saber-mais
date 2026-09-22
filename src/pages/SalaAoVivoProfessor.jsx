@@ -69,7 +69,7 @@ function SalaAoVivoProfessor() {
 
   /* ---- lista de atividades desta sala ---- */
   useEffect(() => {
-    fetch(`${API}/sala/${salaId}/atividades`)
+    fetch(`${API}/sala/${salaId}/atividades`, { headers: cabecalho })
       .then(r => r.json())
       .then(lista => {
         const validas = Array.isArray(lista) ? lista.filter(a => TIPOS_AO_VIVO.includes(a.tipo)) : [];

@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
 import '../CSS/ResponderQuiz.css';
 import '../CSS/ResponderVF.css'; 
-import { API } from '../api';
+import { API, cabecalhoAluno } from '../api';
 
 function ResponderQuiz() {
   const { state } = useLocation();
@@ -12,9 +12,6 @@ function ResponderQuiz() {
   // 🛠️ Recebe os dados da Sala Temporária
   const { atividade, nomeAluno, sala, aluno, modoLive } = state || {};
 
-  // 🛠️ LÓGICA DE PASSAPORTE: Aceita tanto alunos fixos quanto os da Live!
-  const nomeFinal = nomeAluno || (aluno ? aluno.nome : 'Anônimo');
-  const salaIdFinal = sala?.id || null;
 
   const [perguntas, setPerguntas]     = useState([]);
   const [idxAtual, setIdxAtual]       = useState(0);
@@ -49,12 +46,13 @@ function ResponderQuiz() {
 
   const buscarAtividade = async () => {
     try {
-      const res = await fetch(`${API}/atividade/${atividade.id}`);
+      const res = await fetch(`${API}/atividade/${atividade.id}`, { headers: cabecalhoAluno() });
+      if (res.status === 401) { navigate('/aluno/area'); return; }
       const data = await res.json();
       const lista = data.conteudo?.perguntas || data.conteudo || [];
       setPerguntas(Array.isArray(lista) ? lista : []);
     } catch {
-      console.error('Erro ao buscar atividade');
+      setPerguntas([]);
     }
   };
 
@@ -95,40 +93,24 @@ function ResponderQuiz() {
     if (idxAtual > 0) setIdxAtual(idxAtual - 1);
   };
 
-  const calcularPontos = () => {
-    let total = 0;
-    perguntas.forEach((p, i) => {
-      if (!p.alternativas) return;
-      const corretas = p.alternativas
-        .map((a, idx) => a.correta ? idx : null)
-        .filter(v => v !== null);
-      const selecionadas = respostas[i] || [];
-      const acertou = corretas.length === selecionadas.length &&
-        corretas.every(c => selecionadas.includes(c));
-      if (acertou) total += 10;
-    });
-    return total;
-  };
-
+  // A resposta certa não vem mais para o navegador: quem corrige é o servidor,
+  // que devolve os pontos já calculados.
   const handleEnviar = async () => {
     setEnviando(true);
-    const pts = calcularPontos();
-    setPontos(pts);
 
     try {
-      await fetch(`${API}/atividade/${atividade.id}/resposta`, {
+      const res = await fetch(`${API}/atividade/${atividade.id}/resposta`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome_aluno: nomeFinal, 
-          sala_id: salaIdFinal,  
-          resposta: { respostas, pontos: pts, total: perguntas.length * 10 }
-        })
+        headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ resposta: { respostas } })
       });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) { alert(dados.erro || 'Não consegui enviar. Tente de novo.'); return; }
+      setPontos(dados.resultado?.pontos ?? 0);
       setFinalizado(true);
       setShowConfirmacao(false); 
     } catch {
-      console.error('Erro ao enviar resposta');
+      alert('Não consegui falar com o servidor. Confira a internet.');
     } finally {
       setEnviando(false);
     }

@@ -2,11 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/LigarAluno.css';
 import '../CSS/ResponderVF.css'; // <-- Importando o CSS para usarmos as telas bonitas de troféu e confirmação
-import { API } from '../api';
-
-function embaralhar(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
-}
+import { API, cabecalhoAluno } from '../api';
 
 function LigarAluno() {
   const { state }  = useLocation();
@@ -36,13 +32,15 @@ function LigarAluno() {
 
   const buscarAtividade = async () => {
     try {
-      const res  = await fetch(`${API}/atividade/${atividade.id}`);
+      // As duas colunas chegam do servidor já misturadas e com códigos
+      // diferentes de cada lado: o navegador não sabe quem combina com quem.
+      const res  = await fetch(`${API}/atividade/${atividade.id}`, { headers: cabecalhoAluno() });
+      if (res.status === 401) { navigate('/aluno/area'); return; }
       const data = await res.json();
-      const pares = data.conteudo?.pares || [];
-      setParesA(embaralhar(pares.map((p, i) => ({ ...p.ladoA, parId: i }))));
-      setParesB(embaralhar(pares.map((p, i) => ({ ...p.ladoB, parId: i }))));
+      setParesA((data.conteudo?.itensA || []).map(item => ({ ...item, parId: item.id })));
+      setParesB((data.conteudo?.itensB || []).map(item => ({ ...item, parId: item.id })));
     } catch {
-      console.error('Erro ao buscar atividade');
+      setParesA([]); setParesB([]);
     }
   };
 
@@ -107,33 +105,25 @@ function LigarAluno() {
 
   const todosConectados = paresA.length > 0 && conexoes.length === paresA.length;
 
-  const calcularResultado = () => {
-    let acertos = 0;
-    conexoes.forEach(c => {
-      if (c.parIdA === c.parIdB) acertos++;
-    });
-    return { acertos, total: paresA.length, pontos: acertos * 10 };
-  };
-
+  // Quem confere as ligações é o servidor, que devolve acertos e pontos
   const handleEnviar = async () => {
     setEnviando(true);
-    const res = calcularResultado();
-    setResultado(res);
 
     try {
-      await fetch(`${API}/atividade/${atividade.id}/resposta`, {
+      const res = await fetch(`${API}/atividade/${atividade.id}/resposta`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          nome_aluno: nomeAluno,
-          sala_id: sala.id,
-          resposta: { conexoes, acertos: res.acertos, total: res.total, pontos: res.pontos }
+          resposta: { conexoes: conexoes.map(c => ({ a: c.parIdA, b: c.parIdB })) }
         })
       });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) { alert(dados.erro || 'Não consegui enviar.'); return; }
+      setResultado(dados.resultado);
       setFinalizado(true);
       setModalEnviar(false);
     } catch {
-      console.error('Erro ao enviar');
+      alert('Não consegui falar com o servidor. Confira a internet.');
     } finally {
       setEnviando(false);
     }
@@ -141,7 +131,8 @@ function LigarAluno() {
 
   const getCor = (parIdA) => {
     const cores = ['#E23F3F','#1368CE','#D89E00','#26890C','#8B44AC','#E07820','#E91E8C','#00BCD4','#795548','#F5812A'];
-    return cores[parIdA % cores.length];
+    const posicao = Math.max(0, paresA.findIndex(p => p.parId === parIdA));
+    return cores[posicao % cores.length];
   };
 
   // ==========================================

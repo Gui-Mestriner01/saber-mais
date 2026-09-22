@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
 import '../CSS/ResponderVF.css'; 
-import { API } from '../api';
+import { API, cabecalhoAluno } from '../api';
 
 function ResponderVF() {
   const { id } = useParams();
@@ -24,15 +24,14 @@ function ResponderVF() {
   // Novo estado para guardar os pontos ganhos
   const [pontos, setPontos] = useState(0);
 
-  const alunoLogado = JSON.parse(localStorage.getItem('aluno') || '{}');
-
   useEffect(() => {
     buscarAtividade();
   }, []);
 
   const buscarAtividade = async () => {
     try {
-      const res = await fetch(`${API}/atividade/${id}`);
+      const res = await fetch(`${API}/atividade/${id}`, { headers: cabecalhoAluno() });
+      if (res.status === 401) { navigate('/aluno/area'); return; }
       if (res.ok) {
         const data = await res.json();
         setAtividade(data);
@@ -40,8 +39,7 @@ function ResponderVF() {
         alert('Erro ao carregar a atividade.');
         navigate('/aluno/home', { state: { sala, nomeAluno } });
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       alert('Erro de conexão com o servidor.');
     }
   };
@@ -67,47 +65,24 @@ function ResponderVF() {
   const enviarRespostasParaServidor = async () => {
     setSalvando(true);
     
-    let pontosCalculados = 0; // Variável para somar os pontos
-
-    const respostasFinais = atividade.conteudo.map((pergunta, index) => {
-      const acertou = respostas[index] === pergunta.resposta_correta;
-      
-      // Se acertou, ganha 10 pontos
-      if (acertou) {
-        pontosCalculados += 10;
-      }
-
-      return {
-        texto_pergunta: pergunta.texto,
-        resposta_aluno: respostas[index],
-        acertou: acertou
-      };
-    });
-
-    // Salva os pontos no estado para mostrar na tela final
-    setPontos(pontosCalculados);
-    
-    const payload = {
-      nome_aluno: nomeAluno || alunoLogado.nome_aluno || 'Aluno Teste',
-      sala_id: atividade.sala_id,
-      resposta: respostasFinais
-    };
-
+    // Vai só o que o aluno marcou (V ou F). O gabarito fica no servidor,
+    // que corrige e devolve os pontos.
     try {
       const res = await fetch(`${API}/atividade/${id}/resposta`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ resposta: { respostas } })
       });
+      const dados = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        alert('Erro ao enviar as respostas.');
+        alert(dados.erro || 'Erro ao enviar as respostas.');
       } else {
+        setPontos(dados.resultado?.pontos ?? 0);
         setFinalizado(true);
         setShowConfirmacao(false);
       }
-    } catch (error) {
-      console.error('Erro:', error);
+    } catch {
       alert('Erro de comunicação com o servidor.');
     } finally {
       setSalvando(false);

@@ -100,7 +100,7 @@ function Relatorios() {
         fetch(`${API}/professor/atividade/${atv.id}/respostas`, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
         }),
-        fetch(`${API}/atividade/${atv.id}`)
+        fetch(`${API}/atividade/${atv.id}`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
       ]);
       const respostasData = await resRes.json();
       const atvData       = await atvRes.json();

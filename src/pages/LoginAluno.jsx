@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/LoginAluno.css';
-import { API } from '../api';
+import { API, acessoSala, comToken, salvarTokenAluno } from '../api';
 
 function LoginAluno() {
   const { state }  = useLocation();
@@ -42,11 +42,12 @@ function LoginAluno() {
 
   const buscarAlunos = async () => {
     try {
-      const res  = await fetch(`${API}/sala/${sala.id}/alunos`);
+      const res  = await fetch(`${API}/sala/${sala.id}/alunos`, { headers: comToken(acessoSala(sala.id)) });
+      if (res.status === 401 || res.status === 403) { navigate('/aluno/area'); return; } // precisa da senha da sala
       const data = await res.json();
-      setAlunos(data);
+      setAlunos(Array.isArray(data) ? data : []);
     } catch {
-      console.error('Erro ao buscar alunos');
+      setErro('Não consegui carregar a turma.');
     }
   };
 
@@ -72,7 +73,7 @@ function LoginAluno() {
     try {
       const res = await fetch(`${API}/aluno/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: comToken(acessoSala(sala.id), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ aluno_id: alunoSelecionado.id, pin: pinDigitado })
       });
       const data = await res.json();
@@ -83,6 +84,7 @@ function LoginAluno() {
         return;
       }
 
+      salvarTokenAluno(data.token);
       navigate('/aluno/home', { state: { sala, nomeAluno: data.aluno.nome_aluno, alunoId: data.aluno.id, pontos: data.aluno.pontos } });
     } catch {
       setErro('Erro ao conectar.');
@@ -98,12 +100,13 @@ function LoginAluno() {
     try {
       const res = await fetch(`${API}/aluno/cadastrar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: comToken(acessoSala(sala.id), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ nome_aluno: novoNome, sala_id: sala.id, pin: novoPin })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.erro);
 
+      salvarTokenAluno(data.token);
       navigate('/aluno/home', { state: { sala, nomeAluno: novoNome, alunoId: data.id, pontos: 0 } });
     } catch (err) {
       setErro(err.message);
@@ -132,7 +135,8 @@ function LoginAluno() {
       avatar: avatarSelecionado,
       salaId: sala.id,
       salaNome: sala.nome,
-      codigoSala: sala.codigo
+      codigoSala: sala.codigo,
+      token: acessoSala(sala.id) // crachá da senha da sala: é ele que deixa entrar na partida
     };
     
     localStorage.setItem('alunoTemporario', JSON.stringify(dadosAlunoTemp));

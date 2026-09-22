@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import {
   useAtividadeAluno, JogoAluno, JanelaConfirmar, ResultadoAtividade,
-  embaralhar, estrelasPorAproveitamento, CORES_GRUPOS
+  estrelasPorAproveitamento, CORES_GRUPOS
 } from '../components/JogoAluno';
 
 /* ==========================================================================
@@ -13,13 +13,16 @@ import {
    - arrastar: pega a ficha com o mouse e solta em cima do grupo.
    Para tirar uma ficha de um grupo, é só tocar nela de novo.
 
-   resposta = { itens: [{ texto, grupoAluno, grupoCerto }], acertos, total, pontos }
+   Do servidor chegam só os NOMES dos grupos e os itens misturados, cada um
+   com um código — de que grupo cada item é fica guardado lá. O aluno manda
+   { lugares: [{ id, grupo }] } e o servidor devolve a correção:
+   { itens: [{ texto, grupoAluno, grupoCerto }], acertos, total, pontos, grupos }
    ========================================================================== */
 
 function GruposAluno() {
   const { atividade, conteudo, erro, enviar, voltar } = useAtividadeAluno();
 
-  const [lugar, setLugar] = useState({});         // texto -> índice do grupo (ou ausente = no monte)
+  const [lugar, setLugar] = useState({});         // id do item -> índice do grupo (ou ausente = no monte)
   const [ordemBanco, setOrdemBanco] = useState([]);
   const [escolhida, setEscolhida] = useState(null);
   const [confirmar, setConfirmar] = useState(false);
@@ -27,25 +30,25 @@ function GruposAluno() {
   const [resultado, setResultado] = useState(null);
   const [erroEnvio, setErroEnvio] = useState('');
 
-  const grupos = conteudo?.grupos || [];
+  const grupos = conteudo?.grupos || [];           // só os nomes
 
   useEffect(() => {
-    if (grupos.length === 0) return;
-    setOrdemBanco(embaralhar(grupos.flatMap(g => g.itens)));
+    if (conteudo?.itens) setOrdemBanco(conteudo.itens);
   }, [conteudo]);
 
-  const grupoCertoDe = (texto) => grupos.findIndex(g => g.itens.includes(texto));
-  const noMonte = ordemBanco.filter(t => lugar[t] === undefined);
+  const textoDe = Object.fromEntries(ordemBanco.map(it => [it.id, it.texto]));
+  const noMonte = ordemBanco.map(it => it.id).filter(id => lugar[id] === undefined);
 
-  const colocar = (texto, grupo) => {
-    setLugar(atual => ({ ...atual, [texto]: grupo }));
+  const colocar = (id, grupo) => {
+    if (!textoDe[id]) return;
+    setLugar(atual => ({ ...atual, [id]: grupo }));
     setEscolhida(null);
   };
 
-  const devolver = (texto) => {
+  const devolver = (id) => {
     setLugar(atual => {
       const novo = { ...atual };
-      delete novo[texto];
+      delete novo[id];
       return novo;
     });
   };
@@ -53,19 +56,16 @@ function GruposAluno() {
   const tocarGrupo = (i) => { if (escolhida) colocar(escolhida, i); };
 
   const conferir = async () => {
-    const itens = ordemBanco.map(texto => ({ texto, grupoAluno: lugar[texto], grupoCerto: grupoCertoDe(texto) }));
-    const acertos = itens.filter(it => it.grupoAluno === it.grupoCerto).length;
-    const total = itens.length;
-    const pontos = acertos * 10;
-
     setEnviando(true);
     setErroEnvio('');
     try {
-      await enviar({ itens, acertos, total, pontos, grupos: grupos.map(g => g.nome) }, pontos);
-      setResultado({ itens, acertos, total, pontos });
+      const corrigido = await enviar({
+        lugares: ordemBanco.map(it => ({ id: it.id, grupo: lugar[it.id] ?? null }))
+      });
+      setResultado(corrigido);
       setConfirmar(false);
-    } catch {
-      setErroEnvio('Não consegui enviar. Confira a internet e tente de novo.');
+    } catch (e) {
+      setErroEnvio(e.message || 'Não consegui enviar. Confira a internet e tente de novo.');
       setConfirmar(false);
     } finally {
       setEnviando(false);
@@ -85,13 +85,13 @@ function GruposAluno() {
           <h3>Como ficou</h3>
           <div className="grupos-caixas">
             {grupos.map((g, i) => (
-              <div key={g.nome} className="grupos-caixa" style={{ '--cor-grupo': CORES_GRUPOS[i], cursor: 'default', minHeight: 0 }}>
-                <h3>{g.nome}</h3>
+              <div key={g} className="grupos-caixa" style={{ '--cor-grupo': CORES_GRUPOS[i], cursor: 'default', minHeight: 0 }}>
+                <h3>{g}</h3>
                 <div className="grupos-caixa-fichas">
                   {resultado.itens.filter(it => it.grupoAluno === i).map(it => (
                     <span key={it.texto} className={`grupos-ficha ${it.grupoAluno === it.grupoCerto ? 'certo' : 'errado'}`}>
                       {it.texto}
-                      {it.grupoAluno !== it.grupoCerto && <small>era de {grupos[it.grupoCerto]?.nome}</small>}
+                      {it.grupoAluno !== it.grupoCerto && <small>era de {grupos[it.grupoCerto]}</small>}
                     </span>
                   ))}
                 </div>
@@ -118,16 +118,16 @@ function GruposAluno() {
           <div className="grupos-banco" aria-label="Itens para separar">
             {noMonte.length === 0
               ? <span className="grupos-banco-vazio">Tudo separado! Confira e aperte Terminei.</span>
-              : noMonte.map(texto => (
+              : noMonte.map(id => (
                 <button
-                  key={texto}
-                  className={`grupos-ficha ${escolhida === texto ? 'escolhida' : ''}`}
-                  onClick={() => setEscolhida(escolhida === texto ? null : texto)}
+                  key={id}
+                  className={`grupos-ficha ${escolhida === id ? 'escolhida' : ''}`}
+                  onClick={() => setEscolhida(escolhida === id ? null : id)}
                   draggable
-                  onDragStart={e => { e.dataTransfer.setData('text/plain', texto); setEscolhida(texto); }}
-                  aria-pressed={escolhida === texto}
+                  onDragStart={e => { e.dataTransfer.setData('text/plain', id); setEscolhida(id); }}
+                  aria-pressed={escolhida === id}
                 >
-                  {texto}
+                  {textoDe[id]}
                 </button>
               ))}
           </div>
@@ -135,7 +135,7 @@ function GruposAluno() {
           <div className="grupos-caixas">
             {grupos.map((g, i) => (
               <div
-                key={g.nome}
+                key={g}
                 role="button"
                 tabIndex={0}
                 className={`grupos-caixa ${escolhida ? 'pode-soltar' : ''}`}
@@ -144,18 +144,18 @@ function GruposAluno() {
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tocarGrupo(i); } }}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); colocar(e.dataTransfer.getData('text/plain'), i); }}
-                aria-label={escolhida ? `Colocar ${escolhida} em ${g.nome}` : g.nome}
+                aria-label={escolhida ? `Colocar ${textoDe[escolhida]} em ${g}` : g}
               >
-                <h3>{g.nome}</h3>
+                <h3>{g}</h3>
                 <div className="grupos-caixa-fichas">
-                  {ordemBanco.filter(t => lugar[t] === i).map(texto => (
+                  {ordemBanco.map(it => it.id).filter(id => lugar[id] === i).map(id => (
                     <button
-                      key={texto}
+                      key={id}
                       className="grupos-ficha"
-                      onClick={e => { e.stopPropagation(); devolver(texto); }}
+                      onClick={e => { e.stopPropagation(); devolver(id); }}
                       title="Tocar para tirar daqui"
                     >
-                      {texto}
+                      {textoDe[id]}
                     </button>
                   ))}
                 </div>

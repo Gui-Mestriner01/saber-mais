@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
+const crypto = require('crypto');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const path = require('path');
@@ -36,9 +38,11 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
+  // Nome aleatório e extensão tirada do TIPO da imagem (não do nome que veio):
+  // assim ninguém consegue subir um "arquivo.html" disfarçado de imagem.
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}${ext}`);
+    const ext = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/jpg': '.jpg', 'image/webp': '.webp' }[file.mimetype] || '.bin';
+    cb(null, `${Date.now()}-${require('crypto').randomBytes(8).toString('hex')}${ext}`);
   }
 });
 
@@ -54,6 +58,12 @@ const upload = multer({
 /* ==========================================================================
    2. INICIALIZAÇÃO DO APP, SERVIDOR HTTP E SOCKET.IO
    ========================================================================== */
+
+// Sem o segredo, os crachás (tokens) não teriam assinatura: nem sobe.
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+  console.error('❌ JWT_SECRET ausente ou curto demais (mínimo 16 caracteres). Configure no .env / painel.');
+  process.exit(1);
+}
 
 const app = express();
 
@@ -91,8 +101,8 @@ app.use(helmet({
   // Deixa a janelinha do "Entrar com Google" conversar com o site
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '15mb' })); // imagens do "Ligar" vêm dentro do JSON
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 app.use('/uploads', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -173,6 +183,10 @@ function autenticar(req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Crachá de aluno (ou de "passei pela senha da sala") não abre porta de professor
+    if (decoded.tipo !== 'professor' && decoded.tipo !== 'admin') {
+      return res.status(403).json({ erro: 'Acesso negado.' });
+    }
     req.usuario = decoded;
     next();
   } catch {
@@ -184,6 +198,350 @@ function apenasAdmin(req, res, next) {
   if (req.usuario.tipo !== 'admin')
     return res.status(403).json({ erro: 'Acesso negado.' });
   next();
+}
+
+/* ==========================================================================
+   3b. SEGURANÇA DO LADO DO ALUNO
+
+   Antes, várias coisas eram conferidas no navegador — e tudo que chega no
+   navegador dá para ler pelo "Inspecionar" (aba Rede/Network):
+   - a lista de salas trazia a SENHA de emojis de todas as salas;
+   - a atividade chegava com o GABARITO dentro;
+   - a nota era calculada no navegador e o servidor aceitava qualquer número;
+   - qualquer um mandava resposta em nome de qualquer aluno.
+
+   Agora funciona com "crachás" (tokens assinados pelo servidor, iguais ao
+   do professor):
+   1. Acertou a senha da sala → ganha o crachá de ACESSO àquela sala
+      (vale 3h). Com ele dá para ver a lista de alunos e entrar/cadastrar.
+   2. Acertou o PIN → ganha o crachá de ALUNO (vale 12h), com o id, o nome e
+      a sala dele. Toda rota de aluno usa o que está no crachá, nunca o que
+      vem no corpo do pedido — ninguém responde "como se fosse" outro.
+   3. O gabarito nunca sai do servidor antes da resposta: a correção e os
+      pontos são calculados aqui.
+   ========================================================================== */
+
+function lerToken(req) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return null;
+  try { return jwt.verify(token, process.env.JWT_SECRET); } catch { return null; }
+}
+
+function gerarTokenAcesso(salaId) {
+  return jwt.sign({ tipo: 'acesso_sala', sala_id: Number(salaId) }, process.env.JWT_SECRET, { expiresIn: '3h' });
+}
+
+function gerarTokenAluno({ aluno_id, nome, sala_id }) {
+  return jwt.sign(
+    { tipo: 'aluno', aluno_id: Number(aluno_id), nome, sala_id: Number(sala_id) },
+    process.env.JWT_SECRET,
+    { expiresIn: '12h' }
+  );
+}
+
+// Rotas que só o aluno logado usa (responder, conquistas...)
+function autenticarAluno(req, res, next) {
+  const dados = lerToken(req);
+  if (!dados || dados.tipo !== 'aluno') {
+    return res.status(401).json({ erro: 'Sua sessão acabou. Entre na sala de novo.' });
+  }
+  req.aluno = dados;
+  next();
+}
+
+/* Quem pode ver as coisas de UMA sala: o aluno dela, quem acabou de acertar
+   a senha dela, ou o professor dono. `pegarSalaId` diz de onde vem o id. */
+function acessoASala(pegarSalaId) {
+  return (req, res, next) => {
+    const salaId = Number(pegarSalaId(req));
+    const dados = lerToken(req);
+    if (!salaId) return res.status(400).json({ erro: 'Sala não informada.' });
+    if (!dados) return res.status(401).json({ erro: 'Entre na sala com a senha primeiro.' });
+
+    if ((dados.tipo === 'aluno' || dados.tipo === 'acesso_sala') && Number(dados.sala_id) === salaId) {
+      req.acesso = dados;
+      return next();
+    }
+
+    if (dados.tipo === 'professor' || dados.tipo === 'admin') {
+      // (sem "return db.query": o Express 5 confundiria o retorno com uma Promise)
+      db.query(`SELECT 1 FROM sala WHERE id = ? AND professor_id = ?`, [salaId, dados.id], (err, linhas) => {
+        if (err) return res.status(500).json({ erro: 'Erro ao conferir a sala.' });
+        if (linhas.length === 0) return res.status(403).json({ erro: 'Acesso negado.' });
+        req.usuario = dados;
+        next();
+      });
+      return;
+    }
+
+    return res.status(403).json({ erro: 'Acesso negado.' });
+  };
+}
+
+// Professor só mexe em sala que é dele (rotas que recebem sala_id no corpo)
+function donoDaSala(pegarSalaId) {
+  return (req, res, next) => {
+    const salaId = Number(pegarSalaId(req));
+    if (!salaId) return res.status(400).json({ erro: 'Sala não informada.' });
+    db.query(`SELECT 1 FROM sala WHERE id = ? AND professor_id = ?`, [salaId, req.usuario.id], (err, linhas) => {
+      if (err) return res.status(500).json({ erro: 'Erro ao conferir a sala.' });
+      if (linhas.length === 0) {
+        // Se veio imagem junto (V/F), ela não fica largada no servidor
+        [...(req.files || []), ...(req.file ? [req.file] : [])].forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+        return res.status(403).json({ erro: 'Essa sala não é sua.' });
+      }
+      next();
+    });
+  };
+}
+
+// Limites de tentativa. A escola inteira costuma sair por um IP só, então o
+// limite é por IP + sala / IP + aluno — uma turma não trava a outra.
+const senhaSalaLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip)}:sala:${req.body?.sala_id}`,
+  message: { erro: 'Muitas tentativas de senha. Espere uns minutinhos e tente de novo.' }
+});
+
+const pinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip)}:aluno:${req.body?.aluno_id}`,
+  message: { erro: 'Muitas tentativas de PIN. Chame o professor ou espere 15 minutos.' }
+});
+
+const PIN_VALIDO = /^\d{4}$/;
+const pinCriptografado = (pin) => typeof pin === 'string' && pin.startsWith('$2');
+
+/* ---------------- Gabarito escondido + correção no servidor ---------------- */
+
+// Identificador que não revela a posição certa, mas que o servidor sabe
+// "desfazer" na correção (assinatura com o segredo do servidor).
+function idSecreto(atividadeId, grupo, indice) {
+  return crypto.createHmac('sha256', String(process.env.JWT_SECRET))
+    .update(`${atividadeId}:${grupo}:${indice}`)
+    .digest('base64url')
+    .slice(0, 12);
+}
+
+function embaralharServidor(lista) {
+  const copia = [...lista];
+  for (let i = copia.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [copia[i], copia[j]] = [copia[j], copia[i]];
+  }
+  return copia;
+}
+
+function lerConteudo(atividade) {
+  if (typeof atividade.conteudo !== 'string') return atividade.conteudo || {};
+  try { return JSON.parse(atividade.conteudo); } catch { return {}; }
+}
+
+// Gabarito do V/F guardado como 'V'/'F' (o editor usa isso) ou true/false (versões antigas)
+function letraVF(valor) {
+  const v = String(valor ?? '').trim().toUpperCase();
+  if (v === 'V' || v === 'TRUE' || v === 'VERDADEIRO') return 'V';
+  if (v === 'F' || v === 'FALSE' || v === 'FALSO') return 'F';
+  return null;
+}
+
+function listaDePerguntas(conteudo) {
+  return Array.isArray(conteudo) ? conteudo : (conteudo?.perguntas || []);
+}
+
+function corretasDoQuiz(pergunta) {
+  return (pergunta.alternativas || [])
+    .map((a, i) => (a && typeof a === 'object' && a.correta ? i : null))
+    .filter(i => i !== null);
+}
+
+// O que o ALUNO recebe: a atividade sem nada que entregue a resposta.
+function conteudoParaAluno(atividade) {
+  const c = lerConteudo(atividade);
+
+  switch (atividade.tipo) {
+    case 'quiz': {
+      const perguntas = listaDePerguntas(c).map(p => ({
+        ...p,
+        alternativas: (p.alternativas || []).map(a => {
+          if (!a || typeof a !== 'object') return { texto: String(a ?? '') };
+          const { correta, ...resto } = a; // eslint-disable-line no-unused-vars
+          return resto;
+        })
+      }));
+      return Array.isArray(c) ? perguntas : { ...c, perguntas };
+    }
+
+    case 'v_f':
+      return listaDePerguntas(c).map(p => {
+        const { resposta_correta, ...resto } = p; // eslint-disable-line no-unused-vars
+        return resto;
+      });
+
+    case 'ligar': {
+      const pares = c.pares || [];
+      return {
+        itensA: embaralharServidor(pares.map((p, i) => ({ id: idSecreto(atividade.id, 'A', i), ...p.ladoA }))),
+        itensB: embaralharServidor(pares.map((p, i) => ({ id: idSecreto(atividade.id, 'B', i), ...p.ladoB })))
+      };
+    }
+
+    case 'ordenar': {
+      const itens = (c.itens || []).map((texto, i) => ({ id: idSecreto(atividade.id, 'O', i), texto }));
+      let misturados = embaralharServidor(itens);
+      for (let t = 0; t < 10 && itens.length > 1 && misturados.every((x, i) => x.id === itens[i].id); t++) {
+        misturados = embaralharServidor(itens);
+      }
+      return { enunciado: c.enunciado || '', itens: misturados };
+    }
+
+    case 'grupos': {
+      const grupos = c.grupos || [];
+      const itens = grupos.flatMap(g => g.itens || []).map((texto, k) => ({ id: idSecreto(atividade.id, 'G', k), texto }));
+      return { enunciado: c.enunciado || '', grupos: grupos.map(g => g.nome), itens: embaralharServidor(itens) };
+    }
+
+    default:
+      return c; // memória, pintura, resposta aberta: não têm gabarito para esconder
+  }
+}
+
+/* Corrige a resposta do aluno. Devolve:
+   - armazenar: o que vai para resposta_aluno (mesmo formato de antes, para
+     os relatórios e as insígnias continuarem funcionando);
+   - pontos: quanto o aluno ganha;
+   - resultado: o que a tela mostra depois de enviar (aí sim com o gabarito). */
+function corrigirResposta(atividade, resposta = {}) {
+  const c = lerConteudo(atividade);
+
+  switch (atividade.tipo) {
+    case 'quiz': {
+      const perguntas = listaDePerguntas(c);
+      const enviadas = resposta.respostas || {};
+      const respostas = {};
+      let acertos = 0;
+      const corretas = perguntas.map((p, i) => {
+        const certas = corretasDoQuiz(p);
+        const brutas = enviadas[i] ?? enviadas[String(i)] ?? [];
+        const escolhidas = [...new Set((Array.isArray(brutas) ? brutas : [brutas])
+          .map(Number)
+          .filter(n => Number.isInteger(n) && n >= 0 && n < (p.alternativas || []).length))];
+        respostas[i] = escolhidas;
+        if (escolhidas.length > 0 && escolhidas.length === certas.length && certas.every(x => escolhidas.includes(x))) acertos++;
+        return certas;
+      });
+      const pontos = acertos * 10;
+      return {
+        armazenar: { respostas, pontos, total: perguntas.length * 10, acertos },
+        pontos,
+        resultado: { pontos, acertos, total: perguntas.length, corretas }
+      };
+    }
+
+    case 'v_f': {
+      const perguntas = listaDePerguntas(c);
+      const enviadas = resposta.respostas || {};
+      let acertos = 0;
+      const armazenar = perguntas.map((p, i) => {
+        const valor = String(enviadas[i] ?? enviadas[String(i)] ?? '').toUpperCase();
+        const escolha = valor === 'V' || valor === 'F' ? valor : null;
+        const acertou = escolha !== null && escolha === letraVF(p.resposta_correta);
+        if (acertou) acertos++;
+        return { texto_pergunta: p.texto, resposta_aluno: escolha, acertou };
+      });
+      const pontos = acertos * 10;
+      return {
+        armazenar,
+        pontos,
+        resultado: { pontos, acertos, total: perguntas.length, corretas: perguntas.map(p => letraVF(p.resposta_correta)) }
+      };
+    }
+
+    case 'ligar': {
+      const pares = c.pares || [];
+      const indiceA = {}, indiceB = {};
+      pares.forEach((_, i) => {
+        indiceA[idSecreto(atividade.id, 'A', i)] = i;
+        indiceB[idSecreto(atividade.id, 'B', i)] = i;
+      });
+      const usadosA = new Set(), usadosB = new Set();
+      const conexoes = [];
+      const certos = [];
+      for (const cx of (Array.isArray(resposta.conexoes) ? resposta.conexoes : [])) {
+        const a = indiceA[cx?.a], b = indiceB[cx?.b];
+        if (a === undefined || b === undefined || usadosA.has(a) || usadosB.has(b)) continue;
+        usadosA.add(a); usadosB.add(b);
+        conexoes.push({ parIdA: a, parIdB: b });
+        certos.push({ a: cx.a, b: cx.b, certo: a === b });
+      }
+      const acertos = conexoes.filter(x => x.parIdA === x.parIdB).length;
+      const pontos = acertos * 10;
+      return {
+        armazenar: { conexoes, acertos, total: pares.length, pontos },
+        pontos,
+        resultado: {
+          pontos, acertos, total: pares.length, conexoes: certos,
+          pares: pares.map((_, i) => ({ a: idSecreto(atividade.id, 'A', i), b: idSecreto(atividade.id, 'B', i) }))
+        }
+      };
+    }
+
+    case 'ordenar': {
+      const itens = c.itens || [];
+      const posicaoDe = {};
+      itens.forEach((_, i) => { posicaoDe[idSecreto(atividade.id, 'O', i)] = i; });
+      const ordem = (Array.isArray(resposta.ordem) ? resposta.ordem : []).filter(id => posicaoDe[id] !== undefined);
+      const valida = ordem.length === itens.length && new Set(ordem).size === itens.length;
+      const lista = valida ? ordem : itens.map((_, i) => idSecreto(atividade.id, 'O', i)).reverse();
+      const armazenarItens = lista.map((id, i) => ({
+        texto: itens[posicaoDe[id]],
+        posicaoAluno: i + 1,
+        posicaoCerta: posicaoDe[id] + 1
+      }));
+      const acertos = valida ? armazenarItens.filter(it => it.posicaoAluno === it.posicaoCerta).length : 0;
+      const pontos = acertos * 10;
+      const armazenar = { itens: armazenarItens, acertos, total: itens.length, pontos };
+      return { armazenar, pontos, resultado: armazenar };
+    }
+
+    case 'grupos': {
+      const grupos = c.grupos || [];
+      const todos = grupos.flatMap((g, gi) => (g.itens || []).map(texto => ({ texto, grupoCerto: gi })));
+      const escolhido = {};
+      for (const l of (Array.isArray(resposta.lugares) ? resposta.lugares : [])) {
+        const g = Number(l?.grupo);
+        if (Number.isInteger(g) && g >= 0 && g < grupos.length) escolhido[l.id] = g;
+      }
+      const itens = todos.map((it, k) => ({
+        texto: it.texto,
+        grupoAluno: escolhido[idSecreto(atividade.id, 'G', k)] ?? null,
+        grupoCerto: it.grupoCerto
+      }));
+      const acertos = itens.filter(it => it.grupoAluno === it.grupoCerto).length;
+      const pontos = acertos * 10;
+      const armazenar = { itens, acertos, total: itens.length, pontos, grupos: grupos.map(g => g.nome) };
+      return { armazenar, pontos, resultado: armazenar };
+    }
+
+    case 'memoria': {
+      const pares = (c.pares || []).length;
+      const tentativas = Math.max(pares, Math.floor(Number(resposta.tentativas) || 0));
+      const estrelas = tentativas <= Math.ceil(pares * 1.5) ? 3 : tentativas <= Math.ceil(pares * 2.5) ? 2 : 1;
+      const pontos = pares * ({ 3: 10, 2: 8, 1: 6 })[estrelas];
+      const armazenar = { tentativas, pares, estrelas, acertos: pares, total: pares, pontos };
+      return { armazenar, pontos, resultado: armazenar };
+    }
+
+    default: {
+      // Resposta aberta e afins: vai para o professor corrigir. Participação vale 50.
+      const pontos = 50;
+      return { armazenar: resposta, pontos, resultado: { pontos } };
+    }
+  }
 }
 
 const TEMAS = {
@@ -266,11 +624,33 @@ app.post('/login/professor', authLimiter, async (req, res) => {
   });
 });
 
-app.post('/login/google', async (req, res) => {
-  const { email, nome, tipo, fotoUrl } = req.body;
+/* O navegador manda a "credencial" que o próprio Google assinou. Quem confere
+   é o servidor, perguntando ao Google — antes o e-mail vinha solto no corpo do
+   pedido, e qualquer um conseguia entrar na conta de qualquer professor só
+   mandando o e-mail dele. */
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
+  || '17269757270-gk04h1b82ljnu5ep0fdnctn7gru3aca1.apps.googleusercontent.com';
 
-  if (!email) return res.status(400).json({ erro: "Email não fornecido." });
+async function verificarCredencialGoogle(credencial) {
+  if (!credencial || typeof credencial !== 'string') return null;
+  try {
+    const resposta = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credencial)}`);
+    if (!resposta.ok) return null;
+    const dados = await resposta.json();
+    const emissorOk = dados.iss === 'accounts.google.com' || dados.iss === 'https://accounts.google.com';
+    const emailOk = dados.email_verified === true || dados.email_verified === 'true';
+    if (dados.aud !== GOOGLE_CLIENT_ID || !emissorOk || !emailOk || !dados.email) return null;
+    return { email: dados.email, nome: dados.name || dados.email.split('@')[0], fotoUrl: dados.picture || null };
+  } catch {
+    return null;
+  }
+}
 
+app.post('/login/google', authLimiter, async (req, res) => {
+  const google = await verificarCredencialGoogle(req.body.credential);
+  if (!google) return res.status(401).json({ erro: 'Não foi possível confirmar sua conta Google. Tente de novo.' });
+
+  const { email, nome, fotoUrl } = google;
   const emailLower = email.toLowerCase();
   const sqlSelect = `SELECT * FROM usuario WHERE email = ? AND tipo_usuario IN ('professor', 'admin')`;
 
@@ -344,33 +724,94 @@ app.post('/login/google', async (req, res) => {
   });
 });
 
-app.post('/aluno/cadastrar', (req, res) => {
-  const { nome_aluno, sala_id, pin } = req.body;
-  if (!nome_aluno || !sala_id || !pin) return res.status(400).json({ erro: 'Dados incompletos.' });
+/* --------------------------------------------------------------------------
+   ALUNO — senha de emojis da sala. A senha fica só aqui no servidor; quem
+   acerta ganha o crachá de acesso daquela sala.
+   -------------------------------------------------------------------------- */
+app.post('/aluno/sala/entrar', senhaSalaLimiter, (req, res) => {
+  const { sala_id, senha } = req.body;
+  if (!sala_id || typeof senha !== 'string') return res.status(400).json({ erro: 'Dados incompletos.' });
 
-  const sql = `INSERT INTO aluno_sala (nome_aluno, sala_id, pin) VALUES (?, ?, ?)`;
-  db.query(sql, [nome_aluno, sala_id, pin], (err, result) => {
-    if (err) return res.status(500).json({ erro: 'Erro ao cadastrar aluno.' });
-    res.status(201).json({ mensagem: 'Aluno cadastrado!', id: result.insertId });
+  const sql = `
+    SELECT s.id, s.nome, s.serie, s.materia, s.codigo, s.senha_emojis, s.tema_senha,
+           s.tipo_sala, s.status, s.expires_at, u.nome AS professor
+    FROM sala s JOIN usuario u ON s.professor_id = u.id
+    WHERE s.id = ?`;
+
+  db.query(sql, [sala_id], (err, salas) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao procurar a sala.' });
+    if (salas.length === 0) return res.status(404).json({ erro: 'Sala não encontrada.' });
+
+    const sala = salas[0];
+    if (sala.status === 'encerrada') return res.status(403).json({ erro: 'Esta sala está encerrada.' });
+    if (sala.expires_at && new Date(sala.expires_at).getTime() < Date.now()) {
+      return res.status(403).json({ erro: 'O tempo desta sala acabou.' });
+    }
+
+    const certa = Buffer.from(String(sala.senha_emojis || '').trim());
+    const digitada = Buffer.from(senha.trim());
+    const acertou = certa.length > 0 && certa.length === digitada.length && crypto.timingSafeEqual(certa, digitada);
+    if (!acertou) return res.status(401).json({ erro: 'Senha errada! Tente de novo.' });
+
+    delete sala.senha_emojis;
+    delete sala.expires_at;
+    res.json({ token: gerarTokenAcesso(sala.id), sala });
   });
 });
 
-app.post('/aluno/login', (req, res) => {
+app.post('/aluno/cadastrar', acessoASala(req => req.body.sala_id), async (req, res) => {
+  const { sala_id, pin } = req.body;
+  const nome_aluno = String(req.body.nome_aluno || '').trim().slice(0, 40);
+  if (!nome_aluno || !sala_id) return res.status(400).json({ erro: 'Dados incompletos.' });
+  if (!PIN_VALIDO.test(String(pin))) return res.status(400).json({ erro: 'O PIN precisa ter 4 números.' });
+
+  try {
+    const pinHash = await bcrypt.hash(String(pin), 10);
+    const sql = `INSERT INTO aluno_sala (nome_aluno, sala_id, pin) VALUES (?, ?, ?)`;
+    db.query(sql, [nome_aluno, sala_id, pinHash], (err, result) => {
+      if (err) return res.status(500).json({ erro: 'Erro ao cadastrar aluno.' });
+      const token = gerarTokenAluno({ aluno_id: result.insertId, nome: nome_aluno, sala_id });
+      res.status(201).json({ mensagem: 'Aluno cadastrado!', id: result.insertId, token });
+    });
+  } catch {
+    res.status(500).json({ erro: 'Erro ao cadastrar aluno.' });
+  }
+});
+
+app.post('/aluno/login', pinLimiter, (req, res) => {
   const { aluno_id, pin } = req.body;
+  const acesso = lerToken(req);
+  if (!aluno_id || !pin) return res.status(400).json({ erro: 'Dados incompletos.' });
 
   // O JOIN traz o status da sala: quem está em sala encerrada não entra
   const sql = `
-    SELECT al.id, al.nome_aluno, al.sala_id, al.pontos, s.status AS status_sala, s.nome AS nome_sala
+    SELECT al.id, al.nome_aluno, al.sala_id, al.pontos, al.pin, s.status AS status_sala, s.nome AS nome_sala
     FROM aluno_sala al
     JOIN sala s ON al.sala_id = s.id
-    WHERE al.id = ? AND al.pin = ?
+    WHERE al.id = ?
   `;
 
-  db.query(sql, [aluno_id, pin], (err, results) => {
+  db.query(sql, [aluno_id], async (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao fazer login.' });
     if (results.length === 0) return res.status(401).json({ erro: 'PIN incorreto!' });
 
     const aluno = results[0];
+
+    // Só entra quem passou pela senha da sala (ou já é aluno dela)
+    if (!acesso || !['acesso_sala', 'aluno'].includes(acesso.tipo) || Number(acesso.sala_id) !== Number(aluno.sala_id)) {
+      return res.status(401).json({ erro: 'Entre na sala com a senha primeiro.' });
+    }
+
+    // PIN antigo (texto puro) ainda funciona e já é trocado pela versão protegida
+    const guardado = String(aluno.pin || '');
+    const pinOk = pinCriptografado(guardado)
+      ? await bcrypt.compare(String(pin), guardado)
+      : guardado.length > 0 && guardado === String(pin);
+    if (!pinOk) return res.status(401).json({ erro: 'PIN incorreto!' });
+
+    if (!pinCriptografado(guardado)) {
+      bcrypt.hash(String(pin), 10).then(h => db.query(`UPDATE aluno_sala SET pin = ? WHERE id = ?`, [h, aluno.id]));
+    }
 
     if (aluno.status_sala === 'encerrada') {
       return res.status(403).json({
@@ -378,11 +819,14 @@ app.post('/aluno/login', (req, res) => {
       });
     }
 
-    db.query(`UPDATE aluno_sala SET ultimo_acesso = NOW() WHERE id = ?`, [aluno_id]);
+    db.query(`UPDATE aluno_sala SET ultimo_acesso = NOW() WHERE id = ?`, [aluno.id]);
 
-    delete aluno.status_sala;
-    delete aluno.nome_sala;
-    res.json({ mensagem: 'Login realizado!', aluno });
+    const token = gerarTokenAluno({ aluno_id: aluno.id, nome: aluno.nome_aluno, sala_id: aluno.sala_id });
+    res.json({
+      mensagem: 'Login realizado!',
+      token,
+      aluno: { id: aluno.id, nome_aluno: aluno.nome_aluno, sala_id: aluno.sala_id, pontos: aluno.pontos }
+    });
   });
 });
 
@@ -545,7 +989,7 @@ app.post('/professor/sala', autenticar, (req, res) => {
 app.get('/salas', (req, res) => {
   // Sala encerrada não aparece para o aluno escolher
   const sql = `
-    SELECT s.id, s.nome, s.serie, s.materia, s.codigo, s.senha_emojis, s.tema_senha,
+    SELECT s.id, s.nome, s.serie, s.materia, s.codigo, s.tema_senha,
            s.tipo_sala, s.status, u.nome AS professor
     FROM sala s
     JOIN usuario u ON s.professor_id = u.id
@@ -593,7 +1037,7 @@ app.put('/professor/sala/:id/encerrar', autenticar, (req, res) => {
   });
 });
 
-app.post('/aluno/entrar-sala', (req, res) => {
+app.post('/aluno/entrar-sala', acessoASala(req => req.body.sala_id), (req, res) => {
   const { nome_aluno, sala_id } = req.body;
   if (!nome_aluno || !sala_id) return res.status(400).json({ erro: 'Dados incompletos.' });
   
@@ -617,7 +1061,7 @@ app.post('/aluno/entrar-sala', (req, res) => {
   });
 });
 
-app.get('/sala/:id/alunos', (req, res) => {
+app.get('/sala/:id/alunos', acessoASala(req => req.params.id), (req, res) => {
   const sql = `SELECT id, nome_aluno, pontos, ultimo_acesso FROM aluno_sala WHERE sala_id = ? ORDER BY nome_aluno ASC`;
   db.query(sql, [req.params.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar alunos.' });
@@ -625,7 +1069,7 @@ app.get('/sala/:id/alunos', (req, res) => {
   });
 });
 
-app.get('/professor/sala/:id/alunos', autenticar, (req, res) => {
+app.get('/professor/sala/:id/alunos', autenticar, donoDaSala(req => req.params.id), (req, res) => {
   const sql = `SELECT id, nome_aluno, entrou_em FROM aluno_sala WHERE sala_id = ? ORDER BY entrou_em DESC`;
   db.query(sql, [req.params.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar alunos.' });
@@ -656,7 +1100,7 @@ app.delete('/professor/sala/:idSala/aluno/:idAluno', autenticar, (req, res) => {
    7. ROTAS DE ATIVIDADES (CRIAÇÃO, LISTAGEM E CLONAGEM)
    ========================================================================== */
 
-app.post('/professor/atividade', autenticar, (req, res) => {
+app.post('/professor/atividade', autenticar, donoDaSala(req => req.body.sala_id), (req, res) => {
   const { titulo, tipo, sala_id, conteudo } = req.body;
   const professorId = req.usuario.id;
   const tempo_limite = parseInt(req.body.tempo_limite) || 0; 
@@ -671,7 +1115,7 @@ app.post('/professor/atividade', autenticar, (req, res) => {
   });
 });
 
-app.post('/professor/atividades/v_f', autenticar, upload.any(), async (req, res) => {
+app.post('/professor/atividades/v_f', autenticar, upload.any(), donoDaSala(req => req.body.salaId), async (req, res) => {
   const { salaId, titulo } = req.body;
   const professorId = req.usuario.id;
   const tempo_limite = parseInt(req.body.tempo_limite) || 0; 
@@ -710,9 +1154,10 @@ app.post('/professor/atividades/v_f', autenticar, upload.any(), async (req, res)
   }
 });
 
-app.get('/sala/:salaId/atividades', (req, res) => {
+app.get('/sala/:salaId/atividades', acessoASala(req => req.params.salaId), (req, res) => {
   const salaId = req.params.salaId;
-  const aluno = req.query.aluno || ''; 
+  // "Já fiz?" é sempre do aluno do crachá, nunca de um nome vindo na URL
+  const aluno = req.acesso?.tipo === 'aluno' ? req.acesso.nome : '';
 
   const sql = `
     SELECT a.id, a.titulo, a.tipo, a.criado_em, a.tempo_limite,
@@ -735,17 +1180,32 @@ app.get('/sala/:salaId/atividades', (req, res) => {
 });
 
 app.get('/atividade/:id', (req, res) => {
-  const sql = `SELECT * FROM atividade WHERE id = ?`;
+  const quem = lerToken(req);
+  if (!quem) return res.status(401).json({ erro: 'Entre na sala primeiro.' });
+
+  const sql = `SELECT a.*, s.professor_id AS dono FROM atividade a JOIN sala s ON s.id = a.sala_id WHERE a.id = ?`;
   db.query(sql, [req.params.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar atividade.' });
     if (results.length === 0) return res.status(404).json({ erro: 'Atividade não encontrada.' });
-    
+
     const atv = results[0];
-    try {
-      atv.conteudo = typeof atv.conteudo === 'string' ? JSON.parse(atv.conteudo) : atv.conteudo;
-    } catch { }
-    
-    res.json(atv);
+    const dono = atv.dono;
+    delete atv.dono;
+
+    // Professor dono: vê tudo, com o gabarito (relatórios, correção)
+    if ((quem.tipo === 'professor' || quem.tipo === 'admin') && Number(quem.id) === Number(dono)) {
+      atv.conteudo = lerConteudo(atv);
+      return res.json(atv);
+    }
+
+    // Aluno da sala: recebe a atividade SEM a resposta certa
+    if (quem.tipo === 'aluno' && Number(quem.sala_id) === Number(atv.sala_id)) {
+      atv.conteudo = conteudoParaAluno(atv);
+      delete atv.professor_id;
+      return res.json(atv);
+    }
+
+    return res.status(403).json({ erro: 'Acesso negado.' });
   });
 });
 
@@ -765,7 +1225,7 @@ app.get('/professor/atividades', autenticar, (req, res) => {
   });
 });
 
-app.post('/professor/atividade/:id/clonar', autenticar, (req, res) => {
+app.post('/professor/atividade/:id/clonar', autenticar, donoDaSala(req => req.body.sala_destino_id), (req, res) => {
   const atividadeId = req.params.id;
   const { sala_destino_id } = req.body;
   const professorId = req.usuario.id;
@@ -802,26 +1262,40 @@ app.post('/professor/atividade/:id/clonar', autenticar, (req, res) => {
    8. ROTAS DE RESPOSTAS DOS ALUNOS E RELATÓRIOS
    ========================================================================== */
 
-app.post('/atividade/:id/resposta', (req, res) => {
-  const { nome_aluno, sala_id, resposta, pontos = 50 } = req.body;
+app.post('/atividade/:id/resposta', autenticarAluno, (req, res) => {
+  const { aluno_id, nome, sala_id } = req.aluno;   // quem responde é quem está no crachá
+  const resposta = req.body.resposta;
+  if (!resposta || typeof resposta !== 'object') return res.status(400).json({ erro: 'Resposta vazia.' });
+  if (JSON.stringify(resposta).length > 100000) return res.status(413).json({ erro: 'Resposta grande demais.' });
 
-  // nome_aluno e resposta são obrigatórios; sala_id pode ser null (aluno convidado/Live)
-  if (!nome_aluno || !resposta) return res.status(400).json({ erro: 'Dados incompletos.' });
+  db.query(`SELECT * FROM atividade WHERE id = ?`, [req.params.id], (err, atividades) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar a atividade.' });
+    if (atividades.length === 0) return res.status(404).json({ erro: 'Atividade não encontrada.' });
 
-  const sqlInsert = `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta) VALUES (?, ?, ?, ?)`;
+    const atv = atividades[0];
+    if (Number(atv.sala_id) !== Number(sala_id)) return res.status(403).json({ erro: 'Essa atividade não é da sua sala.' });
 
-  db.query(sqlInsert, [req.params.id, nome_aluno, sala_id || null, JSON.stringify(resposta)], (err, result) => {
-    if (err) return res.status(500).json({ erro: 'Erro ao salvar resposta.' });
+    db.query(
+      `SELECT id FROM resposta_aluno WHERE atividade_id = ? AND sala_id = ? AND nome_aluno = ? LIMIT 1`,
+      [atv.id, sala_id, nome],
+      (errJa, ja) => {
+        if (errJa) return res.status(500).json({ erro: 'Erro ao salvar resposta.' });
+        if (ja.length > 0) return res.status(409).json({ erro: 'Você já respondeu esta atividade.' });
 
-    // Só atualiza pontos se o aluno tiver uma sala_id válida (aluno cadastrado)
-    if (sala_id) {
-      const sqlUpdatePontos = `UPDATE aluno_sala SET pontos = pontos + ? WHERE nome_aluno = ? AND sala_id = ?`;
-      db.query(sqlUpdatePontos, [pontos, nome_aluno, sala_id], (errUpdate) => {
-        if (errUpdate) console.error("Erro ao dar pontos ao aluno:", errUpdate);
-      });
-    }
+        const { armazenar, pontos, resultado } = corrigirResposta(atv, resposta);
 
-    res.status(201).json({ mensagem: 'Resposta enviada com sucesso!', id: result.insertId });
+        const sqlInsert = `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta) VALUES (?, ?, ?, ?)`;
+        db.query(sqlInsert, [atv.id, nome, sala_id, JSON.stringify(armazenar)], (errIns, result) => {
+          if (errIns) return res.status(500).json({ erro: 'Erro ao salvar resposta.' });
+
+          db.query(`UPDATE aluno_sala SET pontos = pontos + ? WHERE id = ?`, [pontos, aluno_id], (errPontos) => {
+            if (errPontos) console.error('Erro ao dar pontos ao aluno:', errPontos.message);
+          });
+
+          res.status(201).json({ mensagem: 'Resposta enviada com sucesso!', id: result.insertId, resultado });
+        });
+      }
+    );
   });
 });
 
@@ -830,10 +1304,11 @@ app.get('/professor/atividade/:id/respostas', autenticar, (req, res) => {
     SELECT r.id, r.nome_aluno, r.resposta, r.nota, r.corrigido, r.criado_em, s.nome AS nome_sala, s.serie, s.materia
     FROM resposta_aluno r
     JOIN sala s ON r.sala_id = s.id
-    WHERE r.atividade_id = ?
+    JOIN atividade a ON a.id = r.atividade_id
+    WHERE r.atividade_id = ? AND a.professor_id = ?
     ORDER BY r.criado_em DESC
   `;
-  db.query(sql, [req.params.id], (err, results) => {
+  db.query(sql, [req.params.id, req.usuario.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar respostas.' });
     results.forEach(r => {
       try { r.resposta = typeof r.resposta === 'string' ? JSON.parse(r.resposta) : r.resposta; } catch { }
@@ -906,32 +1381,38 @@ app.post('/professor/pintura/upload', autenticar, upload.single('imagem'), async
   }
 });
 
-app.post('/atividade/:id/resposta/pintura', upload.single('pintura'), async (req, res) => {
-  const { nome_aluno, sala_id, pontos = 50 } = req.body;
+app.post('/atividade/:id/resposta/pintura', autenticarAluno, upload.single('pintura'), async (req, res) => {
+  const { aluno_id, nome, sala_id } = req.aluno;
+  const PONTOS_PINTURA = 50;
 
   if (!req.file) return res.status(400).json({ erro: 'Nenhuma imagem enviada.' });
-  if (!nome_aluno || !sala_id) return res.status(400).json({ erro: 'Dados incompletos.' });
+  const apagarArquivo = () => { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); };
 
   try {
+    const banco = db.promise();
+    const [atividades] = await banco.query(`SELECT id, sala_id, tipo FROM atividade WHERE id = ?`, [req.params.id]);
+    if (atividades.length === 0) { apagarArquivo(); return res.status(404).json({ erro: 'Atividade não encontrada.' }); }
+    if (Number(atividades[0].sala_id) !== Number(sala_id)) { apagarArquivo(); return res.status(403).json({ erro: 'Essa atividade não é da sua sala.' }); }
+
+    const [ja] = await banco.query(
+      `SELECT id FROM resposta_aluno WHERE atividade_id = ? AND sala_id = ? AND nome_aluno = ? LIMIT 1`,
+      [req.params.id, sala_id, nome]
+    );
+    if (ja.length > 0) { apagarArquivo(); return res.status(409).json({ erro: 'Você já enviou esta pintura.' }); }
+
     const result = await cloudinary.uploader.upload(req.file.path, { folder: 'saber_plus/respostas_alunos' });
-    fs.unlinkSync(req.file.path);
-    const urlNuvem = result.secure_url;
+    apagarArquivo();
 
-    const sqlInsert = `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta) VALUES (?, ?, ?, ?)`;
-    const resposta = JSON.stringify({ url_pintura: urlNuvem, filename: result.public_id });
+    const resposta = JSON.stringify({ url_pintura: result.secure_url, filename: result.public_id });
+    const [ins] = await banco.query(
+      `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta) VALUES (?, ?, ?, ?)`,
+      [req.params.id, nome, sala_id, resposta]
+    );
+    await banco.query(`UPDATE aluno_sala SET pontos = pontos + ? WHERE id = ?`, [PONTOS_PINTURA, aluno_id]);
 
-    db.query(sqlInsert, [req.params.id, nome_aluno, sala_id, resposta], (err, bdResult) => {
-      if (err) return res.status(500).json({ erro: 'Erro ao salvar pintura no banco de dados.' });
-      
-      const sqlUpdatePontos = `UPDATE aluno_sala SET pontos = pontos + ? WHERE nome_aluno = ? AND sala_id = ?`;
-      db.query(sqlUpdatePontos, [pontos, nome_aluno, sala_id], (errUpdate) => {
-         if (errUpdate) console.error("Erro ao dar pontos na pintura:", errUpdate);
-         
-         res.status(201).json({ mensagem: 'Pintura enviada e pontos adicionados!', url: urlNuvem, id: bdResult.insertId });
-      });
-    });
+    res.status(201).json({ mensagem: 'Pintura enviada e pontos adicionados!', url: result.secure_url, id: ins.insertId });
   } catch (error) {
-    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    apagarArquivo();
     res.status(500).json({ erro: 'Erro ao processar pintura na nuvem.' });
   }
 });
@@ -1018,8 +1499,8 @@ function montarPerguntas(atividade) {
       texto: p.texto || p.pergunta || '',
       imagem: p.imagem_url || p.imagem || null,
       alternativas: [
-        { texto: 'Verdadeiro', correta: String(p.resposta_correta).toUpperCase() === 'V' },
-        { texto: 'Falso',      correta: String(p.resposta_correta).toUpperCase() === 'F' }
+        { texto: 'Verdadeiro', correta: letraVF(p.resposta_correta) === 'V' },
+        { texto: 'Falso',      correta: letraVF(p.resposta_correta) === 'F' }
       ]
     }));
   }
@@ -1147,9 +1628,12 @@ function retrato(partida, { professor = false, jogadorId = null } = {}) {
    Quem chega primeiro cria a sala de espera; os próximos só se juntam.
    Mandando o `jogador_id` de volta, um F5 no meio do jogo não perde os pontos.
    -------------------------------------------------------------------------- */
-app.post('/live/entrar', (req, res) => {
+app.post('/live/entrar', acessoASala(req => req.body.sala_id), (req, res) => {
   limparPartidasVelhas();
-  const { sala_id, nome, avatar, jogador_id, aluno_id } = req.body;
+  const { sala_id, avatar, jogador_id } = req.body;
+  // Aluno de sala permanente: id e nome vêm do crachá, não do pedido
+  const aluno_id = req.acesso?.tipo === 'aluno' ? req.acesso.aluno_id : null;
+  const nome = req.acesso?.tipo === 'aluno' ? req.acesso.nome : req.body.nome;
 
   if (!sala_id || !nome || !String(nome).trim()) {
     return res.status(400).json({ erro: 'Informe a sala e o seu nome.' });
@@ -1195,12 +1679,12 @@ app.post('/live/entrar', (req, res) => {
 
     // Chegou atrasado, com a partida já rolando? Entra assim mesmo, zerado —
     // é melhor participar do resto do que ficar de fora da aula inteira.
-    const id = `j${Date.now()}${Math.floor(Math.random() * 1000)}`;
+    const id = `j${crypto.randomBytes(9).toString('base64url')}`; // impossível de adivinhar
     partida.jogadores[id] = {
       id,
       alunoId: aluno_id || null,
       nome: nomeLimpo,
-      avatar: avatar || 'img1.PNG',
+      avatar: /^img\d{1,2}\.PNG$/.test(String(avatar)) ? avatar : 'img1.PNG',
       pontos: 0,
       acertos: 0,
       respostas: {},
@@ -1215,7 +1699,7 @@ app.post('/live/entrar', (req, res) => {
 /* --------------------------------------------------------------------------
    ALUNO — sair da sala de espera.
    -------------------------------------------------------------------------- */
-app.post('/live/sair', (req, res) => {
+app.post('/live/sair', acessoASala(req => req.body.sala_id), (req, res) => {
   const { sala_id, jogador_id } = req.body;
   const partida = partidas[sala_id];
   if (partida && partida.jogadores[jogador_id] && partida.estado === 'lobby') {
@@ -1232,12 +1716,12 @@ app.post('/live/sair', (req, res) => {
    ranking nem pergunta, porque roda o tempo todo enquanto o aluno está na
    plataforma, mesmo quando não tem aula nenhuma acontecendo.
    -------------------------------------------------------------------------- */
-app.get('/live/convite/:salaId', (req, res) => {
+app.get('/live/convite/:salaId', acessoASala(req => req.params.salaId), (req, res) => {
   const partida = partidas[req.params.salaId];
   if (!partida || !partida.convite) return res.json({ chamando: false });
 
   const { para } = partida.convite;
-  const alunoId = req.query.aluno;
+  const alunoId = req.acesso?.tipo === 'aluno' ? req.acesso.aluno_id : null;
 
   // Convite para a turma toda (para = null) ou só para alguns alunos.
   if (para && !para.map(String).includes(String(alunoId))) return res.json({ chamando: false });
@@ -1257,7 +1741,7 @@ app.get('/live/convite/:salaId', (req, res) => {
    ALUNO — "o que está acontecendo agora?". É esta rota que a tela do aluno
    fica consultando de 1 em 1 segundo.
    -------------------------------------------------------------------------- */
-app.get('/live/sala/:salaId', (req, res) => {
+app.get('/live/sala/:salaId', acessoASala(req => req.params.salaId), (req, res) => {
   const partida = partidas[req.params.salaId];
   if (!partida) return res.json({ ativa: false });
   sincronizar(partida);
@@ -1269,7 +1753,7 @@ app.get('/live/sala/:salaId', (req, res) => {
    relógio do servidor: assim ninguém ganha vantagem mexendo no próprio
    navegador nem por ter internet mais rápida em casa.
    -------------------------------------------------------------------------- */
-app.post('/live/responder', (req, res) => {
+app.post('/live/responder', acessoASala(req => req.body.sala_id), (req, res) => {
   const { sala_id, jogador_id, indice, escolha } = req.body;
   const partida = partidas[sala_id];
 
@@ -1414,7 +1898,7 @@ app.post('/live/iniciar', autenticar, (req, res) => {
 /* --------------------------------------------------------------------------
    PROFESSOR — fechar a pergunta na hora (sem esperar o cronômetro).
    -------------------------------------------------------------------------- */
-app.post('/live/fechar-pergunta', autenticar, (req, res) => {
+app.post('/live/fechar-pergunta', autenticar, donoDaSala(req => req.body.sala_id), (req, res) => {
   const partida = partidas[req.body.sala_id];
   if (!partida) return res.status(404).json({ erro: 'Partida não encontrada.' });
   if (partida.estado === 'pergunta') partida.estado = 'revisao';
@@ -1424,7 +1908,7 @@ app.post('/live/fechar-pergunta', autenticar, (req, res) => {
 /* --------------------------------------------------------------------------
    PROFESSOR — próxima pergunta (ou fim da partida).
    -------------------------------------------------------------------------- */
-app.post('/live/proxima', autenticar, (req, res) => {
+app.post('/live/proxima', autenticar, donoDaSala(req => req.body.sala_id), (req, res) => {
   const partida = partidas[req.body.sala_id];
   if (!partida) return res.status(404).json({ erro: 'Partida não encontrada.' });
 
@@ -1445,7 +1929,7 @@ app.post('/live/proxima', autenticar, (req, res) => {
    PROFESSOR — encerrar. A partida volta para a sala de espera e os alunos
    continuam lá, prontos para a próxima atividade.
    -------------------------------------------------------------------------- */
-app.post('/live/encerrar', autenticar, (req, res) => {
+app.post('/live/encerrar', autenticar, donoDaSala(req => req.body.sala_id), (req, res) => {
   const partida = partidas[req.body.sala_id];
   if (!partida) return res.status(404).json({ erro: 'Partida não encontrada.' });
 
@@ -1469,7 +1953,7 @@ app.post('/live/encerrar', autenticar, (req, res) => {
 /* --------------------------------------------------------------------------
    PROFESSOR — fechar a sala de espera inteira.
    -------------------------------------------------------------------------- */
-app.post('/live/fechar-sala', autenticar, (req, res) => {
+app.post('/live/fechar-sala', autenticar, donoDaSala(req => req.body.sala_id), (req, res) => {
   const partida = partidas[req.body.sala_id];
   if (partida) {
     if (partida.estado !== 'lobby') gravarResultado(partida);
@@ -1571,6 +2055,35 @@ db.query(
     else if (r.affectedRows > 0) console.log(`✅ ${r.affectedRows} professor(es) pendente(s) liberado(s).`);
   }
 );
+
+// PINs dos alunos passam a ser guardados criptografados (bcrypt, 60 letras).
+// 1) alarga a coluna se precisar; 2) criptografa os PINs antigos em texto puro.
+db.query(`SHOW COLUMNS FROM aluno_sala LIKE 'pin'`, (err, colunas) => {
+  if (err || !colunas || colunas.length === 0) return;
+  const tipo = String(colunas[0].Type || '').toLowerCase();
+  const tamanho = Number((tipo.match(/\((\d+)\)/) || [])[1] || 0);
+  const alargar = (tipo.startsWith('varchar') || tipo.startsWith('char')) && tamanho < 100;
+
+  const criptografarAntigos = () => {
+    db.query(`SELECT id, pin FROM aluno_sala WHERE pin IS NOT NULL AND pin <> '' AND pin NOT LIKE '$2%'`, async (errSel, linhas) => {
+      if (errSel || !linhas.length) return;
+      for (const l of linhas) {
+        const hash = await bcrypt.hash(String(l.pin), 10);
+        db.query(`UPDATE aluno_sala SET pin = ? WHERE id = ?`, [hash, l.id]);
+      }
+      console.log(`🔒 ${linhas.length} PIN(s) de aluno criptografado(s).`);
+    });
+  };
+
+  if (alargar) {
+    db.query(`ALTER TABLE aluno_sala MODIFY pin VARCHAR(100) NULL`, (errAlt) => {
+      if (errAlt) return console.error('Não consegui alargar a coluna do PIN:', errAlt.message);
+      criptografarAntigos();
+    });
+  } else {
+    criptografarAntigos();
+  }
+});
 
 // Se a coluna atividade.tipo for um ENUM, ela recusaria os tipos novos
 // (ordenar, memoria, grupos). Nesse caso vira texto — só alarga, não apaga nada.
@@ -1795,7 +2308,8 @@ async function medirAluno(aluno) {
    o progresso de cada uma (as bloqueadas também, para a criança ver o que
    falta).
    -------------------------------------------------------------------------- */
-app.get('/aluno/:alunoId/conquistas', async (req, res) => {
+app.get('/aluno/:alunoId/conquistas', autenticarAluno, async (req, res) => {
+  if (Number(req.params.alunoId) !== Number(req.aluno.aluno_id)) return res.status(403).json({ erro: 'Acesso negado.' });
   try {
     const banco = db.promise();
     const [alunos] = await banco.query(
@@ -1863,7 +2377,8 @@ app.get('/aluno/:alunoId/conquistas', async (req, res) => {
 /* --------------------------------------------------------------------------
    ALUNO — "já vi a comemoração". Depois disso a insígnia não festeja mais.
    -------------------------------------------------------------------------- */
-app.post('/aluno/:alunoId/conquistas/vistas', (req, res) => {
+app.post('/aluno/:alunoId/conquistas/vistas', autenticarAluno, (req, res) => {
+  if (Number(req.params.alunoId) !== Number(req.aluno.aluno_id)) return res.status(403).json({ erro: 'Acesso negado.' });
   db.query(
     `UPDATE conquista_aluno SET vista = 1 WHERE aluno_id = ? AND vista = 0`,
     [req.params.alunoId],
@@ -1877,7 +2392,7 @@ app.post('/aluno/:alunoId/conquistas/vistas', (req, res) => {
 /* --------------------------------------------------------------------------
    Quantas insígnias cada aluno tem nesta turma — para a sala de colegas.
    -------------------------------------------------------------------------- */
-app.get('/sala/:salaId/conquistas', (req, res) => {
+app.get('/sala/:salaId/conquistas', acessoASala(req => req.params.salaId), (req, res) => {
   db.query(
     `SELECT aluno_id, COUNT(*) AS total FROM conquista_aluno WHERE sala_id = ? GROUP BY aluno_id`,
     [req.params.salaId],
@@ -2156,6 +2671,16 @@ app.post('/professor/conquistas/vistas', autenticar, (req, res) => {
 /* ==========================================================================
    11. INICIAR SERVIDOR
    ========================================================================== */
+
+/* Qualquer erro que escapar vira uma mensagem simples: nada de mostrar
+   pedaço de código, caminho de pasta ou detalhe do banco para quem visita. */
+app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
+  if (err?.message === 'Acesso bloqueado pela política de CORS') return res.status(403).json({ erro: 'Acesso negado.' });
+  if (err?.message === 'Formato inválido' || err?.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ erro: 'Imagem inválida ou grande demais (até 10 MB).' });
+  if (err?.type === 'entity.too.large') return res.status(413).json({ erro: 'Envio grande demais.' });
+  console.error('Erro não tratado:', err?.message);
+  res.status(500).json({ erro: 'Erro interno do servidor.' });
+});
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => console.log(`🚀 Servidor HTTP e Socket.io rodando na porta ${PORT}`));

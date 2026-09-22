@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from "jwt-decode";
 import '../CSS/Login.css';
 import { API } from '../api';
 
@@ -111,20 +110,14 @@ function LoginProfessor() {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
             <GoogleLogin
             onSuccess={async (credentialResponse) => {
-              const dadosGoogle = jwtDecode(credentialResponse.credential);
-              console.log("Usuário do Google:", dadosGoogle);
+              // Manda a credencial assinada pelo Google; quem confere é o servidor
               setCarregando(true);
 
               try {
                 const response = await fetch(`${API}/login/google`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    email: dadosGoogle.email, 
-                    nome: dadosGoogle.name,
-                    fotoUrl: dadosGoogle.picture,
-                    tipo: 'professor'
-                  }),
+                  body: JSON.stringify({ credential: credentialResponse.credential }),
                 });
 
                 const data = await response.json();
@@ -151,15 +144,13 @@ function LoginProfessor() {
 
                 navigate('/professor/dashboard');
 
-              } catch (error) {
-                console.error("Erro na requisição pro Node:", error);
+              } catch {
                 setErro('Não foi possível conectar ao servidor.');
               } finally {
                 setCarregando(false);
               }
             }}
             onError={() => {
-              console.log('Falha no Login do Google');
               setErro('O login com o Google falhou.');
             }}
             theme="outline" 

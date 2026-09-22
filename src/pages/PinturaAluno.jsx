@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/Pintura.css';
-import { API } from '../api';
+import { API, cabecalhoAluno } from '../api';
 
 const CORES = [
   '#E23F3F', '#E07820', '#D89E00', '#3DAA5C',
@@ -35,7 +35,7 @@ function PinturaAluno() {
 
   const carregarImagem = async () => {
     try {
-      const res  = await fetch(`${API}/atividade/${atividade.id}`);
+      const res  = await fetch(`${API}/atividade/${atividade.id}`, { headers: cabecalhoAluno() });
       const data = await res.json();
       const urlImagem = data.conteudo?.url_imagem;
 
@@ -121,10 +121,14 @@ function PinturaAluno() {
 
       const res = await fetch(`${API}/atividade/${atividade.id}/resposta/pintura`, {
         method: 'POST',
+        headers: cabecalhoAluno(),   // quem enviou é o aluno do crachá
         body: formData
       });
 
-      if (!res.ok) throw new Error('Erro ao enviar');
+      if (!res.ok) {
+        const dados = await res.json().catch(() => ({}));
+        throw new Error(dados.erro || 'Erro ao enviar');
+      }
 
       setEnviado(true);
       setModalEnviar(false);

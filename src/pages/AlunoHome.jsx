@@ -11,7 +11,7 @@ import FestaInsignias from '../components/FestaInsignias';
 import '../CSS/AlunoHome.css';
 import '../CSS/AoVivo.css';
 import '../CSS/Conquistas.css';
-import { API } from '../api';
+import { API, cabecalhoAluno, tokenAluno, sairAluno } from '../api';
 
 // Avatares para os alunos
 const AVATARES = [
@@ -100,7 +100,8 @@ function AlunoHome() {
   }, [modoEscuro]);
 
   useEffect(() => {
-    if (!nomeAluno || !sala) { navigate('/aluno/area'); return; }
+    // Sem crachá (aba nova, sessão vencida) volta para escolher a sala
+    if (!nomeAluno || !sala || !tokenAluno()) { navigate('/aluno/area'); return; }
     buscarAtividades();
     buscarColegas();
 
@@ -137,9 +138,7 @@ function AlunoHome() {
 
     const consultar = async () => {
       try {
-        const res = await fetch(
-          `${API}/live/convite/${sala.id}?aluno=${alunoId || ''}`
-        );
+        const res = await fetch(`${API}/live/convite/${sala.id}`, { headers: cabecalhoAluno() });
         const dados = await res.json();
         if (!vivo) return;
 
@@ -165,6 +164,7 @@ function AlunoHome() {
       salaNome: sala.nome,
       codigoSala: sala.codigo,
       alunoId,
+      token: tokenAluno(), // crachá do aluno: é com ele que a partida sabe quem entrou
       // Guardado para o botão "Sair" da aula trazer o aluno de volta para
       // esta página do jeito que ela estava, sem pedir login de novo.
       voltar: { sala, nomeAluno, alunoId, pontos }
@@ -186,7 +186,7 @@ function AlunoHome() {
   const buscarConquistas = async () => {
     if (!alunoId) return;
     try {
-      const res = await fetch(`${API}/aluno/${alunoId}/conquistas?t=${Date.now()}`);
+      const res = await fetch(`${API}/aluno/${alunoId}/conquistas?t=${Date.now()}`, { headers: cabecalhoAluno() });
       if (res.ok) setConquistas(await res.json());
     } catch {
       /* sem conquistas por enquanto: a página continua funcionando */
@@ -194,7 +194,7 @@ function AlunoHome() {
 
     // Quantas insígnias cada colega tem, para a sala de colegas
     try {
-      const res = await fetch(`${API}/sala/${sala.id}/conquistas`);
+      const res = await fetch(`${API}/sala/${sala.id}/conquistas`, { headers: cabecalhoAluno() });
       if (res.ok) {
         const dados = await res.json();
         setInsigniasColegas(Object.fromEntries(
@@ -215,32 +215,33 @@ function AlunoHome() {
       lista: atual.lista.map(c => ({ ...c, nova: false }))
     }));
     try {
-      await fetch(`${API}/aluno/${alunoId}/conquistas/vistas`, { method: 'POST' });
+      await fetch(`${API}/aluno/${alunoId}/conquistas/vistas`, { method: 'POST', headers: cabecalhoAluno() });
     } catch { /* se falhar, a festa só aparece de novo na próxima visita */ }
   };
 
   const buscarAtividades = async () => {
     try {
-      const res = await fetch(`${API}/sala/${sala.id}/atividades?aluno=${encodeURIComponent(nomeAluno)}&t=${Date.now()}`);
+      const res = await fetch(`${API}/sala/${sala.id}/atividades?t=${Date.now()}`, { headers: cabecalhoAluno() });
+      if (res.status === 401) { sairAluno(); navigate('/aluno/area'); return; } // crachá venceu: entra de novo
       const data = await res.json();
       if (Array.isArray(data)) setAtividades(data);
-    } catch (error) {
-      console.error('Erro ao buscar atividades:', error);
+    } catch {
+      /* sem internet agora: a lista continua como estava */
     }
   };
 
   // Busca a turma inteira (nome + pontos) para montar o pódio
   const buscarColegas = async () => {
     try {
-      const res = await fetch(`${API}/sala/${sala.id}/alunos?t=${Date.now()}`);
+      const res = await fetch(`${API}/sala/${sala.id}/alunos?t=${Date.now()}`, { headers: cabecalhoAluno() });
       const data = await res.json();
       if (Array.isArray(data)) {
         setColegas(data);
         const eu = data.find(a => a.nome_aluno === nomeAluno);
         if (eu) setPontos(Number(eu.pontos) || 0);
       }
-    } catch (error) {
-      console.error('Erro ao buscar colegas:', error);
+    } catch {
+      /* sem internet agora */
     }
   };
 
@@ -250,6 +251,7 @@ function AlunoHome() {
     // O personagem escolhido continua salvo, para o aluno reencontrar da
     // próxima vez. Sai só o que é da sessão.
     localStorage.removeItem('alunoTemporario');
+    sairAluno();
     navigate('/');
   };
 

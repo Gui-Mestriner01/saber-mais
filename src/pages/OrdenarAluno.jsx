@@ -2,38 +2,31 @@ import { useState, useEffect } from 'react';
 import { ArrowUp, ArrowDown, Check, X } from 'lucide-react';
 import {
   useAtividadeAluno, JogoAluno, JanelaConfirmar, ResultadoAtividade,
-  embaralhar, estrelasPorAproveitamento
+  estrelasPorAproveitamento
 } from '../components/JogoAluno';
 
 /* ==========================================================================
    ALUNO — COLOCAR EM ORDEM
 
-   Os itens chegam embaralhados; o aluno sobe e desce com as setas (funciona
-   no mouse, no toque e no teclado). Cada item na posição certa vale 10.
-
-   resposta = { itens: [{ texto, posicaoAluno, posicaoCerta }], acertos, total, pontos }
-   Ela já leva a posição certa de cada item, para o relatório do professor
-   mostrar a correção sem precisar buscar a atividade de novo.
+   Os itens chegam do servidor JÁ embaralhados e com um código no lugar da
+   posição — a ordem certa nunca vem para o navegador. O aluno sobe e desce
+   com as setas (mouse, toque e teclado) e manda só a ordem dos códigos.
+   O servidor corrige (10 pontos por item no lugar certo) e devolve
+   { itens: [{ texto, posicaoAluno, posicaoCerta }], acertos, total, pontos }.
    ========================================================================== */
 
 function OrdenarAluno() {
   const { atividade, conteudo, erro, enviar, voltar } = useAtividadeAluno();
 
-  const [ordem, setOrdem] = useState([]);          // textos, na ordem do aluno
+  const [ordem, setOrdem] = useState([]);          // { id, texto }, na ordem do aluno
   const [mexido, setMexido] = useState(null);      // último item movido (brilha)
   const [confirmar, setConfirmar] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [erroEnvio, setErroEnvio] = useState('');
 
-  const certa = conteudo?.itens || [];
-
   useEffect(() => {
-    if (certa.length === 0) return;
-    // Embaralha até sair diferente da ordem certa (com 3 itens isso importa)
-    let lista = embaralhar(certa);
-    for (let t = 0; t < 10 && lista.every((x, i) => x === certa[i]); t++) lista = embaralhar(certa);
-    setOrdem(lista);
+    if (conteudo?.itens) setOrdem(conteudo.itens);
   }, [conteudo]);
 
   const mover = (i, direcao) => {
@@ -42,27 +35,18 @@ function OrdenarAluno() {
     const nova = [...ordem];
     [nova[i], nova[destino]] = [nova[destino], nova[i]];
     setOrdem(nova);
-    setMexido(nova[destino]);
+    setMexido(nova[destino].id);
   };
 
   const conferir = async () => {
-    const itens = ordem.map((texto, i) => ({
-      texto,
-      posicaoAluno: i + 1,
-      posicaoCerta: certa.indexOf(texto) + 1
-    }));
-    const acertos = itens.filter(it => it.posicaoAluno === it.posicaoCerta).length;
-    const total = itens.length;
-    const pontos = acertos * 10;
-
     setEnviando(true);
     setErroEnvio('');
     try {
-      await enviar({ itens, acertos, total, pontos }, pontos);
-      setResultado({ itens, acertos, total, pontos });
+      const corrigido = await enviar({ ordem: ordem.map(it => it.id) });
+      setResultado(corrigido);
       setConfirmar(false);
-    } catch {
-      setErroEnvio('Não consegui enviar. Confira a internet e tente de novo.');
+    } catch (e) {
+      setErroEnvio(e.message || 'Não consegui enviar. Confira a internet e tente de novo.');
       setConfirmar(false);
     } finally {
       setEnviando(false);
@@ -114,8 +98,8 @@ function OrdenarAluno() {
           </div>
 
           <ol className="ordem-lista">
-            {ordem.map((texto, i) => (
-              <li key={texto} className={`ordem-item ${mexido === texto ? 'mexeu' : ''}`}>
+            {ordem.map(({ id, texto }, i) => (
+              <li key={id} className={`ordem-item ${mexido === id ? 'mexeu' : ''}`}>
                 <span className="ordem-posicao">{i + 1}</span>
                 <span className="ordem-texto">{texto}</span>
                 <span className="ordem-setas">

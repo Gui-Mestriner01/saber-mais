@@ -15,6 +15,11 @@ createRoot(document.getElementById('root')).render(
   </StrictMode>,
 )
 
+/* No site publicado, nada de mensagens de depuração no console do navegador. */
+if (import.meta.env.PROD) {
+  ['log', 'info', 'debug', 'table', 'dir'].forEach(metodo => { console[metodo] = () => {}; });
+}
+
 /* App instalável: o service worker só entra no site "de verdade" (npm run
    build / publicado). No npm run dev ele atrapalharia o recarregamento. */
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

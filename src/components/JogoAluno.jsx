@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star } from 'lucide-react';
 import '../CSS/NovasAtividades.css';
-import { API } from '../api';
+import { API, cabecalhoAluno } from '../api';
 
 /* ==========================================================================
    PEÇAS COMPARTILHADAS DAS ATIVIDADES NOVAS DO ALUNO
@@ -53,19 +53,27 @@ export function useAtividadeAluno() {
 
   useEffect(() => {
     if (!atividade || !nomeAluno || !sala) { navigate('/aluno/area'); return; }
-    fetch(`${API}/atividade/${atividade.id}`)
-      .then(r => r.json())
-      .then(dados => setConteudo(dados.conteudo || {}))
+    fetch(`${API}/atividade/${atividade.id}`, { headers: cabecalhoAluno() })
+      .then(async r => {
+        if (r.status === 401) { navigate('/aluno/area'); return null; } // crachá venceu
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then(dados => { if (dados) setConteudo(dados.conteudo || {}); })
       .catch(() => setErro('Não consegui abrir a atividade. Tente de novo.'));
   }, []);
 
-  const enviar = async (resposta, pontos) => {
+  /* Manda só o que o aluno fez. A correção e os pontos são calculados no
+     servidor, que devolve o resultado (com a correção) para a tela mostrar. */
+  const enviar = async (resposta) => {
     const res = await fetch(`${API}/atividade/${atividade.id}/resposta`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome_aluno: nomeAluno, sala_id: sala.id, resposta, pontos })
+      headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ resposta })
     });
-    if (!res.ok) throw new Error('Não consegui enviar.');
+    const dados = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(dados.erro || 'Não consegui enviar.');
+    return dados.resultado;
   };
 
   return { atividade, conteudo, erro, enviar, voltar };

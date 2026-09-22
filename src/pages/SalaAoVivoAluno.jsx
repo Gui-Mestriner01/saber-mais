@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/AoVivo.css';
-import { API } from '../api';
+import { API, comToken, tokenAluno, acessoSala } from '../api';
+
+// Crachá para falar com a partida: o do aluno logado ou o da senha da sala
+const crachaDe = (dados) => (dados?.alunoId ? tokenAluno() : null) || dados?.token || acessoSala(dados?.salaId);
 
 
 // Cada alternativa tem cor e símbolo. O símbolo existe para quem não
@@ -39,7 +42,7 @@ function SalaAoVivoAluno() {
       try {
         const res = await fetch(`${API}/live/entrar`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: comToken(crachaDe(dados), { 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             sala_id: dados.salaId,
             nome: dados.nome,
@@ -73,7 +76,7 @@ function SalaAoVivoAluno() {
 
     const consultar = async () => {
       try {
-        const res  = await fetch(`${API}/live/sala/${aluno.salaId}?jogador=${jogadorRef.current}`);
+        const res  = await fetch(`${API}/live/sala/${aluno.salaId}?jogador=${jogadorRef.current}`, { headers: comToken(crachaDe(aluno)) });
         const novo = await res.json();
         if (!vivo) return;
         setEstado(novo);
@@ -105,7 +108,7 @@ function SalaAoVivoAluno() {
     try {
       await fetch(`${API}/live/responder`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: comToken(crachaDe(aluno), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           sala_id: aluno.salaId,
           jogador_id: jogadorRef.current,
@@ -130,7 +133,7 @@ function SalaAoVivoAluno() {
     try {
       await fetch(`${API}/live/sair`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: comToken(crachaDe(aluno), { 'Content-Type': 'application/json' }),
         body: JSON.stringify({ sala_id: aluno.salaId, jogador_id: jogadorRef.current })
       });
     } catch { /* tudo bem */ }
