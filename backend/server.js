@@ -1007,7 +1007,17 @@ app.get('/professor/salas', autenticar, (req, res) => {
   const sql = `SELECT * FROM sala WHERE professor_id = ? ORDER BY criado_em DESC`;
   db.query(sql, [req.usuario.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar salas.' });
-    res.json(results);
+    // A senha não vai na lista: ela só é buscada, uma sala por vez, quando o
+    // professor clica em "mostrar". Assim ela não fica aparecendo na aba Rede.
+    res.json(results.map(({ senha_emojis, ...sala }) => ({ ...sala, tem_senha: !!senha_emojis })));
+  });
+});
+
+app.get('/professor/sala/:id/senha', autenticar, donoDaSala(req => req.params.id), (req, res) => {
+  db.query(`SELECT senha_emojis FROM sala WHERE id = ?`, [req.params.id], (err, linhas) => {
+    if (err || !linhas.length) return res.status(500).json({ erro: 'Erro ao buscar a senha.' });
+    res.set('Cache-Control', 'no-store');
+    res.json({ senha: linhas[0].senha_emojis || '' });
   });
 });
 

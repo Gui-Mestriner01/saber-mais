@@ -102,8 +102,22 @@ function Salas() {
   };
 
   // Mostra ou esconde a senha de uma sala específica
-  const alternarSenha = (idSala) => {
-    setSenhasVisiveis(atual => ({ ...atual, [idSala]: !atual[idSala] }));
+  // A senha não vem na lista de salas: ela é pedida ao servidor só na hora de
+  // mostrar e some da memória quando o professor esconde de novo.
+  const alternarSenha = async (idSala) => {
+    if (senhasVisiveis[idSala]) {
+      setSenhasVisiveis(atual => ({ ...atual, [idSala]: undefined }));
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/professor/sala/${idSala}/senha`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      if (res.ok && data.senha) setSenhasVisiveis(atual => ({ ...atual, [idSala]: data.senha }));
+    } catch {
+      /* sem conexão: a senha continua escondida */
+    }
   };
 
   // Encerrar tira a sala do ar: o aluno não consegue mais entrar nem fazer login
@@ -229,7 +243,7 @@ function Salas() {
                       <strong>Senha</strong>
                       <p>
                         {senhasVisiveis[salaSelecionada.id]
-                          ? salaSelecionada.senha_emojis
+                          ? senhasVisiveis[salaSelecionada.id]
                           : <span className="senha-oculta">••••</span>
                         }
                       </p>
@@ -388,7 +402,7 @@ function Salas() {
                       <span className="sala-dado-rotulo">Senha</span>
                       <span className="sala-dado-valor">
                         {visivel
-                          ? <span className="senha-emojis">{sala.senha_emojis}</span>
+                          ? <span className="senha-emojis">{senhasVisiveis[sala.id]}</span>
                           : <span className="senha-oculta">••••</span>
                         }
                         <button

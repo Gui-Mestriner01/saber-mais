@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { ligarTravaInspecionar } from './travaInspecionar.js'
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')).render(
 /* No site publicado, nada de mensagens de depuração no console do navegador. */
 if (import.meta.env.PROD) {
   ['log', 'info', 'debug', 'table', 'dir'].forEach(metodo => { console[metodo] = () => {}; });
+  ligarTravaInspecionar();
 }
 
 /* App instalável: o service worker só entra no site "de verdade" (npm run
