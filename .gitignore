@@ -36,3 +36,6 @@ backend/uploads/
 
 # Pasta de trabalho gerada fora do projeto
 Claude outputs/
+
+# Backups do banco (têm dados dos alunos) — nunca no GitHub
+backend/backups/

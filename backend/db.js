@@ -9,7 +9,13 @@ const db = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 3,
   charset: 'utf8mb4',
-  queueLimit: 0
+  queueLimit: 0,
+  // Blindagem contra "SQL injection":
+  // - só um comando por consulta: ninguém consegue emendar "; DROP TABLE ..."
+  multipleStatements: false,
+  // - se alguém mandar um objeto no lugar de um texto/número, ele vira texto
+  //   em vez de virar pedaço de SQL (truque clássico para pular o login)
+  stringifyObjects: true
 });
 
 // Teste de conexão que libera o espaço logo em seguida

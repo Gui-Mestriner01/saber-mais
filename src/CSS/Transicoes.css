@@ -14,47 +14,90 @@
    ========================================================================== */
 
 @keyframes pagina-entrar {
-  from { opacity: 0; transform: translateY(14px); }
+  from { opacity: 0; transform: translateY(26px); }
   to   { opacity: 1; transform: none; }
 }
 
 @keyframes bloco-entrar {
-  from { opacity: 0; transform: translateY(18px); }
+  from { opacity: 0; transform: translateY(28px) scale(.98); }
   to   { opacity: 1; transform: none; }
 }
 
 /* A página inteira */
 .pagina-animada {
-  animation: pagina-entrar .35s cubic-bezier(.2, .8, .2, 1) backwards;
+  animation: pagina-entrar .45s cubic-bezier(.2, .8, .2, 1) backwards;
 }
+/* Com a troca por View Transition a página inteira já desliza; aqui fica só a cascata dos blocos */
+.pagina-animada.com-vt { animation: none; }
 
 /* Os blocos de dentro das páginas do professor e do aluno, em cascata */
 .pagina-animada .dashboard-main > *,
 .pagina-animada .aluno-main > *,
 .pagina-animada .aluno-secao > *,
 .pagina-animada .nova-atividade > * {
-  animation: bloco-entrar .45s cubic-bezier(.2, .8, .2, 1) backwards;
+  animation: bloco-entrar .55s cubic-bezier(.2, .8, .2, 1) backwards;
 }
 
 .pagina-animada .dashboard-main > *:nth-child(2),
 .pagina-animada .aluno-main > *:nth-child(2),
 .pagina-animada .aluno-secao > *:nth-child(2),
-.pagina-animada .nova-atividade > *:nth-child(2) { animation-delay: .06s; }
+.pagina-animada .nova-atividade > *:nth-child(2) { animation-delay: .08s; }
 
 .pagina-animada .dashboard-main > *:nth-child(3),
 .pagina-animada .aluno-main > *:nth-child(3),
 .pagina-animada .aluno-secao > *:nth-child(3),
-.pagina-animada .nova-atividade > *:nth-child(3) { animation-delay: .12s; }
+.pagina-animada .nova-atividade > *:nth-child(3) { animation-delay: .16s; }
 
 .pagina-animada .dashboard-main > *:nth-child(4),
 .pagina-animada .aluno-main > *:nth-child(4),
 .pagina-animada .aluno-secao > *:nth-child(4),
-.pagina-animada .nova-atividade > *:nth-child(4) { animation-delay: .18s; }
+.pagina-animada .nova-atividade > *:nth-child(4) { animation-delay: .24s; }
 
 .pagina-animada .dashboard-main > *:nth-child(n+5),
 .pagina-animada .aluno-main > *:nth-child(n+5),
 .pagina-animada .aluno-secao > *:nth-child(n+5),
-.pagina-animada .nova-atividade > *:nth-child(n+5) { animation-delay: .24s; }
+.pagina-animada .nova-atividade > *:nth-child(n+5) { animation-delay: .32s; }
+
+
+/* ---------- troca de página (View Transition) ----------
+   A página velha sai para a esquerda e some; a nova entra pela direita.
+   Voltando (botão do navegador), o sentido inverte.
+   Nas telas com barra lateral, só o conteúdo desliza: a barra fica parada. */
+
+.dashboard-main, .aluno-main { view-transition-name: conteudo; }
+
+@keyframes vt-sair {
+  to { opacity: 0; transform: translateX(-60px) scale(.97); }
+}
+@keyframes vt-entrar {
+  from { opacity: 0; transform: translateX(80px) scale(.97); }
+}
+@keyframes vt-sair-voltando {
+  to { opacity: 0; transform: translateX(60px) scale(.97); }
+}
+@keyframes vt-entrar-voltando {
+  from { opacity: 0; transform: translateX(-80px) scale(.97); }
+}
+
+::view-transition-old(root),
+::view-transition-old(conteudo) {
+  animation: vt-sair .22s cubic-bezier(.4, 0, 1, 1) both;
+}
+::view-transition-new(root),
+::view-transition-new(conteudo) {
+  animation: vt-entrar .42s cubic-bezier(.2, .8, .2, 1) .08s both;
+}
+::view-transition-group(conteudo) { animation-duration: .42s; }
+
+html.vt-voltando::view-transition-old(root),
+html.vt-voltando::view-transition-old(conteudo) { animation-name: vt-sair-voltando; }
+html.vt-voltando::view-transition-new(root),
+html.vt-voltando::view-transition-new(conteudo) { animation-name: vt-entrar-voltando; }
+
+/* Painel nas duas telas: o resto (barra lateral, fundo) troca sem mexer */
+html.vt-painel::view-transition-old(root),
+html.vt-painel::view-transition-new(root) { animation: none; }
+html.vt-painel::view-transition-old(root) { display: none; }
 
 /* Pequenos retornos ao passar o mouse e clicar.
    :where() deixa essas regras com peso zero: qualquer regra específica
@@ -84,6 +127,8 @@ body.a11y-sem-animacao .pagina-animada * {
 body.a11y-sem-animacao :where(.sala-cartao, .tipo-card, .conquistas-cartao):hover,
 body.a11y-sem-animacao :where(button):active { transform: none; }
 body.a11y-sem-animacao .sidebar .nav-item.active { animation: none; }
+body.a11y-sem-animacao .dashboard-main,
+body.a11y-sem-animacao .aluno-main { view-transition-name: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .pagina-animada,
@@ -94,4 +139,7 @@ body.a11y-sem-animacao .sidebar .nav-item.active { animation: none; }
   :where(.sala-cartao, .tipo-card, .conquistas-cartao):hover,
   :where(button):active { transform: none; }
   .sidebar .nav-item.active { animation: none; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
 }

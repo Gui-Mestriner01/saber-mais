@@ -1,5 +1,6 @@
-import { useLayoutEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useLayoutEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from 'react-router-dom';
 import Home from './pages/Home';
 import LoginProfessor from './pages/LoginProfessor';
 import CadastroProfessor from './pages/CadastroProfessor';
@@ -38,22 +39,67 @@ import './CSS/ModoEscuroProfessor.css';
 import './CSS/Celular.css';
 import { temaEscuroProfessorLigado } from './components/BarraLateralProfessor';
 
-/* A cada troca de endereço a <div> ganha uma "key" nova, o React monta a
-   página de novo e a animação de entrada (Transicoes.css) toca outra vez. */
+/* Troca de página animada.
+
+   O endereço muda na hora, mas a página mostrada (`mostrada`) só troca dentro de
+   document.startViewTransition: o navegador tira uma "foto" da página velha,
+   o React desenha a nova e as duas se cruzam com a animação de Transicoes.css
+   (a velha sai para um lado, a nova entra pelo outro). Voltar (botão do
+   navegador) inverte o sentido.
+
+   Navegador sem esse recurso, ou quem pediu "Reduzir animações": a página
+   troca na hora e só a animação de entrada em CSS toca. */
+const TEM_VIEW_TRANSITION = typeof document !== 'undefined' && 'startViewTransition' in document;
+
+function semAnimacao() {
+  return document.body.classList.contains('a11y-sem-animacao') ||
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+}
+
+// Telas com painel (barra lateral + conteúdo): só o conteúdo desliza.
+const temPainel = () => !!document.querySelector('.dashboard-main, .aluno-main');
+
 function RotasAnimadas() {
   const location = useLocation();
+  const tipoNavegacao = useNavigationType();
+  const [mostrada, setMostrada] = useState(location);
+
+  useLayoutEffect(() => {
+    if (location.key === mostrada.key && location.pathname === mostrada.pathname) return;
+    const html = document.documentElement;
+    const trocar = (sincrono) => {
+      if (sincrono) flushSync(() => setMostrada(location));
+      else setMostrada(location);
+      if (tipoNavegacao !== 'POP') window.scrollTo(0, 0);
+    };
+
+    // Mesma página (só mudou ?busca) ou sem animação: troca direto
+    if (!TEM_VIEW_TRANSITION || semAnimacao() || location.pathname === mostrada.pathname) {
+      trocar(false);
+      return;
+    }
+
+    const painelAntes = temPainel();
+    html.classList.toggle('vt-voltando', tipoNavegacao === 'POP');
+    const transicao = document.startViewTransition(() => {
+      trocar(true);
+      // Painel nas duas pontas: a barra lateral fica parada e só o conteúdo anda
+      html.classList.toggle('vt-painel', painelAntes && temPainel());
+    });
+    transicao.finished.finally(() => html.classList.remove('vt-voltando', 'vt-painel'));
+  }, [location]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Modo escuro do professor: só vale nas telas /professor/*. Ao sair delas
      (login, telas do aluno) a classe é tirada e tudo volta ao normal.
      useLayoutEffect evita piscar a tela clara antes de escurecer. */
   useLayoutEffect(() => {
-    const ligado = location.pathname.startsWith('/professor') && temaEscuroProfessorLigado();
+    const ligado = mostrada.pathname.startsWith('/professor') && temaEscuroProfessorLigado();
     document.body.classList.toggle('modo-escuro-prof', ligado);
-  }, [location.pathname]);
+  }, [mostrada.pathname]);
 
   return (
-    <div key={location.pathname} className="pagina-animada">
-      <Routes location={location}>
+    <div key={mostrada.pathname} className={TEM_VIEW_TRANSITION ? 'pagina-animada com-vt' : 'pagina-animada'}>
+      <Routes location={mostrada}>
         <Route path="/" element={<Home />} />
         <Route path="/login/professor" element={<LoginProfessor />} />
         <Route path="/cadastro/professor" element={<CadastroProfessor />} />

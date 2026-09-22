@@ -11,6 +11,7 @@ const cloudinary = require('cloudinary').v2;
 const path = require('path');
 const fs = require('fs');
 const db = require('./db');
+const { ligarBackupAutomatico } = require('./backup');
 require('dotenv').config({ path: path.join(__dirname, '.env') }); // acha o .env mesmo rodando de outra pasta
 
 // --- IMPORTAÇÕES DO SOCKET.IO E HTTP ---
@@ -173,6 +174,53 @@ const authLimiter = rateLimit({
   message: { erro: 'Muitas tentativas. Tente novamente em 15 minutos.' }
 });
 
+/* --------------------------------------------------------------------------
+   BLINDAGEM DAS ENTRADAS
+
+   1. Nada de chaves "__proto__", "constructor" ou "prototype" no que chega
+      (truque para bagunçar os objetos do JavaScript do servidor).
+   2. Limite de escritas: cada pessoa (professor, aluno ou visitante) pode
+      criar/alterar/apagar até 300 coisas a cada 10 minutos. Uso normal fica
+      muito abaixo disso; um robô tentando encher ou bagunçar o banco para.
+   -------------------------------------------------------------------------- */
+const CHAVES_PROIBIDAS = new Set(['__proto__', 'constructor', 'prototype']);
+function temChaveProibida(valor, profundidade = 0) {
+  if (profundidade > 20) return true;                        // objeto fundo demais: suspeito
+  if (!valor || typeof valor !== 'object') return false;
+  for (const chave of Object.keys(valor)) {
+    if (CHAVES_PROIBIDAS.has(chave)) return true;
+    if (temChaveProibida(valor[chave], profundidade + 1)) return true;
+  }
+  return false;
+}
+// Campos que são sempre texto ou número: se chegar objeto/lista, é tentativa de truque
+const CAMPOS_SIMPLES = ['email', 'senha', 'nome', 'pin', 'aluno_id', 'sala_id', 'salaId', 'nome_aluno',
+  'codigo', 'atividade_id', 'sala_destino_id', 'titulo', 'tipo', 'credential', 'telefone', 'instituicao', 'materia'];
+app.use((req, res, next) => {
+  const corpo = req.body && typeof req.body === 'object' ? req.body : {};
+  const campoTorto = CAMPOS_SIMPLES.some(c => corpo[c] !== undefined && corpo[c] !== null && typeof corpo[c] === 'object');
+  if (campoTorto || temChaveProibida(req.body) || temChaveProibida(req.query)) {
+    return res.status(400).json({ erro: 'Envio inválido.' });
+  }
+  next();
+});
+
+const limiteEscrita = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => ['GET', 'HEAD', 'OPTIONS'].includes(req.method),
+  keyGenerator: (req) => {
+    const t = lerToken(req);
+    if (t?.tipo === 'aluno') return `aluno:${t.aluno_id}`;
+    if (t?.id) return `usuario:${t.id}`;
+    return `ip:${ipKeyGenerator(req.ip)}`;
+  },
+  message: { erro: 'Muitas ações seguidas. Espere alguns minutos e tente de novo.' }
+});
+app.use(limiteEscrita);
+
 /* ==========================================================================
    3. MIDDLEWARES DE AUTENTICAÇÃO E AUTORIZAÇÃO
    ========================================================================== */
@@ -182,7 +230,7 @@ function autenticar(req, res, next) {
   if (!token) return res.status(401).json({ erro: 'Token não fornecido.' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     // Crachá de aluno (ou de "passei pela senha da sala") não abre porta de professor
     if (decoded.tipo !== 'professor' && decoded.tipo !== 'admin') {
       return res.status(403).json({ erro: 'Acesso negado.' });
@@ -224,7 +272,7 @@ function apenasAdmin(req, res, next) {
 function lerToken(req) {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return null;
-  try { return jwt.verify(token, process.env.JWT_SECRET); } catch { return null; }
+  try { return jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] }); } catch { return null; }
 }
 
 function gerarTokenAcesso(salaId) {
@@ -2694,4 +2742,10 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => console.log(`🚀 Servidor HTTP e Socket.io rodando na porta ${PORT}`));
+
+// Cópia diária do banco (pasta backend/backups + Cloudinary privado)
+ligarBackupAutomatico();
+
+// Um erro inesperado vira registro no log em vez de derrubar o site
+process.on('unhandledRejection', (motivo) => console.error('Promessa rejeitada sem tratamento:', motivo?.message || motivo));
 
