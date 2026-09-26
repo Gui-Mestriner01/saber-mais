@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/AreaAluno.css';
 import { API, salvarAcessoSala } from '../api';
+import { aplicarTemaAluno } from '../temaAluno';
 
 const TEMAS = {
   frutas:   ['🍎','🍌','🍇','🍓','🍊','🍋','🍉','🍑','🍒','🥭','🍍','🥝'],
@@ -22,7 +23,7 @@ function AreaAluno() {
   const [senhaDigitada, setSenhaDigitada]     = useState([]);
   const [erroSenha, setErroSenha]   = useState(false);
 
-  useEffect(() => { buscarSalas(); }, []);
+  useEffect(() => { aplicarTemaAluno(); buscarSalas(); }, []);
 
   const buscarSalas = async () => {
     try {

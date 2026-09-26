@@ -365,7 +365,7 @@ function SalaAoVivoProfessor() {
                 : <span className="pergunta-relogio fechado">Encerrada</span>
               }
               <span className="prof-respondidos">
-                <Check size={15} strokeWidth={2.2} /> {estado.respondidos || 0} de {totalAlunos} responderam
+                <Check size={15} strokeWidth={2.2} /> {estado.confirmados ?? estado.respondidos ?? 0} de {totalAlunos} confirmaram
               </span>
             </div>
 

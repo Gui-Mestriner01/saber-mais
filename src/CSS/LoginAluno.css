@@ -1,93 +1,144 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
 
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+/* ==========================================================================
+   LOGIN DO ALUNO
+
+   Quatro telas dentro do mesmo cartão: escolher quem é, digitar o PIN,
+   primeiro acesso (um passo por vez) e a entrada da sala temporária.
+
+   As cores ficam em variáveis, então o tema escuro é só a mesma folha com
+   outros valores (body.modo-escuro, ligado em temaAluno.js pela escolha que
+   o aluno fez na Home).
+   ========================================================================== */
 
 .login-aluno-container {
+  --ceu: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
+  --cartao: rgba(255, 255, 255, 0.94);
+  --barra: rgba(255, 255, 255, 0.85);
+  --tinta: #2A4A6A;
+  --tinta-fraca: #6E93B0;
+  --campo: #F4F9FD;
+  --borda: #C8DFF0;
+  --azul: #1A6FC4;
+  --azul-escuro: #155DA0;
+  --verde: #3DAA5C;
+  --vermelho: #D63B3B;
+  --sombra: 0 10px 34px rgba(26, 111, 196, 0.16);
+
   min-height: 100vh;
-  background: linear-gradient(180deg, #B8DFF5 0%, #D9EEF8 40%, #E8F5D0 100%);
+  min-height: 100dvh;
+  background: var(--ceu);
   font-family: 'Nunito', sans-serif;
+  color: var(--tinta);
   display: flex;
   flex-direction: column;
 }
 
+body.modo-escuro .login-aluno-container {
+  --ceu: linear-gradient(180deg, #101B27 0%, #13202E 45%, #16262B 100%);
+  --cartao: #1B2A3A;
+  --barra: rgba(20, 32, 45, 0.92);
+  --tinta: #E6EEF6;
+  --tinta-fraca: #94AEC6;
+  --campo: #223448;
+  --borda: #33506B;
+  --azul: #3B8EDD;
+  --azul-escuro: #2F78BC;
+  --verde: #45B86A;
+  --vermelho: #FF7A7A;
+  --sombra: 0 10px 34px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- topo ---------- */
 .login-aluno-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px;
-  background: rgba(255,255,255,0.85);
+  gap: 12px;
+  padding: 14px 24px;
+  background: var(--barra);
   backdrop-filter: blur(10px);
-  border-bottom: 1.5px solid rgba(255,255,255,0.9);
+  border-bottom: 1.5px solid var(--borda);
 }
 
 .login-aluno-brand { font-size: 24px; font-weight: 900; }
 .brand-saber { color: #F5812A; }
-.brand-plus  { color: #1A6FC4; }
+.brand-plus  { color: var(--azul); }
 
 .login-aluno-header h2 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 900;
-  color: #2A4A6A;
+  color: var(--tinta);
+  text-align: right;
 }
 
+/* ---------- cartão ---------- */
 .login-aluno-main {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 28px 16px 40px;
 }
 
 .login-aluno-card {
-  background: rgba(255,255,255,0.92);
+  background: var(--cartao);
+  border: 1.5px solid var(--borda);
   border-radius: 24px;
-  padding: 40px;
+  padding: 54px 28px 32px;
   width: 100%;
-  max-width: 520px;
-  box-shadow: 0 8px 32px rgba(26,111,196,0.15);
+  max-width: 460px;
+  box-shadow: var(--sombra);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   text-align: center;
   position: relative;
 }
 
+.login-aluno-card.card-largo { max-width: 600px; }
+
 .login-aluno-card h2 {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
-  color: #2A4A6A;
+  color: var(--tinta);
+  line-height: 1.25;
 }
 
-.login-aluno-card p {
+.login-aluno-card > p {
   font-size: 15px;
-  color: #7AAAC8;
+  color: var(--tinta-fraca);
   font-weight: 700;
 }
+
+.login-carregando { color: var(--tinta-fraca); font-weight: 700; padding: 20px 0; }
 
 .login-voltar {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 14px;
+  left: 14px;
   background: none;
   border: none;
-  font-family: 'Nunito', sans-serif;
+  padding: 8px 10px;
+  font-family: inherit;
   font-size: 14px;
-  font-weight: 700;
-  color: #7AAAC8;
+  font-weight: 800;
+  color: var(--tinta-fraca);
   cursor: pointer;
-  transition: color 0.2s;
+  border-radius: 10px;
+  transition: color 0.2s, background 0.2s;
 }
 
-.login-voltar:hover { color: #2A4A6A; }
+.login-voltar:hover { color: var(--tinta); background: var(--campo); }
 
-/* GRID DE ALUNOS */
+/* ---------- lista de alunos ---------- */
 .alunos-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   gap: 12px;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .aluno-btn {
@@ -95,29 +146,26 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  background: #F4F9FD;
-  border: 2px solid #C8DFF0;
-  border-radius: 16px;
+  background: var(--campo);
+  border: 2px solid var(--borda);
+  border-radius: 18px;
   padding: 16px 8px;
   cursor: pointer;
-  transition: border-color 0.2s, transform 0.15s, background 0.2s;
-  font-family: 'Nunito', sans-serif;
+  font-family: inherit;
   font-size: 13px;
-  font-weight: 700;
-  color: #2A4A6A;
+  font-weight: 800;
+  color: var(--tinta);
+  transition: border-color 0.2s, transform 0.15s, background 0.2s;
 }
 
-.aluno-btn:hover {
-  border-color: #1A6FC4;
-  background: #EBF4FF;
-  transform: translateY(-2px);
-}
+.aluno-btn:hover { border-color: var(--azul); transform: translateY(-2px); }
+.aluno-btn:active { transform: scale(0.97); }
 
 .aluno-btn-avatar {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #1A6FC4;
+  background: var(--azul);
   color: #fff;
   display: flex;
   align-items: center;
@@ -126,215 +174,305 @@
   font-weight: 900;
 }
 
-.aluno-btn-novo .aluno-btn-avatar.novo {
-  background: #3DAA5C;
-  font-size: 20px;
+.aluno-btn-avatar.novo { background: var(--verde); font-size: 20px; }
+
+.aluno-btn-nome {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.aluno-btn-pts {
-  font-size: 11px;
-  font-weight: 700;
-  color: #F5812A;
-}
+.aluno-btn-pts { font-size: 11px; font-weight: 800; color: #F5812A; }
 
-/* PIN */
+/* ---------- PIN ---------- */
 .pin-avatar {
-  width: 72px;
-  height: 72px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  background: #1A6FC4;
+  background: var(--azul);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 900;
-  margin-bottom: 4px;
 }
 
-.pin-dots {
-  display: flex;
-  gap: 16px;
-  margin: 8px 0;
-}
+.pin-dots { display: flex; gap: 14px; margin: 6px 0; }
 
 .pin-dot {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #C8DFF0;
-  border: 2px solid #C8DFF0;
-  transition: background 0.2s, transform 0.15s;
+  background: transparent;
+  border: 2.5px solid var(--borda);
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
 }
 
-.pin-dot.preenchido {
-  background: #1A6FC4;
-  border-color: #1A6FC4;
-  transform: scale(1.1);
-}
-
-.pin-dot.erro { background: #E23F3F; border-color: #E23F3F; }
+.pin-dot.preenchido { background: var(--azul); border-color: var(--azul); transform: scale(1.15); }
+.pin-dot.erro { border-color: var(--vermelho); background: transparent; }
 
 .pin-erro {
   font-size: 14px;
-  font-weight: 700;
-  color: #E23F3F;
+  font-weight: 800;
+  color: var(--vermelho);
+  max-width: 320px;
 }
 
 .pin-teclado {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  width: 240px;
+  width: 100%;
+  max-width: 260px;
 }
 
 .pin-tecla {
-  padding: 16px;
-  background: #F4F9FD;
-  border: 2px solid #C8DFF0;
+  padding: 14px 0;
+  background: var(--campo);
+  border: 2px solid var(--borda);
   border-radius: 14px;
-  font-family: 'Nunito', sans-serif;
+  font-family: inherit;
   font-size: 22px;
   font-weight: 900;
-  color: #2A4A6A;
+  color: var(--tinta);
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  min-height: 56px;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 
-.pin-tecla:hover:not(:disabled) {
-  background: #EBF4FF;
-  border-color: #1A6FC4;
-  transform: scale(1.05);
+.pin-tecla:hover { border-color: var(--azul); }
+.pin-tecla:active { transform: scale(0.94); }
+.pin-tecla.apagar { color: var(--vermelho); font-size: 18px; }
+.pin-tecla-vazia { display: block; }
+
+/* ---------- primeiro acesso: um passo por vez ---------- */
+.passos {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
 }
 
-.pin-tecla.apagar { color: #E23F3F; font-size: 18px; }
+.passo {
+  border: 2px solid var(--borda);
+  border-radius: 16px;
+  background: var(--campo);
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+}
 
-/* NOVO ALUNO */
+.passo.aberto { border-color: var(--azul); background: var(--cartao); }
+.passo.pronto .passo-num { background: var(--verde); }
+
+.passo-cab {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--tinta);
+  text-align: left;
+  cursor: pointer;
+}
+
+.passo-cab:disabled { cursor: default; opacity: 0.55; }
+
+.passo-num {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--borda);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.passo.aberto .passo-num { background: var(--azul); }
+
+.passo-titulo { flex: 1; }
+
+.passo-valor {
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tinta-fraca);
+  font-weight: 800;
+}
+
+.passo-corpo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 14px 18px;
+  animation: passo-abrir 0.28s ease;
+}
+
+@keyframes passo-abrir {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.passo-erro {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--vermelho);
+}
+
+.passo-dica {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta-fraca);
+}
+
+/* ---------- campos e botões ---------- */
 .novo-campo {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 8px;
 }
 
 .novo-campo label {
   font-size: 13px;
   font-weight: 900;
-  color: #5A7A9A;
+  color: var(--tinta-fraca);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  align-self: flex-start;
+  text-align: left;
 }
 
 .novo-input {
   width: 100%;
-  padding: 14px 18px;
-  background: #F4F9FD;
-  border: 2px solid #C8DFF0;
+  padding: 14px 16px;
+  background: var(--campo);
+  border: 2px solid var(--borda);
   border-radius: 12px;
-  font-family: 'Nunito', sans-serif;
-  font-size: 16px;
+  font-family: inherit;
+  font-size: 16px;          /* 16px evita o zoom automático do iPhone */
   font-weight: 700;
-  color: #2A4A6A;
+  color: var(--tinta);
   outline: none;
   text-align: center;
   transition: border-color 0.2s;
 }
 
-.novo-input:focus { border-color: #1A6FC4; }
-.novo-input::placeholder { color: #A0B8CC; font-weight: 400; }
+.novo-input:focus { border-color: var(--azul); }
+.novo-input::placeholder { color: var(--tinta-fraca); font-weight: 500; }
 
 .btn-entrar-pin {
   width: 100%;
-  padding: 16px;
-  background: #1A6FC4;
+  padding: 15px;
+  background: var(--azul);
   color: #fff;
   border: none;
   border-radius: 14px;
-  font-family: 'Nunito', sans-serif;
+  font-family: inherit;
   font-size: 16px;
   font-weight: 900;
   cursor: pointer;
   transition: background 0.2s, transform 0.15s;
-  margin-top: 8px;
 }
 
-.btn-entrar-pin:hover:not(:disabled) {
-  background: #155DA0;
-  transform: translateY(-2px);
-}
+.btn-entrar-pin:hover:not(:disabled) { background: var(--azul-escuro); transform: translateY(-2px); }
+.btn-entrar-pin:active:not(:disabled) { transform: scale(0.98); }
+.btn-entrar-pin:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-entrar-pin.btn-verde { background: var(--verde); }
+.btn-entrar-pin.btn-verde:hover:not(:disabled) { background: #339550; }
 
-.btn-entrar-pin:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* ==========================================================================
-   SALA TEMPORÁRIA (ESCOLHA DE AVATAR)
-   ========================================================================== */
-
-.login-avatares-titulo {
-  font-size: 15px;
-  color: #5A7A9A;
-  font-weight: 900;
-  text-transform: uppercase;
-  margin-top: 10px;
-  margin-bottom: 12px;
-  align-self: flex-start;
+/* ---------- sala temporária ---------- */
+.form-temporaria {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 6px;
 }
 
 .login-grid-avatares {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
   gap: 10px;
   width: 100%;
-  max-height: 220px;
+  max-height: 230px;
   overflow-y: auto;
   padding: 12px;
   border-radius: 16px;
-  background: #F4F9FD;
-  border: 2px solid #C8DFF0;
+  background: var(--campo);
+  border: 2px solid var(--borda);
 }
 
 .login-avatar-btn {
-  background: white;
+  background: var(--cartao);
   border: 2px solid transparent;
   border-radius: 12px;
-  padding: 6px;
+  padding: 5px;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   justify-content: center;
   align-items: center;
-  aspect-ratio: 1/1;
-  box-shadow: 0 2px 4px rgba(26,111,196,0.1);
+  aspect-ratio: 1 / 1;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s;
 }
 
-.login-avatar-btn:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 6px 12px rgba(26,111,196,0.2);
-  border-color: #C8DFF0;
-}
+.login-avatar-btn:hover { transform: translateY(-3px); border-color: var(--borda); }
 
 .login-avatar-btn.selecionado {
   border-color: #F5812A;
-  background: #FFF3EB;
-  transform: scale(1.1);
-  box-shadow: 0 0 15px rgba(245, 129, 42, 0.4);
+  background: rgba(245, 129, 42, 0.16);
+  transform: scale(1.06);
 }
 
-.login-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+.login-avatar-img { width: 100%; height: 100%; object-fit: contain; }
+
+.login-grid-avatares::-webkit-scrollbar { width: 6px; }
+.login-grid-avatares::-webkit-scrollbar-track { background: transparent; }
+.login-grid-avatares::-webkit-scrollbar-thumb { background: var(--borda); border-radius: 10px; }
+
+/* ---------- celular ---------- */
+@media (max-width: 560px) {
+  .login-aluno-header { padding: 12px 16px; }
+  .login-aluno-brand { font-size: 21px; }
+  .login-aluno-header h2 { font-size: 15px; }
+
+  .login-aluno-main { padding: 16px 12px 28px; }
+
+  .login-aluno-card {
+    padding: 54px 16px 24px;
+    border-radius: 20px;
+    gap: 12px;
+  }
+
+  .login-aluno-card h2 { font-size: 21px; }
+  .login-aluno-card > p { font-size: 14px; }
+
+  .alunos-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+  .aluno-btn-avatar { width: 46px; height: 46px; font-size: 19px; }
+
+  .passo-cab { padding: 13px 12px; font-size: 14px; }
+  .passo-corpo { padding: 2px 12px 16px; }
 }
 
-.login-grid-avatares::-webkit-scrollbar {
-  width: 6px;
+/* Telas baixas (celular deitado ou aparelho pequeno): tudo um pouco menor */
+@media (max-height: 680px) {
+  .pin-tecla { min-height: 48px; padding: 10px 0; font-size: 20px; }
+  .pin-avatar { width: 56px; height: 56px; font-size: 25px; }
+  .login-aluno-card { gap: 10px; }
 }
-.login-grid-avatares::-webkit-scrollbar-track {
-  background: #F4F9FD;
-  border-radius: 10px;
-}
-.login-grid-avatares::-webkit-scrollbar-thumb {
-  background: #C8DFF0;
-  border-radius: 10px;
+
+@media (prefers-reduced-motion: reduce) {
+  .passo-corpo { animation: none; }
 }

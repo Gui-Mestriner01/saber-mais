@@ -1583,7 +1583,7 @@ function sincronizar(partida) {
   const jogadores = Object.values(partida.jogadores);
   const todosResponderam =
     jogadores.length > 0 &&
-    jogadores.every(j => j.respostas[partida.indice] !== undefined);
+    jogadores.every(j => j.respostas[partida.indice]?.confirmado);
 
   if (Date.now() >= partida.terminaEm || todosResponderam) {
     partida.estado = 'revisao';
@@ -1643,7 +1643,9 @@ function retrato(partida, { professor = false, jogadorId = null } = {}) {
     dados.pergunta = {
       texto: pergunta.texto,
       imagem: pergunta.imagem,
-      alternativas: pergunta.alternativas.map(a => a.texto)
+      alternativas: pergunta.alternativas.map(a => a.texto),
+      // Avisa a tela que dá para marcar mais de uma (sem dizer quais são)
+      multipla: indicesCorretos(pergunta).length > 1
     };
     if (!emPergunta) dados.gabarito = indicesCorretos(pergunta);
   }
@@ -1656,8 +1658,9 @@ function retrato(partida, { professor = false, jogadorId = null } = {}) {
     dados.respondidos = respondidas.length;
     if (pergunta) {
       dados.contagem = pergunta.alternativas.map(
-        (_, i) => respondidas.filter(r => r.escolha === i).length
+        (_, i) => respondidas.filter(r => (r.escolhas || [r.escolha]).includes(i)).length
       );
+      dados.confirmados = respondidas.filter(r => r.confirmado).length;
     }
   }
 
@@ -1672,6 +1675,8 @@ function retrato(partida, { professor = false, jogadorId = null } = {}) {
       acertos: eu.acertos,
       posicao: dados.ranking.findIndex(r => r.id === eu.id) + 1,
       respondeu: minha !== undefined,
+      confirmou: !!minha?.confirmado,
+      escolhas: minha?.escolhas || (minha ? [minha.escolha] : []),
       escolha: minha ? minha.escolha : null,
       acertou: minha ? minha.acertou : null,
       ganhou: minha ? minha.ganhou : 0
@@ -1812,7 +1817,7 @@ app.get('/live/sala/:salaId', acessoASala(req => req.params.salaId), (req, res) 
    navegador nem por ter internet mais rápida em casa.
    -------------------------------------------------------------------------- */
 app.post('/live/responder', acessoASala(req => req.body.sala_id), (req, res) => {
-  const { sala_id, jogador_id, indice, escolha } = req.body;
+  const { sala_id, jogador_id, indice, escolha, escolhas, confirmar } = req.body;
   const partida = partidas[sala_id];
 
   if (!partida) return res.status(404).json({ erro: 'Partida não encontrada.' });
@@ -1822,27 +1827,57 @@ app.post('/live/responder', acessoASala(req => req.body.sala_id), (req, res) => 
   if (!jogador) return res.status(404).json({ erro: 'Jogador não encontrado.' });
   if (partida.estado !== 'pergunta') return res.status(409).json({ erro: 'O tempo desta pergunta já acabou.' });
   if (Number(indice) !== partida.indice) return res.status(409).json({ erro: 'Esta pergunta já passou.' });
-  if (jogador.respostas[partida.indice] !== undefined) return res.status(409).json({ erro: 'Você já respondeu.' });
+
+  const anterior = jogador.respostas[partida.indice];
+  // Enquanto não confirmar, o aluno pode trocar de ideia quantas vezes quiser.
+  if (anterior?.confirmado) return res.status(409).json({ erro: 'Você já confirmou sua resposta.' });
 
   const pergunta = partida.perguntas[partida.indice];
   const corretas = indicesCorretos(pergunta);
-  const acertou = corretas.includes(Number(escolha));
+
+  // Aceita tanto `escolha` (uma só) quanto `escolhas` (lista, para as
+  // perguntas que têm mais de uma alternativa certa).
+  const brutas = escolhas !== undefined ? escolhas : escolha;
+  const marcadas = [...new Set((Array.isArray(brutas) ? brutas : [brutas])
+    .map(Number)
+    .filter(n => Number.isInteger(n) && n >= 0 && n < pergunta.alternativas.length))]
+    .sort((a, b) => a - b);
+
+  if (marcadas.length === 0) return res.status(400).json({ erro: 'Escolha pelo menos uma alternativa.' });
+
+  const acertou = marcadas.length === corretas.length && corretas.every(c => marcadas.includes(c));
 
   const restante = Math.max(0, partida.terminaEm - Date.now());
   const fracao = partida.segundos > 0 ? restante / (partida.segundos * 1000) : 0;
   const ganhou = acertou ? Math.round(PONTOS_MINIMOS + PONTOS_BONUS * fracao) : 0;
 
+  // Trocar de resposta refaz a conta: tira o que a resposta antiga valia
+  if (anterior) {
+    jogador.pontos -= anterior.ganhou || 0;
+    if (anterior.acertou) jogador.acertos -= 1;
+  }
+
   jogador.respostas[partida.indice] = {
-    escolha: Number(escolha),
+    escolhas: marcadas,
+    escolha: marcadas[0],          // compatibilidade com as telas antigas
     acertou,
     ganhou,
+    confirmado: !!confirmar,
     ms: partida.segundos * 1000 - restante
   };
   jogador.pontos += ganhou;
   if (acertou) jogador.acertos += 1;
 
-  sincronizar(partida); // pode ter sido o último a responder
-  res.json({ acertou, ganhou, pontos: jogador.pontos, gabarito: corretas });
+  sincronizar(partida); // pode ter sido o último a confirmar
+  // O gabarito só sai depois que a pergunta fecha (senão o aluno veria a
+  // resposta certa antes da hora, e ainda dava para trocar).
+  const fechou = partida.estado !== 'pergunta';
+  res.json({
+    escolhas: marcadas,
+    confirmado: !!confirmar,
+    pontos: jogador.pontos,
+    ...(fechou ? { acertou, ganhou, gabarito: corretas } : {})
+  });
 });
 
 /* --------------------------------------------------------------------------
@@ -2042,7 +2077,7 @@ function gravarResultado(partida) {
 
   jogadores.forEach(jogador => {
     const respostas = {};
-    Object.entries(jogador.respostas).forEach(([i, r]) => { respostas[i] = [r.escolha]; });
+    Object.entries(jogador.respostas).forEach(([i, r]) => { respostas[i] = r.escolhas || [r.escolha]; });
 
     const conteudo = {
       respostas,

@@ -304,6 +304,47 @@
 
 .alternativa-simbolo { font-size: 1.7rem; line-height: 1; }
 .alternativa-texto   { flex: 1; }
+.alternativa-check   { font-size: 1.4rem; font-weight: 900; }
+
+/* Marcada: fica em destaque, com um anel branco em volta.
+   Enquanto o tempo corre dá para marcar, desmarcar e trocar. */
+.alternativa.marcada {
+  outline: 4px solid #fff;
+  outline-offset: -4px;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, .25);
+}
+.alternativa.apagada { opacity: .45; }
+.alternativa:disabled { cursor: default; }
+.alternativa:disabled:hover { transform: none; box-shadow: 0 4px 0 rgba(0, 0, 0, .18); }
+
+.pergunta-dica {
+  text-align: center;
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--texto-fraco, #7d93a8);
+  margin: 0 0 14px;
+}
+
+.btn-confirmar-resposta {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 16px;
+  border: none;
+  border-radius: var(--r);
+  background: #1A6FC4;
+  color: #fff;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .18);
+  transition: background .15s ease, transform .1s ease;
+}
+.btn-confirmar-resposta:hover:not(:disabled) { background: #155DA0; }
+.btn-confirmar-resposta:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, .18); }
+.btn-confirmar-resposta:disabled { opacity: .5; cursor: not-allowed; }
 
 .alt-azul    { background: var(--alt-azul); }
 .alt-laranja { background: var(--alt-laranja); }
@@ -963,7 +1004,10 @@ body.modo-escuro .chamado-sala { color: #fb923c; }
   .aovivo-palco { padding: 18px 14px 50px; }
   .pergunta-texto { font-size: 1.25rem; padding: 20px 16px; }
   .alternativas { grid-template-columns: 1fr; }
-  .alternativa { min-height: 74px; font-size: 1rem; }
+  .alternativa { min-height: 68px; font-size: 1rem; padding: 12px 14px; gap: 10px; }
+  .alternativa-simbolo { font-size: 1.4rem; }
+  .pergunta-dica { font-size: .88rem; }
+  .btn-confirmar-resposta { padding: 15px; font-size: 1rem; position: sticky; bottom: 10px; }
   .espera-cartao h1 { font-size: 1.6rem; }
   .aovivo-aluno .podio-lugar, .aovivo-prof .podio-lugar { width: 104px; }
   .aovivo-aluno .lugar-1 img, .aovivo-prof .lugar-1 img { width: 58px; height: 58px; }

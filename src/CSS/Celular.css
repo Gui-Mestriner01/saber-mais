@@ -318,9 +318,18 @@
   /* ------------------------------------------------------------------------
      6. ÁREA DO ALUNO (AlunoHome)
      ------------------------------------------------------------------------ */
-  .aluno-header-card { min-height: 0; }
-  .aluno-header-texto h1 { font-size: 24px; }
-  .aluno-header-texto p { font-size: 14px; max-width: 70%; }
+  /* A saudação ficava espremida numa coluna estreita por causa da ilustração.
+     No celular o texto ocupa a largura toda e o desenho fica menor, no canto. */
+  .aluno-header-card { min-height: 0; padding: 22px 18px 20px; }
+  .aluno-header-texto { max-width: 100%; }
+  .aluno-header-texto h1 { font-size: 23px; }
+  .aluno-header-texto p { font-size: 14px; max-width: 100%; }
+  .aluno-header-imagem-bg { width: 42%; opacity: .5; object-position: right bottom; }
+}
+
+@media (max-width: 420px) {
+  /* Tela bem estreita: a ilustração sai e o texto fica por conta do cartão */
+  .aluno-header-imagem-bg { display: none; }
 
   /* Pontos / nível / insígnias: três cartõezinhos em pé, lado a lado */
   .aluno-stats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
@@ -516,4 +525,68 @@
 @keyframes pagina-entrar-cel {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+/* ==========================================================================
+   PENTE-FINO DO CELULAR (set/2026)
+
+   Varredura em todas as telas num aparelho de 360px. O que aparecia:
+   botões pequenos demais para o dedo (24 a 34px de altura), o editor do
+   quiz passando alguns pixels da tela e a lista de salas saindo do cartão.
+
+   A regra que uso aqui: nada de tocar com menos de 40px de altura, e nada
+   pode ser mais largo que a tela.
+   ========================================================================== */
+@media (max-width: 860px) {
+  /* Alvos de toque */
+  .back-btn,
+  .login-voltar,
+  .senha-voltar,
+  .link-ver-todas,
+  .btn-icone,
+  .editor-icone-btn,
+  .chamada-btn,
+  .alt-correta-btn,
+  .thumb-del,
+  .par-tipo-toggle button,
+  .senha-apagar,
+  .busca-limpar {
+    min-height: 40px;
+    min-width: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .link-ver-todas { padding: 8px 4px; }
+  .toggle-tipo button,
+  .btn-add-pergunta,
+  .btn-sair-quiz { min-height: 42px; }
+  .busca-sala-input input { min-height: 40px; }
+  .back-btn { padding: 8px 12px; }
+  .alt-correta-btn { border-radius: 50%; }
+
+  /* Nada mais largo que a tela */
+  .quiz-main,
+  .ligar-main,
+  .editor-conteudo,
+  .alternativa-card,
+  .par-row,
+  .modal-card { max-width: 100%; }
+
+  .alternativa-card { flex-wrap: wrap; }
+  .alt-input { min-height: 40px; }
+
+  select,
+  .criar-select,
+  .filtro-select { max-width: 100%; width: 100%; }
+
+  /* Campo de texto com 16px: assim o iPhone não dá zoom sozinho ao tocar */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  select,
+  textarea { font-size: 16px; }
 }

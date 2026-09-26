@@ -30,6 +30,11 @@ function SalaAoVivoAluno() {
   const jogadorRef = useRef(null);
   const alvoRef    = useRef(0);
 
+  // O que o aluno marcou nesta pergunta. Fica separado do `estado` porque a
+  // tela se atualiza de segundo em segundo e não pode apagar o que ele
+  // acabou de tocar.
+  const [selecao, setSelecao] = useState({ indice: -1, escolhas: [], confirmado: false });
+
   /* ---- entrar na sala ---- */
   useEffect(() => {
     const salvo = localStorage.getItem('alunoTemporario');
@@ -81,6 +86,13 @@ function SalaAoVivoAluno() {
         if (!vivo) return;
         setEstado(novo);
         alvoRef.current = Date.now() + (novo.restanteMs || 0);
+        setSelecao(atual => {
+          if (novo.indice !== atual.indice) {
+            // Pergunta nova (ou recarregou a página): começa do que o servidor sabe
+            return { indice: novo.indice, escolhas: novo.eu?.escolhas || [], confirmado: !!novo.eu?.confirmou };
+          }
+          return novo.eu?.confirmou ? { ...atual, confirmado: true } : atual;
+        });
       } catch {
         /* silêncio: na próxima volta tenta de novo */
       }
@@ -99,12 +111,11 @@ function SalaAoVivoAluno() {
     return () => clearInterval(id);
   }, []);
 
-  const responder = async (indiceAlternativa) => {
-    if (!estado || estado.estado !== 'pergunta' || estado.eu?.respondeu) return;
-
-    // Pinta o botão na hora, sem esperar a resposta do servidor.
-    setEstado(atual => ({ ...atual, eu: { ...atual.eu, respondeu: true, escolha: indiceAlternativa } }));
-
+  /* ---- responder ----
+     Enquanto o tempo corre, o aluno pode trocar de alternativa à vontade.
+     Nas perguntas com mais de uma resposta certa dá para marcar várias.
+     Só o botão "Confirmar" fecha a resposta. */
+  const enviarEscolhas = async (escolhas, confirmar) => {
     try {
       await fetch(`${API}/live/responder`, {
         method: 'POST',
@@ -113,12 +124,36 @@ function SalaAoVivoAluno() {
           sala_id: aluno.salaId,
           jogador_id: jogadorRef.current,
           indice: estado.indice,
-          escolha: indiceAlternativa
+          escolhas,
+          confirmar: !!confirmar
         })
       });
     } catch {
       /* a próxima consulta corrige a tela */
     }
+  };
+
+  const marcar = (indiceAlternativa) => {
+    if (!estado || estado.estado !== 'pergunta' || selecao.confirmado || estado.eu?.confirmou) return;
+
+    const multipla = !!estado.pergunta?.multipla;
+    const atuais = selecao.indice === estado.indice ? selecao.escolhas : [];
+    const novas = multipla
+      ? (atuais.includes(indiceAlternativa)
+          ? atuais.filter(x => x !== indiceAlternativa)
+          : [...atuais, indiceAlternativa].sort((a, b) => a - b))
+      : [indiceAlternativa];
+
+    setSelecao({ indice: estado.indice, escolhas: novas, confirmado: false });
+    if (novas.length > 0) enviarEscolhas(novas, false);
+  };
+
+  const confirmar = () => {
+    if (!estado || estado.estado !== 'pergunta') return;
+    const escolhas = selecao.indice === estado.indice ? selecao.escolhas : [];
+    if (escolhas.length === 0) return;
+    setSelecao(atual => ({ ...atual, confirmado: true }));
+    enviarEscolhas(escolhas, true);
   };
 
   // O aluno de sala permanente volta para a página dele; o de sala
@@ -178,7 +213,7 @@ function SalaAoVivoAluno() {
 
       {estado.estado === 'lobby'   && <Espera estado={estado} aluno={aluno} />}
       {estado.estado === 'pergunta' && (
-        <Pergunta estado={estado} relogio={relogio} responder={responder} />
+        <Pergunta estado={estado} relogio={relogio} selecao={selecao} marcar={marcar} confirmar={confirmar} />
       )}
       {estado.estado === 'revisao' && <Revisao estado={estado} />}
       {estado.estado === 'fim'     && <Fim estado={estado} />}
@@ -224,11 +259,13 @@ function Espera({ estado, aluno }) {
 }
 
 /* ---------- pergunta ---------- */
-function Pergunta({ estado, relogio, responder }) {
+function Pergunta({ estado, relogio, selecao, marcar, confirmar }) {
   const p = estado.pergunta;
   if (!p) return null;
 
-  const respondeu = estado.eu?.respondeu;
+  const confirmado = selecao.confirmado || estado.eu?.confirmou;
+  const marcadas = selecao.indice === estado.indice ? selecao.escolhas : (estado.eu?.escolhas || []);
+  const multipla = !!p.multipla;
   const fracao = estado.segundos > 0 ? Math.max(0, Math.min(1, relogio / estado.segundos)) : 0;
 
   return (
@@ -244,30 +281,40 @@ function Pergunta({ estado, relogio, responder }) {
       <h1 className="pergunta-texto">{p.texto}</h1>
       {p.imagem && <img className="pergunta-imagem" src={p.imagem} alt="" />}
 
-      {respondeu ? (
-        <div className="pergunta-enviada">
-          <span className="enviada-simbolo" aria-hidden="true">
-            {ESTILOS[estado.eu.escolha % ESTILOS.length].simbolo}
-          </span>
-          <h2>Resposta enviada!</h2>
-          <p>Agora é esperar os colegas. Quanto mais cedo você respondeu, mais pontos vale.</p>
-        </div>
-      ) : (
-        <div className={`alternativas ${p.alternativas.length === 2 ? 'duas' : ''}`}>
-          {p.alternativas.map((texto, i) => {
-            const estilo = ESTILOS[i % ESTILOS.length];
-            return (
-              <button
-                key={i}
-                className={`alternativa ${estilo.classe}`}
-                onClick={() => responder(i)}
-              >
-                <span className="alternativa-simbolo" aria-hidden="true">{estilo.simbolo}</span>
-                <span className="alternativa-texto">{texto}</span>
-              </button>
-            );
-          })}
-        </div>
+      <p className="pergunta-dica">
+        {confirmado
+          ? '✅ Resposta confirmada! Agora é esperar os colegas.'
+          : multipla
+            ? 'Esta pergunta tem mais de uma resposta certa: marque todas e confirme.'
+            : 'Dá para trocar de resposta até confirmar. Quanto antes confirmar, mais pontos.'}
+      </p>
+
+      <div className={`alternativas ${p.alternativas.length === 2 ? 'duas' : ''}`}>
+        {p.alternativas.map((texto, i) => {
+          const estilo = ESTILOS[i % ESTILOS.length];
+          const marcada = marcadas.includes(i);
+          return (
+            <button
+              key={i}
+              className={`alternativa ${estilo.classe} ${marcada ? 'marcada' : ''} ${confirmado && !marcada ? 'apagada' : ''}`}
+              onClick={() => marcar(i)}
+              disabled={confirmado}
+              aria-pressed={marcada}
+            >
+              <span className="alternativa-simbolo" aria-hidden="true">{estilo.simbolo}</span>
+              <span className="alternativa-texto">{texto}</span>
+              {marcada && <span className="alternativa-check" aria-hidden="true">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {!confirmado && (
+        <button className="btn-confirmar-resposta" onClick={confirmar} disabled={marcadas.length === 0}>
+          {marcadas.length === 0
+            ? 'Escolha uma alternativa'
+            : multipla ? `Confirmar ${marcadas.length} resposta${marcadas.length > 1 ? 's' : ''}` : 'Confirmar resposta'}
+        </button>
       )}
     </main>
   );
@@ -277,7 +324,7 @@ function Pergunta({ estado, relogio, responder }) {
 function Revisao({ estado }) {
   const eu = estado.eu || {};
   const gabarito = estado.gabarito || [];
-  const certa = estado.pergunta?.alternativas?.[gabarito[0]];
+  const certas = gabarito.map(i => estado.pergunta?.alternativas?.[i]).filter(Boolean);
 
   return (
     <main className="aovivo-palco">
@@ -288,7 +335,10 @@ function Revisao({ estado }) {
 
         {eu.acertou
           ? <p className="revisao-ganho animar-pop">+{eu.ganhou} pontos</p>
-          : <p className="revisao-certa">Resposta certa: <strong>{certa}</strong></p>
+          : <p className="revisao-certa">
+              {certas.length > 1 ? 'Respostas certas: ' : 'Resposta certa: '}
+              <strong>{certas.join(' · ')}</strong>
+            </p>
         }
 
         <div className="revisao-numeros">

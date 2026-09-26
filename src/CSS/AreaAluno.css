@@ -401,3 +401,107 @@
   background: #155DA0;
   transform: translateY(-2px);
 }
+/* ==========================================================================
+   AJUSTES DE CELULAR E TEMA ESCURO (set/2026)
+
+   O teclado de emojis era fixo em 6 colunas: num celular de 360px as duas
+   últimas colunas ficavam para fora do cartão. Agora as colunas se ajustam
+   ao espaço que tem.
+
+   O tema escuro segue a escolha que o aluno fez na Home (temaAluno.js liga a
+   classe no <body>). Sem essas regras, o "modo escuro" do próprio navegador
+   inventava as cores e a tela ficava com caixa vermelha e texto ilegível.
+   ========================================================================== */
+
+@media (max-width: 560px) {
+  .area-aluno-header { padding: 14px 16px; gap: 10px; }
+  .area-aluno-brand  { font-size: 26px; }
+  .area-aluno-titulo { font-size: 17px; text-align: right; }
+  .area-aluno-header > div[style] { display: none; }
+
+  .area-aluno-main { padding: 18px 12px 28px; gap: 20px; }
+
+  .salas-grid { grid-template-columns: 1fr; gap: 14px; }
+
+  .senha-card { padding: 44px 16px 24px; border-radius: 20px; gap: 16px; }
+  .senha-info-sala { margin-top: 8px; }
+  .senha-tema-icon { font-size: 40px; }
+
+  .senha-digitada { gap: 8px; }
+  .senha-slot { width: 58px; height: 58px; font-size: 26px; border-radius: 14px; }
+
+  .teclado-virtual { gap: 8px; }
+  .tecla-emoji { font-size: 24px; padding: 8px 0; }
+}
+
+@media (max-width: 380px) {
+  .senha-slot { width: 50px; height: 50px; font-size: 22px; }
+}
+
+/* O teclado se encaixa no espaço disponível em qualquer tela */
+.teclado-virtual {
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+}
+
+.tecla-emoji { min-height: 48px; }
+.tecla-emoji:active:not(:disabled) { transform: scale(0.92); }
+
+/* ---------- tema escuro ---------- */
+body.modo-escuro .area-aluno-container {
+  background: linear-gradient(180deg, #101B27 0%, #13202E 45%, #16262B 100%);
+  color: #E6EEF6;
+}
+
+body.modo-escuro .area-aluno-header {
+  background: rgba(20, 32, 45, 0.92);
+  border-bottom-color: #33506B;
+}
+
+body.modo-escuro .area-aluno-titulo,
+body.modo-escuro .senha-info-sala h2,
+body.modo-escuro .senha-instrucao,
+body.modo-escuro .sala-card-body h3,
+body.modo-escuro .nome-card h2 { color: #E6EEF6; }
+
+body.modo-escuro .senha-info-sala p,
+body.modo-escuro .sala-escola,
+body.modo-escuro .salas-vazio,
+body.modo-escuro .nome-card p,
+body.modo-escuro .senha-voltar,
+body.modo-escuro .senha-apagar { color: #94AEC6; }
+
+body.modo-escuro .senha-card,
+body.modo-escuro .nome-card,
+body.modo-escuro .sala-card,
+body.modo-escuro .busca-sala-input {
+  background: #1B2A3A;
+  border-color: #33506B;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45);
+}
+
+body.modo-escuro .senha-slot,
+body.modo-escuro .tecla-emoji,
+body.modo-escuro .nome-input,
+body.modo-escuro .senha-apagar {
+  background: #223448;
+  border-color: #33506B;
+  color: #E6EEF6;
+}
+
+body.modo-escuro .senha-slot.preenchido,
+body.modo-escuro .tecla-emoji:hover:not(:disabled) { border-color: #3B8EDD; background: #26405A; }
+
+body.modo-escuro .senha-slot.erro { border-color: #FF7A7A; }
+body.modo-escuro .senha-erro,
+body.modo-escuro .nome-erro { color: #FF7A7A; }
+
+body.modo-escuro .busca-sala-input input { color: #E6EEF6; }
+body.modo-escuro .busca-sala-input input::placeholder,
+body.modo-escuro .busca-limpar { color: #7D97AE; }
+
+body.modo-escuro .sala-materia { color: #6FB4F0; }
+
+body.modo-escuro .sala-entrar-btn,
+body.modo-escuro .btn-entrar-sala { background: #2F78BC; }
+body.modo-escuro .sala-entrar-btn:hover,
+body.modo-escuro .btn-entrar-sala:hover { background: #3B8EDD; }
