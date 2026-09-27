@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+
+const CLIENTE_GOOGLE = '17269757270-gk04h1b82ljnu5ep0fdnctn7gru3aca1.apps.googleusercontent.com';
 import '../CSS/Login.css';
 import { API } from '../api';
 
@@ -108,6 +110,7 @@ function LoginProfessor() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+            <GoogleOAuthProvider clientId={CLIENTE_GOOGLE}>
             <GoogleLogin
             onSuccess={async (credentialResponse) => {
               // Manda a credencial assinada pelo Google; quem confere é o servidor
@@ -156,6 +159,7 @@ function LoginProfessor() {
             theme="outline" 
             size="large"    
           />
+            </GoogleOAuthProvider>
           </div>
 
           <p className="cadastro-link">

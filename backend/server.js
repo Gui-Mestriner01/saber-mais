@@ -142,9 +142,10 @@ if (fs.existsSync(path.join(pastaSite, 'index.html'))) {
       } else if (/(sw\.js|index\.html|manifest\.webmanifest)$/.test(arquivo)) {
         res.setHeader('Cache-Control', 'no-cache');                            // sempre a versão nova
       } else if (/\.(webp|png|jpe?g|svg|woff2?|ico)$/i.test(arquivo)) {
-        // Avatares, ilustrações e ícones mudam muito pouco: ficam 30 dias no
+        // Avatares, ilustrações, ícones e fontes: quando mudam, mudam de nome
+        // (banner13.webp, professor6.webp...). Então podem ficar um ano no
         // celular do aluno em vez de serem baixados a cada visita.
-        res.setHeader('Cache-Control', 'public, max-age=2592000');
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
       }
     },
   }));

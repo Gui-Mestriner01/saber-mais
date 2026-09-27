@@ -32,8 +32,15 @@ function Home() {
         <div className="cards-row">
           <div className="access-card">
             <div className="avatar">
+              {/* srcset: no celular baixa a versão de 480px (13 KB) em vez da
+                  de 960px. fetchpriority alto: é a maior imagem da tela, então
+                  o navegador vai buscá-la antes das outras coisas. */}
               <img
                 src={`/imagens/professor${professor}.webp`}
+                srcSet={`/imagens/professor${professor}-480.webp 480w, /imagens/professor${professor}.webp 960w`}
+                sizes="(max-width: 560px) 88vw, 420px"
+                width="960" height="640"
+                fetchPriority="high"
                 alt="Dois professores sorrindo, com livros na mão"
                 className="avatar-img"
               />
@@ -47,6 +54,10 @@ function Home() {
             <div className="avatar">
               <img
                 src={`/imagens/aluno${aluno}.webp`}
+                srcSet={`/imagens/aluno${aluno}-480.webp 480w, /imagens/aluno${aluno}.webp 960w`}
+                sizes="(max-width: 560px) 88vw, 420px"
+                width="960" height="640"
+                fetchPriority="high"
                 alt="Dois alunos sorrindo, estudando no computador"
                 className="avatar-img"
               />

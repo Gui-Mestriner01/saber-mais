@@ -83,6 +83,15 @@ function MenuAcessibilidade() {
     body.classList.toggle('a11y-alto-contraste', config.altoContraste);
     body.classList.toggle('a11y-espacamento',    config.espacamento);
     body.classList.toggle('a11y-fonte-legivel',  config.fonteLegivel);
+    // A fonte Atkinson (mais fácil para quem tem dislexia) só é baixada
+    // quando a opção é ligada — antes vinha do Google em toda visita.
+    if (config.fonteLegivel && !document.getElementById('fonte-legivel')) {
+      const link = document.createElement('link');
+      link.id = 'fonte-legivel';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap';
+      document.head.appendChild(link);
+    }
     body.classList.toggle('a11y-sem-animacao',   config.reduzirAnimacoes);
     body.classList.toggle('a11y-destacar-links', config.destacarLinks);
 

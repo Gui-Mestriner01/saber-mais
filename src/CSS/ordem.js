@@ -10,6 +10,13 @@
    App.jsx carrega Transicoes, ModoEscuroProfessor e Celular depois, nessa
    ordem. Folha nova em CSS/ precisa ser acrescentada nesta lista.
    ========================================================================== */
+/* Fonte Nunito servida pelo próprio site (pacote @fontsource/nunito).
+   Antes vinha do Google Fonts: era um pedido a outro servidor que segurava a
+   primeira pintura da tela ("render-blocking request" no PageSpeed). */
+import '@fontsource/nunito/latin-400.css';
+import '@fontsource/nunito/latin-700.css';
+import '@fontsource/nunito/latin-900.css';
+
 import './Admin.css';
 import './AlunoHome.css';
 import './AoVivo.css';

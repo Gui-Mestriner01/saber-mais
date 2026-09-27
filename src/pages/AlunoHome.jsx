@@ -619,7 +619,14 @@ function AlunoHome() {
           <>
             <div className="aluno-header-card">
               {imagemBanner && (
-                <img src={imagemBanner} alt="" className="aluno-header-imagem-bg" />
+                <img
+                  src={imagemBanner}
+                  srcSet={`${imagemBanner.replace('.webp', '-1200.webp')} 1200w, ${imagemBanner} 2400w`}
+                  sizes="(max-width: 1200px) 100vw, 1200px"
+                  width="2400" height="388"
+                  alt=""
+                  className="aluno-header-imagem-bg"
+                />
               )}
 
               <div className="aluno-header-texto">

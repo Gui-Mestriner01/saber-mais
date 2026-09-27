@@ -4,15 +4,12 @@ import './index.css'
 import App from './App.jsx'
 import { ligarTravaInspecionar } from './travaInspecionar.js'
 
-import { GoogleOAuthProvider } from '@react-oauth/google';
-
+/* O provedor do "Entrar com Google" saiu daqui: ele baixava o script do
+   Google em TODA visita, inclusive nas telas do aluno, que nem usam isso.
+   Agora ele fica só dentro da tela de login do professor. */
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId="17269757270-gk04h1b82ljnu5ep0fdnctn7gru3aca1.apps.googleusercontent.com">
-      
-      <App />
-      
-    </GoogleOAuthProvider>
+    <App />
   </StrictMode>,
 )
 
