@@ -26,13 +26,13 @@ const AVATARES = [
   '/avatares/img33.PNG',
 ];
 
-// Banners de boas vindas
-const ILUSTRACOES_BEM_VINDO = [
-  '/ilustracoes/banner1.webp',
-  '/ilustracoes/banner2.webp',
-  '/ilustracoes/banner3.webp',
-  '/ilustracoes/banner4.webp',
-];
+/* Banners de boas-vindas. São 12, com crianças diferentes: cada visita
+   mostra uma. Para acrescentar mais, salve o arquivo em public/ilustracoes/
+   (2400 x 388) e aumente o número aqui. */
+const ILUSTRACOES_BEM_VINDO = Array.from(
+  { length: 12 },
+  (_, i) => `/ilustracoes/banner${i + 1}.webp`
+);
 
 // Cada tipo de atividade tem seu ícone
 function IconeTipo({ tipo, size = 20 }) {

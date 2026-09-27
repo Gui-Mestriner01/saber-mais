@@ -1,9 +1,25 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Home.css';
 import BotaoInstalar from '../components/BotaoInstalar';
 
+/* As ilustrações da tela inicial mudam a cada visita.
+   São várias versões dos mesmos dois cartões, com pessoas diferentes —
+   quem abre o Saber+ deve conseguir se reconhecer ali.
+   Para acrescentar mais, é só salvar o arquivo em public/imagens/ e
+   aumentar o número aqui. */
+const PROFESSORES = 5;
+const ALUNOS = 4;
+
+const sortear = (quantos) => 1 + Math.floor(Math.random() * quantos);
+
 function Home() {
   const navigate = useNavigate();
+
+  // useState com função: sorteia uma vez por carregamento da página,
+  // e não a cada vez que o React redesenha a tela.
+  const [professor] = useState(() => sortear(PROFESSORES));
+  const [aluno]     = useState(() => sortear(ALUNOS));
 
   return (
     <div className="home-container">
@@ -16,17 +32,24 @@ function Home() {
         <div className="cards-row">
           <div className="access-card">
             <div className="avatar">
-              {/* Substitua pelo nome exato da imagem que você salvou na pasta public */}
-              <img src="/imagens/professor.webp" alt="Avatar Professor" className="avatar-img" />
+              <img
+                src={`/imagens/professor${professor}.webp`}
+                alt="Dois professores sorrindo, com livros na mão"
+                className="avatar-img"
+              />
             </div>
             <button className="btn-blue" onClick={() => navigate('/login/professor')}>
               ACESSO PROFESSOR
             </button>
           </div>
+
           <div className="access-card">
             <div className="avatar">
-              {/* Substitua pelo nome exato da imagem que você salvou na pasta public */}
-              <img src="/imagens/aluno.webp" alt="Avatar Aluno" className="avatar-img" />
+              <img
+                src={`/imagens/aluno${aluno}.webp`}
+                alt="Dois alunos sorrindo, estudando no computador"
+                className="avatar-img"
+              />
             </div>
             <button className="btn-green" onClick={() => navigate('/aluno/area')}>
               ACESSO ALUNO
