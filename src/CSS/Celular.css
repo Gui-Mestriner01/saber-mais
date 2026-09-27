@@ -558,7 +558,8 @@
     justify-content: center;
   }
 
-  .link-ver-todas { padding: 8px 4px; }
+  .link-ver-todas,
+  .btn-ver-tudo { padding: 8px 4px; min-height: 40px; }
   .toggle-tipo button,
   .btn-add-pergunta,
   .btn-sair-quiz { min-height: 42px; }

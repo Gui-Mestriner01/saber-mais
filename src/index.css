@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -69,4 +67,11 @@ button, input, select, textarea {
 svg.lucide {
   flex-shrink: 0;
   vertical-align: middle;
+}
+
+/* Enquanto o pedacinho da tela é baixado (leva um piscar de olhos),
+   fica só o fundo — nada de tela branca nem de pulo no layout. */
+.carregando-tela {
+  min-height: 100vh;
+  min-height: 100dvh;
 }

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
@@ -94,6 +95,10 @@ const io = new Server(server, {
 // trataria todo mundo como um único visitante.
 app.set('trust proxy', 1);
 
+/* Compacta tudo que sai (gzip/brotli). O JS e o CSS do site caem para menos
+   de um terço do tamanho — é o que mais pesa no celular com internet fraca. */
+app.use(compression());
+
 app.use(helmet({
   // O mesmo servidor agora entrega o site (React). A política padrão de
   // conteúdo do helmet bloquearia o VLibras, o login do Google, as fontes
@@ -136,6 +141,10 @@ if (fs.existsSync(path.join(pastaSite, 'index.html'))) {
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // nome muda a cada build
       } else if (/(sw\.js|index\.html|manifest\.webmanifest)$/.test(arquivo)) {
         res.setHeader('Cache-Control', 'no-cache');                            // sempre a versão nova
+      } else if (/\.(webp|png|jpe?g|svg|woff2?|ico)$/i.test(arquivo)) {
+        // Avatares, ilustrações e ícones mudam muito pouco: ficam 30 dias no
+        // celular do aluno em vez de serem baixados a cada visita.
+        res.setHeader('Cache-Control', 'public, max-age=2592000');
       }
     },
   }));

@@ -12,4 +12,11 @@ export default defineConfig({
   preview: {
     host: true,
   },
+  build: {
+    /* O JavaScript é dividido por tela (cada página vira um pedacinho), mas o
+       CSS continua num arquivo só. Se o CSS também fosse dividido, a folha de
+       cada tela seria carregada DEPOIS da Celular.css e os ajustes de celular
+       perderiam a briga — as telas do professor voltavam a estourar a largura. */
+    cssCodeSplit: false,
+  },
 })
