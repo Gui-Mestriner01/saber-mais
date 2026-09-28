@@ -74,8 +74,12 @@ function bloquearAtalhos(e) {
   }
 }
 
-// 2. Armadilha do debugger: com o DevTools aberto, esta linha para o código
-const armadilha = new Function('debugger');
+// 2. Armadilha do debugger: com o DevTools aberto, esta linha para o código.
+// (Escrita direto, e não com new Function, porque a política de conteúdo do
+// site proíbe executar texto como código — que é o que new Function faz.)
+function armadilha() {
+  debugger;   // eslint-disable-line no-debugger
+}
 
 function verificar() {
   const inicio = performance.now();
@@ -89,6 +93,11 @@ function verificar() {
 }
 
 export function ligarTravaInspecionar() {
+  // Se qualquer coisa aqui falhar, o site continua funcionando normalmente.
+  try { montarTrava(); } catch { /* sem trava, o servidor segue protegendo */ }
+}
+
+function montarTrava() {
   // Nos campos de texto o botão direito continua (para colar, corrigir etc.)
   document.addEventListener('contextmenu', e => {
     if (!e.target?.closest?.('input, textarea')) e.preventDefault();

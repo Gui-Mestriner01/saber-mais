@@ -18,5 +18,11 @@ export default defineConfig({
        cada tela seria carregada DEPOIS da Celular.css e os ajustes de celular
        perderiam a briga — as telas do professor voltavam a estourar a largura. */
     cssCodeSplit: false,
+
+    /* O minificador padrão apaga a palavra "debugger" do código final, e é
+       justamente ela que a trava do Inspecionar usa (travaInspecionar.js).
+       O terser mantém, e o resto do trabalho dele é igual. */
+    minify: 'terser',
+    terserOptions: { compress: { drop_debugger: false } },
   },
 })

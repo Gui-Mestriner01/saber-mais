@@ -12,6 +12,7 @@ const cloudinary = require('cloudinary').v2;
 const path = require('path');
 const fs = require('fs');
 const db = require('./db');
+const { enviarCodigo, configurado: emailConfigurado } = require('./email');
 const { ligarBackupAutomatico } = require('./backup');
 require('dotenv').config({ path: path.join(__dirname, '.env') }); // acha o .env mesmo rodando de outra pasta
 
@@ -100,10 +101,30 @@ app.set('trust proxy', 1);
 app.use(compression());
 
 app.use(helmet({
-  // O mesmo servidor agora entrega o site (React). A política padrão de
-  // conteúdo do helmet bloquearia o VLibras, o login do Google, as fontes
-  // e as imagens do Cloudinary, então ela fica desligada.
-  contentSecurityPolicy: false,
+  /* Política de conteúdo: diz ao navegador de onde ele PODE carregar coisas.
+     Se alguém conseguir injetar um <script src="site-do-mal"> numa página, o
+     navegador se recusa a executar. A lista é a mínima que o Saber+ usa:
+     o próprio site, o VLibras (Libras), o login do Google e o Cloudinary
+     (imagens das atividades). */
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      'default-src': ["'self'"],
+      'base-uri': ["'self'"],
+      'object-src': ["'none'"],
+      'frame-ancestors': ["'self'"],                 // ninguém coloca o Saber+ dentro de um iframe
+      'form-action': ["'self'"],
+      'script-src': ["'self'", "'unsafe-inline'", 'https://vlibras.gov.br', 'https://accounts.google.com', 'https://apis.google.com'],
+      'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://vlibras.gov.br'],
+      'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com'],
+      'img-src': ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com', 'https://vlibras.gov.br', 'https://lh3.googleusercontent.com'],
+      'media-src': ["'self'", 'https://vlibras.gov.br'],
+      'connect-src': ["'self'", 'https://vlibras.gov.br', 'https://accounts.google.com', 'https://api.cloudinary.com', 'wss:'],
+      'frame-src': ['https://accounts.google.com'],
+      'worker-src': ["'self'", 'blob:'],
+      'upgrade-insecure-requests': [],
+    },
+  },
   // Deixa a janelinha do "Entrar com Google" conversar com o site
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
@@ -256,6 +277,153 @@ function apenasAdmin(req, res, next) {
   if (req.usuario.tipo !== 'admin')
     return res.status(403).json({ erro: 'Acesso negado.' });
   next();
+}
+
+/* ==========================================================================
+   TABELAS DA CONFIRMAÇÃO DE ACESSO (criadas sozinhas na primeira subida)
+
+   login_codigo         → o código de 6 dígitos que vai por e-mail (guardado
+                          embaralhado, nunca em texto puro)
+   dispositivo_confiavel → o "já confirmei neste aparelho", que evita pedir
+                          código toda vez (vale 60 dias)
+   ========================================================================== */
+db.query(`
+  CREATE TABLE IF NOT EXISTS login_codigo (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id  INT         NOT NULL,
+    codigo_hash CHAR(64)    NOT NULL,
+    tentativas  TINYINT     NOT NULL DEFAULT 0,
+    usado       TINYINT(1)  NOT NULL DEFAULT 0,
+    expira_em   DATETIME    NOT NULL,
+    criado_em   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_usuario (usuario_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+`, (err) => { if (err) console.error('❌ Não consegui criar a tabela login_codigo:', err.message); });
+
+db.query(`
+  CREATE TABLE IF NOT EXISTS dispositivo_confiavel (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT          NOT NULL,
+    token_hash CHAR(64)     NOT NULL,
+    aparelho   VARCHAR(120) NULL,
+    criado_em  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ultimo_uso DATETIME     NULL,
+    expira_em  DATETIME     NOT NULL,
+    UNIQUE KEY uk_token (token_hash),
+    KEY idx_usuario (usuario_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+`, (err) => { if (err) console.error('❌ Não consegui criar a tabela dispositivo_confiavel:', err.message); });
+
+/* ==========================================================================
+   3c. CONFIRMAÇÃO DE ACESSO POR E-MAIL
+
+   Como funciona, do começo ao fim:
+
+   1. O professor entra (com senha ou com o Google).
+   2. Se o navegador dele já tem um "crachá de aparelho" válido, entra direto.
+   3. Se não tem, o servidor sorteia um código de 6 dígitos, guarda só o
+      embaralhado (SHA-256 com o JWT_SECRET), manda por e-mail e devolve um
+      `loginId` — que é um bilhete assinado, válido por 15 minutos, e NÃO
+      serve para usar o sistema.
+   4. O professor digita o código. Aí sim sai o token de verdade, e o
+      aparelho ganha um crachá de 60 dias.
+
+   Detalhes de segurança:
+   - o código nunca volta na resposta do servidor, só vai por e-mail;
+   - 5 tentativas erradas queimam o código;
+   - o e-mail aparece mascarado na tela (g***r@gmail.com).
+   ========================================================================== */
+const MINUTOS_CODIGO = 10;
+const DIAS_APARELHO = 60;
+const MAX_TENTATIVAS_CODIGO = 5;
+
+const embaralhar = (valor) =>
+  crypto.createHmac('sha256', process.env.JWT_SECRET).update(String(valor)).digest('hex');
+
+const gerarCodigo = () => String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+
+function mascararEmail(email = '') {
+  const [nome, dominio] = String(email).split('@');
+  if (!dominio) return '***';
+  const visivel = nome.length <= 2 ? nome[0] : nome[0] + '***' + nome[nome.length - 1];
+  return `${visivel}@${dominio}`;
+}
+
+/* Nome amigável do aparelho, só para a pessoa reconhecer no e-mail. */
+function nomeDoAparelho(req) {
+  const ua = String(req.headers['user-agent'] || '');
+  const sistema =
+    /Android/i.test(ua) ? 'Android' :
+    /iPhone|iPad/i.test(ua) ? 'iPhone/iPad' :
+    /Windows/i.test(ua) ? 'Windows' :
+    /Mac OS/i.test(ua) ? 'Mac' :
+    /Linux/i.test(ua) ? 'Linux' : 'aparelho desconhecido';
+  const navegador =
+    /Edg\//i.test(ua) ? 'Edge' :
+    /OPR\//i.test(ua) ? 'Opera' :
+    /Chrome\//i.test(ua) ? 'Chrome' :
+    /Firefox\//i.test(ua) ? 'Firefox' :
+    /Safari\//i.test(ua) ? 'Safari' : 'navegador desconhecido';
+  return `${navegador} no ${sistema}`;
+}
+
+const consultar = (sql, valores = []) =>
+  new Promise((ok, falha) => db.query(sql, valores, (e, r) => (e ? falha(e) : ok(r))));
+
+/* O aparelho já foi confirmado antes por este professor? */
+async function aparelhoConfiavel(usuarioId, token) {
+  if (!token || typeof token !== 'string') return false;
+  const linhas = await consultar(
+    `SELECT id FROM dispositivo_confiavel
+      WHERE usuario_id = ? AND token_hash = ? AND expira_em > NOW() LIMIT 1`,
+    [usuarioId, embaralhar(token)]
+  );
+  if (linhas.length === 0) return false;
+  db.query(`UPDATE dispositivo_confiavel SET ultimo_uso = NOW() WHERE id = ?`, [linhas[0].id], () => {});
+  return true;
+}
+
+function tokenDeSessao(usuario) {
+  return jwt.sign(
+    { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo_usuario },
+    process.env.JWT_SECRET,
+    { expiresIn: '8h' }
+  );
+}
+
+/* Manda o código e devolve o bilhete de confirmação (HTTP 202). */
+async function pedirConfirmacao(res, usuario, req, extras = {}) {
+  const codigo = gerarCodigo();
+  const expira = new Date(Date.now() + MINUTOS_CODIGO * 60 * 1000);
+
+  // Códigos antigos dessa pessoa não valem mais
+  await consultar(`UPDATE login_codigo SET usado = 1 WHERE usuario_id = ? AND usado = 0`, [usuario.id]);
+  const inserido = await consultar(
+    `INSERT INTO login_codigo (usuario_id, codigo_hash, expira_em) VALUES (?, ?, ?)`,
+    [usuario.id, embaralhar(codigo), expira]
+  );
+
+  const aparelho = nomeDoAparelho(req);
+  try {
+    await enviarCodigo({ para: usuario.email, nome: usuario.nome, codigo, aparelho });
+  } catch (e) {
+    console.error('❌ Falha ao enviar o código de acesso:', e.message);
+    return res.status(503).json({ erro: 'Não consegui enviar o e-mail de confirmação. Tente de novo em instantes.' });
+  }
+
+  const loginId = jwt.sign(
+    { tipo: 'login_pendente', usuario_id: usuario.id, codigo_id: inserido.insertId, foto: extras.fotoUrl || null },
+    process.env.JWT_SECRET,
+    { expiresIn: `${MINUTOS_CODIGO + 5}m` }
+  );
+
+  return res.status(202).json({
+    precisaConfirmar: true,
+    loginId,
+    email: mascararEmail(usuario.email),
+    aparelho,
+    mensagem: 'Enviamos um código de 6 dígitos para o seu e-mail.',
+  });
 }
 
 /* ==========================================================================
@@ -624,7 +792,18 @@ app.post('/cadastro/professor', authLimiter, async (req, res) => {
   const { nome, email, senha } = req.body;
 
   if (!nome || !email || !senha) return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
-  if (senha.length < 8) return res.status(400).json({ erro: 'A senha deve ter no mínimo 8 caracteres.' });
+  if (typeof senha !== 'string' || senha.length < 8) {
+    return res.status(400).json({ erro: 'A senha deve ter no mínimo 8 caracteres.' });
+  }
+  if (!/[A-Za-zÀ-ÿ]/.test(senha) || !/\d/.test(senha)) {
+    return res.status(400).json({ erro: 'A senha precisa ter letras e números.' });
+  }
+  // Senhas que todo mundo tenta primeiro: barradas mesmo tendo 8 caracteres
+  const SENHAS_FRACAS = ['12345678', '123456789', '1234567890', 'senha123', 'password', 'password1',
+    'qwerty123', 'abc12345', 'professor1', 'saber123', 'escola123', '11111111', 'aaaaaaa1'];
+  if (SENHAS_FRACAS.includes(senha.toLowerCase())) {
+    return res.status(400).json({ erro: 'Essa senha é muito fácil de adivinhar. Escolha outra.' });
+  }
   
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) return res.status(400).json({ erro: 'E-mail inválido.' });
@@ -668,11 +847,17 @@ app.post('/login/professor', authLimiter, async (req, res) => {
     const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
     if (!senhaCorreta) return res.status(401).json({ erro: 'E-mail ou senha incorretos.' });
 
-    const token = jwt.sign(
-      { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo_usuario },
-      process.env.JWT_SECRET,
-      { expiresIn: '8h' }
-    );
+    // Aparelho novo? Antes de entrar, confirma pelo e-mail.
+    try {
+      if (!(await aparelhoConfiavel(usuario.id, req.body.dispositivo))) {
+        return await pedirConfirmacao(res, usuario, req);
+      }
+    } catch (e) {
+      console.error('Erro na confirmação de acesso:', e.message);
+      return res.status(500).json({ erro: 'Erro interno do servidor.' });
+    }
+
+    const token = tokenDeSessao(usuario);
 
     res.json({
       mensagem: 'Login realizado com sucesso!',
@@ -725,11 +910,17 @@ app.post('/login/google', authLimiter, async (req, res) => {
         return res.status(403).json({ erro: 'Seu cadastro foi rejeitado.' });
       }
 
-      const token = jwt.sign(
-        { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo_usuario },
-        process.env.JWT_SECRET,
-        { expiresIn: '8h' }
-      );
+      // Mesmo vindo do Google, aparelho novo confirma pelo e-mail
+      try {
+        if (!(await aparelhoConfiavel(usuario.id, req.body.dispositivo))) {
+          return await pedirConfirmacao(res, usuario, req, { fotoUrl });
+        }
+      } catch (e) {
+        console.error('Erro na confirmação de acesso:', e.message);
+        return res.status(500).json({ erro: 'Erro interno do servidor.' });
+      }
+
+      const token = tokenDeSessao(usuario);
 
       return res.json({
         mensagem: 'Login com Google realizado com sucesso!',
@@ -757,23 +948,13 @@ app.post('/login/google', authLimiter, async (req, res) => {
 
           const novoId = resultInsert.insertId;
 
-          const token = jwt.sign(
-            { id: novoId, nome: nome, email: emailLower, tipo: 'professor' },
-            process.env.JWT_SECRET,
-            { expiresIn: '8h' }
-          );
-
-          return res.status(201).json({
-            mensagem: 'Conta criada e login realizado!',
-            token,
-            usuario: { 
-              id: novoId, 
-              nome: nome, 
-              email: emailLower, 
-              tipo: 'professor',
-              fotoUrl: fotoUrl 
-            }
-          });
+          // Conta nova: o primeiro acesso também confirma por e-mail
+          pedirConfirmacao(res, { id: novoId, nome, email: emailLower, tipo_usuario: 'professor' }, req, { fotoUrl })
+            .catch((e) => {
+              console.error('Erro na confirmação de acesso:', e.message);
+              res.status(500).json({ erro: 'Erro interno do servidor.' });
+            });
+          return;
         });
       } catch (error) {
         return res.status(500).json({ erro: 'Erro interno ao processar cadastro do Google.' });
@@ -891,6 +1072,141 @@ app.post('/aluno/login', pinLimiter, (req, res) => {
 /* ==========================================================================
    5. ROTAS DO ADMIN E PERFIL E DASHBOARD 
    ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   APARELHOS CONFIRMADOS — o professor vê onde entrou e pode derrubar todos.
+   -------------------------------------------------------------------------- */
+app.get('/professor/dispositivos', autenticar, (req, res) => {
+  db.query(
+    `SELECT id, aparelho, criado_em, ultimo_uso, expira_em
+       FROM dispositivo_confiavel
+      WHERE usuario_id = ? AND expira_em > NOW()
+      ORDER BY ultimo_uso DESC, criado_em DESC`,
+    [req.usuario.id],
+    (err, linhas) => {
+      if (err) return res.status(500).json({ erro: 'Erro ao buscar os aparelhos.' });
+      res.json(linhas);
+    }
+  );
+});
+
+app.delete('/professor/dispositivos', autenticar, (req, res) => {
+  db.query(`DELETE FROM dispositivo_confiavel WHERE usuario_id = ?`, [req.usuario.id], (err, r) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao esquecer os aparelhos.' });
+    res.json({ mensagem: 'Pronto: todos os aparelhos vão precisar confirmar de novo.', removidos: r.affectedRows });
+  });
+});
+
+/* --------------------------------------------------------------------------
+   CONFIRMAR O ACESSO — o professor digita o código que chegou no e-mail.
+   -------------------------------------------------------------------------- */
+const confirmarLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { erro: 'Muitas tentativas. Espere alguns minutos.' },
+});
+
+app.post('/login/confirmar', confirmarLimiter, async (req, res) => {
+  const { loginId, codigo, lembrar } = req.body;
+  if (!loginId || !codigo) return res.status(400).json({ erro: 'Dados incompletos.' });
+
+  let bilhete;
+  try {
+    bilhete = jwt.verify(String(loginId), process.env.JWT_SECRET, { algorithms: ['HS256'] });
+  } catch {
+    return res.status(401).json({ erro: 'Esse pedido de acesso venceu. Entre de novo.' });
+  }
+  if (bilhete.tipo !== 'login_pendente') return res.status(401).json({ erro: 'Pedido inválido.' });
+
+  try {
+    const linhas = await consultar(
+      `SELECT * FROM login_codigo WHERE id = ? AND usuario_id = ? LIMIT 1`,
+      [bilhete.codigo_id, bilhete.usuario_id]
+    );
+    const registro = linhas[0];
+    if (!registro || registro.usado || new Date(registro.expira_em) < new Date()) {
+      return res.status(401).json({ erro: 'Código vencido. Peça um novo.' });
+    }
+    if (registro.tentativas >= MAX_TENTATIVAS_CODIGO) {
+      await consultar(`UPDATE login_codigo SET usado = 1 WHERE id = ?`, [registro.id]);
+      return res.status(429).json({ erro: 'Muitas tentativas erradas. Peça um código novo.' });
+    }
+
+    const certo = registro.codigo_hash === embaralhar(String(codigo).trim());
+    if (!certo) {
+      await consultar(`UPDATE login_codigo SET tentativas = tentativas + 1 WHERE id = ?`, [registro.id]);
+      const faltam = MAX_TENTATIVAS_CODIGO - (registro.tentativas + 1);
+      return res.status(401).json({
+        erro: faltam > 0 ? `Código incorreto. Você ainda tem ${faltam} tentativa(s).` : 'Código incorreto.',
+      });
+    }
+
+    await consultar(`UPDATE login_codigo SET usado = 1 WHERE id = ?`, [registro.id]);
+
+    const usuarios = await consultar(
+      `SELECT id, nome, email, tipo_usuario FROM usuario WHERE id = ? LIMIT 1`,
+      [bilhete.usuario_id]
+    );
+    const usuario = usuarios[0];
+    if (!usuario) return res.status(401).json({ erro: 'Conta não encontrada.' });
+
+    // Crachá do aparelho: o navegador guarda e não pede código por 60 dias
+    let dispositivo = null;
+    if (lembrar !== false) {
+      dispositivo = crypto.randomBytes(32).toString('base64url');
+      await consultar(
+        `INSERT INTO dispositivo_confiavel (usuario_id, token_hash, aparelho, expira_em)
+         VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? DAY))`,
+        [usuario.id, embaralhar(dispositivo), nomeDoAparelho(req).slice(0, 120), DIAS_APARELHO]
+      );
+    }
+
+    return res.json({
+      mensagem: 'Acesso confirmado!',
+      token: tokenDeSessao(usuario),
+      dispositivo,
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        tipo: usuario.tipo_usuario,
+        fotoUrl: bilhete.foto || null,
+      },
+    });
+  } catch (e) {
+    console.error('Erro ao confirmar acesso:', e.message);
+    return res.status(500).json({ erro: 'Erro interno do servidor.' });
+  }
+});
+
+/* Reenviar o código (o e-mail demorou, caiu em spam, etc.). */
+const reenvioLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { erro: 'Já pedimos vários códigos. Espere alguns minutos.' },
+});
+
+app.post('/login/reenviar-codigo', reenvioLimiter, async (req, res) => {
+  let bilhete;
+  try {
+    bilhete = jwt.verify(String(req.body.loginId || ''), process.env.JWT_SECRET, { algorithms: ['HS256'] });
+  } catch {
+    return res.status(401).json({ erro: 'Esse pedido de acesso venceu. Entre de novo.' });
+  }
+  if (bilhete.tipo !== 'login_pendente') return res.status(401).json({ erro: 'Pedido inválido.' });
+
+  try {
+    const usuarios = await consultar(
+      `SELECT id, nome, email, tipo_usuario FROM usuario WHERE id = ? LIMIT 1`,
+      [bilhete.usuario_id]
+    );
+    if (!usuarios[0]) return res.status(401).json({ erro: 'Conta não encontrada.' });
+    return await pedirConfirmacao(res, usuarios[0], req, { fotoUrl: bilhete.foto });
+  } catch (e) {
+    console.error('Erro ao reenviar o código:', e.message);
+    return res.status(500).json({ erro: 'Erro interno do servidor.' });
+  }
+});
 
 app.get('/admin/professores', autenticar, apenasAdmin, (req, res) => {
   const { status } = req.query;
@@ -2790,6 +3106,15 @@ server.listen(PORT, () => console.log(`🚀 Servidor HTTP e Socket.io rodando na
 
 // Cópia diária do banco (pasta backend/backups + Cloudinary privado)
 ligarBackupAutomatico();
+
+/* Faxina: código de acesso vencido e aparelho vencido não ficam no banco.
+   Roda ao ligar e uma vez por dia. */
+const faxinaDeAcesso = () => {
+  db.query(`DELETE FROM login_codigo WHERE expira_em < DATE_SUB(NOW(), INTERVAL 1 DAY)`, () => {});
+  db.query(`DELETE FROM dispositivo_confiavel WHERE expira_em < NOW()`, () => {});
+};
+setTimeout(faxinaDeAcesso, 30 * 1000);
+setInterval(faxinaDeAcesso, 24 * 60 * 60 * 1000);
 
 // Um erro inesperado vira registro no log em vez de derrubar o site
 process.on('unhandledRejection', (motivo) => console.error('Promessa rejeitada sem tratamento:', motivo?.message || motivo));
