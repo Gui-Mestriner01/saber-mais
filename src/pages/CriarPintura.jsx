@@ -1,171 +1,134 @@
 import { useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import '../CSS/Quiz.css';
-import '../CSS/Pintura.css';
+import { ImagePlus, RefreshCw, Trash2 } from 'lucide-react';
+import EditorAtividade from '../components/EditorAtividade';
 import { API } from '../api';
 
+/* ==========================================================================
+   EDITOR — PINTURA
+
+   O professor sobe um desenho e escreve o que o aluno deve pintar. A imagem
+   vai para o servidor antes de a atividade ser salva, porque o endereço que
+   fica no banco precisa ser o do Cloudinary, não um endereço temporário do
+   navegador.
+
+   conteudo = { url_imagem, instrucao }
+   ========================================================================== */
+
 function CriarPintura() {
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  const salaId    = location.state?.salaId;
-  const imgRef    = useRef(null);
+  const campoArquivo = useRef(null);
 
-  const [titulo, setTitulo]         = useState('');
-  const [imagem, setImagem]         = useState(null);
-  const [imagemFile, setImagemFile] = useState(null);
-  const [salvando, setSalvando]     = useState(false);
-  const [msgSucesso, setMsgSucesso] = useState(false);
-  const [modalSair, setModalSair]   = useState(false);
+  const [instrucao, setInstrucao] = useState('');
+  const [arquivo, setArquivo]     = useState(null);
+  const [previa, setPrevia]       = useState(null);
 
-  const handleImagem = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImagem(URL.createObjectURL(file));
-      setImagemFile(file);
-    }
+  const escolher = (file) => {
+    if (!file) return;
+    setArquivo(file);
+    setPrevia(URL.createObjectURL(file));
   };
 
-  const handleDrop = (e) => {
+  const soltar = (e) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      setImagem(URL.createObjectURL(file));
-      setImagemFile(file);
-    }
+    escolher(e.dataTransfer.files[0]);
   };
 
-  const handleSalvar = async () => {
-    if (!titulo) { alert('Adicione um título!'); return; }
-    if (!imagemFile) { alert('Adicione uma imagem!'); return; }
+  const tirar = (e) => {
+    e.stopPropagation();
+    setArquivo(null);
+    setPrevia(null);
+  };
 
-    setSalvando(true);
-    try {
-      // 1. Faz upload da imagem
-      const formData = new FormData();
-      formData.append('imagem', imagemFile);
+  const validar = () => {
+    if (!instrucao.trim()) return 'Escreva o que o aluno precisa pintar.';
+    if (!arquivo) return 'Escolha o desenho que a turma vai pintar.';
+    return null;
+  };
 
-      const uploadRes = await fetch(`${API}/professor/pintura/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: formData
-      });
+  /* A pintura salva em dois passos: primeiro a imagem, depois a atividade. */
+  const aoSalvar = async (titulo, salaId) => {
+    const cracha = { Authorization: `Bearer ${localStorage.getItem('token')}` };
 
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData.erro);
+    const pacote = new FormData();
+    pacote.append('imagem', arquivo);
+    const envio = await fetch(`${API}/professor/pintura/upload`, { method: 'POST', headers: cracha, body: pacote });
+    const dadosEnvio = await envio.json();
+    if (!envio.ok) throw new Error(dadosEnvio.erro || 'Não consegui enviar o desenho.');
 
-      // 2. Salva a atividade com a URL da imagem
-      const atvRes = await fetch(`${API}/professor/atividade`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          titulo,
-          tipo: 'pintura',
-          sala_id: salaId,
-          conteudo: { url_imagem: uploadData.url, instrucao: titulo }
-        })
-      });
-
-      const atvData = await atvRes.json();
-      if (!atvRes.ok) throw new Error(atvData.erro);
-
-      setMsgSucesso(true);
-      setTimeout(() => navigate('/professor/dashboard'), 1500);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSalvando(false);
-    }
+    const res = await fetch(`${API}/professor/atividade`, {
+      method: 'POST',
+      headers: { ...cracha, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        titulo,
+        tipo: 'pintura',
+        sala_id: salaId,
+        conteudo: { url_imagem: dadosEnvio.url, instrucao: instrucao.trim() },
+      }),
+    });
+    const dados = await res.json();
+    if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar.');
   };
 
   return (
-    <div className="quiz-builder">
-
-      {modalSair && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Deseja salvar antes de sair?</h3>
-            <p>Se sair sem salvar, as alterações serão perdidas.</p>
-            <div className="modal-btns">
-              <button className="modal-btn-salvar" onClick={() => { setModalSair(false); handleSalvar(); }}>💾 Salvar e Sair</button>
-              <button className="modal-btn-sair" onClick={() => navigate('/professor/dashboard')}>Sair sem Salvar</button>
-              <button className="modal-btn-cancelar" onClick={() => setModalSair(false)}>Cancelar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <aside className="quiz-sidebar">
-        <div className="quiz-brand">
-          <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
-        </div>
-        <input
-          className="quiz-titulo-input"
-          type="text"
-          placeholder="Título da Atividade..."
-          value={titulo}
-          onChange={e => setTitulo(e.target.value)}
-        />
-        <div style={{flex:1}} />
-        <button className="btn-sair-quiz" onClick={() => setModalSair(true)}>← Sair</button>
-      </aside>
-
-      <main className="quiz-main">
-        <div className="quiz-pergunta-wrap">
+    <EditorAtividade
+      tipo="pintura"
+      nomeTipo="Pintura"
+      explicacao="Suba um desenho. O aluno pinta na tela e manda de volta para você."
+      validar={validar}
+      aoSalvar={aoSalvar}
+    >
+      <section className="editor-cartao">
+        <label className="editor-campo">
+          <span>O que o aluno vai pintar?</span>
           <input
-            className="quiz-pergunta-input"
-            type="text"
-            placeholder="Instrução para o aluno... Ex: Pinte o cachorro!"
-            value={titulo}
-            onChange={e => setTitulo(e.target.value)}
+            className="editor-input"
+            value={instrucao}
+            onChange={e => setInstrucao(e.target.value)}
+            placeholder="Ex.: Pinte o cachorro de marrom e a grama de verde"
+            maxLength={160}
           />
-        </div>
+        </label>
+      </section>
+
+      <section className="editor-cartao">
+        <h2>O desenho</h2>
+        <p className="editor-dica">Vale PNG, JPG ou WEBP, até 10 MB. Desenho com traço grosso fica melhor para pintar.</p>
 
         <div
-          className="pintura-upload-area"
-          onClick={() => imgRef.current.click()}
-          onDrop={handleDrop}
+          className={`editor-imagem ${previa ? 'tem-foto' : ''}`}
+          onClick={() => campoArquivo.current?.click()}
+          onDrop={soltar}
           onDragOver={e => e.preventDefault()}
         >
-          {imagem ? (
+          {previa ? (
             <>
-              <img src={imagem} alt="desenho" className="pintura-preview" />
-              <button
-                className="pintura-trocar-btn"
-                onClick={e => { e.stopPropagation(); imgRef.current.click(); }}
-              >
-                🔄 Trocar imagem
-              </button>
+              <img src={previa} alt="desenho escolhido" />
+              <div className="editor-imagem-acoes">
+                <button className="editor-mini-btn" onClick={e => { e.stopPropagation(); campoArquivo.current?.click(); }}>
+                  <RefreshCw size={14} strokeWidth={2.2} /> Trocar
+                </button>
+                <button className="editor-mini-btn perigo" onClick={tirar}>
+                  <Trash2 size={14} strokeWidth={2.2} /> Tirar
+                </button>
+              </div>
             </>
           ) : (
-            <div className="pintura-placeholder">
-              <span>🎨</span>
-              <p>Clique ou arraste uma imagem aqui</p>
-              <small>Aceita PNG, JPEG, JPG, WEBP</small>
-            </div>
+            <>
+              <ImagePlus size={30} strokeWidth={1.6} />
+              <p>Clique ou arraste um desenho até aqui</p>
+              <small>PNG, JPG ou WEBP</small>
+            </>
           )}
         </div>
-        <input ref={imgRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleImagem} />
-      </main>
 
-      <aside className="quiz-props">
-        <h3>Propriedades</h3>
-        <div className="prop-grupo">
-          <label>Tipo</label>
-          <span className="prop-info">🎨 Pintura</span>
-        </div>
-        <div className="prop-grupo">
-          <label>Imagem</label>
-          <span className="prop-info">{imagem ? '✅ Adicionada' : '❌ Nenhuma'}</span>
-        </div>
-        {msgSucesso && <div className="msg-sucesso-quiz">✅ Salvo!</div>}
-        <button className="btn-salvar-quiz" onClick={handleSalvar} disabled={salvando || !imagem}>
-          {salvando ? 'Salvando...' : '💾 SALVAR'}
-        </button>
-      </aside>
-    </div>
+        <input
+          ref={campoArquivo}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={e => escolher(e.target.files[0])}
+        />
+      </section>
+    </EditorAtividade>
   );
 }
 

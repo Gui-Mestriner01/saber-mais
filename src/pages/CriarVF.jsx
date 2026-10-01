@@ -1,303 +1,230 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import '../CSS/CriarVF.css'; 
+import { useState, useRef } from 'react';
+import { Plus, Trash2, Check, X, ImagePlus, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
+import EditorAtividade from '../components/EditorAtividade';
 import { API } from '../api';
 
+/* ==========================================================================
+   EDITOR — VERDADEIRO OU FALSO
+
+   Uma afirmação por cartão, com a imagem opcional e os dois botões logo
+   embaixo. O prazo é da atividade inteira, então fica no fim, sozinho.
+
+   O envio continua por /professor/atividades/v_f, que recebe as imagens
+   junto (FormData) e guarda o tempo limite já convertido em minutos.
+   ========================================================================== */
+
+let contador = 0;
+const novaId = () => `vf${Date.now()}_${contador++}`;
+
+const novaAfirmacao = () => ({ id: novaId(), texto: '', arquivo: null, previa: null, resposta: null });
+
 function CriarVF() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const salaId = location.state?.salaId;
+  const [afirmacoes, setAfirmacoes] = useState([novaAfirmacao()]);
+  const [temPrazo, setTemPrazo]     = useState(false);
+  const [quanto, setQuanto]         = useState(5);
+  const [unidade, setUnidade]       = useState('minutos');
+  const campos = useRef({});
 
-  const [titulo, setTitulo] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  // --- NOVOS ESTADOS PARA O TEMPO/PRAZO ---
-  const [temTempo, setTemTempo] = useState(false);
-  const [tempoValor, setTempoValor] = useState(5);
-  const [tempoUnidade, setTempoUnidade] = useState('minutos'); // Pode ser: minutos, horas, dias
-  
-  const [perguntas, setPerguntas] = useState([
-    { id: Date.now(), texto: '', imagem: null, respostaCorreta: null }
-  ]);
-  const [perguntaAtiva, setPerguntaAtiva] = useState(0);
+  const mudar = (i, mudancas) =>
+    setAfirmacoes(lista => lista.map((a, j) => (j === i ? { ...a, ...mudancas } : a)));
 
-  if (!salaId) {
-    navigate('/professor/criar-atividade');
-    return null;
-  }
-
-  const adicionarPergunta = () => {
-    setPerguntas([...perguntas, { id: Date.now(), texto: '', imagem: null, respostaCorreta: null }]);
-    setPerguntaAtiva(perguntas.length);
-  };
-
-  const removerPergunta = (indexParaRemover, evento) => {
-    evento.stopPropagation(); 
-
-    if (perguntas.length === 1) {
-      alert('A atividade precisa ter pelo menos uma afirmação.');
-      return;
-    }
-
-    const novasPerguntas = perguntas.filter((_, index) => index !== indexParaRemover);
-    setPerguntas(novasPerguntas);
-
-    if (perguntaAtiva === indexParaRemover) {
-      setPerguntaAtiva(Math.max(0, indexParaRemover - 1));
-    } else if (perguntaAtiva > indexParaRemover) {
-      setPerguntaAtiva(perguntaAtiva - 1);
-    }
-  };
-
-  const atualizarPergunta = (campo, valor) => {
-    const novasPerguntas = [...perguntas];
-    novasPerguntas[perguntaAtiva][campo] = valor;
-    setPerguntas(novasPerguntas);
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      atualizarPergunta('imagem', e.target.files[0]);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    const perguntaIncompleta = perguntas.find(p => !p.texto || !p.respostaCorreta);
-    if (perguntaIncompleta) {
-      alert('Por favor, preencha o texto e selecione Verdadeiro ou Falso em TODAS as afirmações antes de salvar.');
-      return;
-    }
-
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append('salaId', salaId);
-    formData.append('tipo', 'v_f');
-    formData.append('titulo', titulo || 'Verdadeiro ou Falso');
-    
-    // --- LÓGICA DE CONVERSÃO DO TEMPO ---
-    // Converte horas ou dias para minutos, para o banco salvar sempre um número padrão
-    let minutosCalculados = 0;
-    if (temTempo) {
-      const valor = parseInt(tempoValor) || 0;
-      if (tempoUnidade === 'minutos') minutosCalculados = valor;
-      if (tempoUnidade === 'horas')   minutosCalculados = valor * 60;
-      if (tempoUnidade === 'dias')    minutosCalculados = valor * 24 * 60;
-    }
-    
-    formData.append('tempo_limite', minutosCalculados);
-    
-    const perguntasParaSalvar = perguntas.map(p => ({ texto: p.texto, resposta_correta: p.respostaCorreta }));
-    formData.append('perguntas', JSON.stringify(perguntasParaSalvar));
-    
-    perguntas.forEach((p, index) => {
-      if (p.imagem) {
-        formData.append(`imagem_${index}`, p.imagem);
-      }
+  const mover = (i, direcao) => {
+    const destino = i + direcao;
+    if (destino < 0 || destino >= afirmacoes.length) return;
+    setAfirmacoes(lista => {
+      const nova = [...lista];
+      [nova[i], nova[destino]] = [nova[destino], nova[i]];
+      return nova;
     });
-
-    try {
-      const res = await fetch(`${API}/professor/atividades/v_f`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-
-      if (res.ok) {
-        alert('Atividade criada com sucesso!');
-        navigate('/professor/dashboard');
-      } else {
-        alert('Erro ao criar a atividade no servidor.');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Erro de conexão com o servidor.');
-    } finally {
-      setLoading(false);
-    }
   };
 
-  const perguntaAtual = perguntas[perguntaAtiva];
+  const escolherImagem = (i, file) => {
+    if (!file) return;
+    mudar(i, { arquivo: file, previa: URL.createObjectURL(file) });
+  };
+
+  const emMinutos = () => {
+    if (!temPrazo) return 0;
+    const valor = parseInt(quanto, 10) || 0;
+    if (unidade === 'horas') return valor * 60;
+    if (unidade === 'dias') return valor * 24 * 60;
+    return valor;
+  };
+
+  const validar = () => {
+    for (let i = 0; i < afirmacoes.length; i++) {
+      const a = afirmacoes[i];
+      if (!a.texto.trim()) return `A afirmação ${i + 1} está em branco.`;
+      if (!a.resposta) return `Diga se a afirmação ${i + 1} é verdadeira ou falsa.`;
+    }
+    if (temPrazo && (parseInt(quanto, 10) || 0) < 1) return 'O prazo precisa ser de pelo menos 1.';
+    return null;
+  };
+
+  const aoSalvar = async (titulo, salaId) => {
+    const pacote = new FormData();
+    pacote.append('salaId', salaId);
+    pacote.append('tipo', 'v_f');
+    pacote.append('titulo', titulo);
+    pacote.append('tempo_limite', emMinutos());
+    pacote.append('perguntas', JSON.stringify(
+      afirmacoes.map(a => ({ texto: a.texto.trim(), resposta_correta: a.resposta }))
+    ));
+    afirmacoes.forEach((a, i) => { if (a.arquivo) pacote.append(`imagem_${i}`, a.arquivo); });
+
+    const res = await fetch(`${API}/professor/atividades/v_f`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: pacote,
+    });
+    if (!res.ok) {
+      const dados = await res.json().catch(() => ({}));
+      throw new Error(dados.erro || 'Não consegui salvar.');
+    }
+  };
 
   return (
-    <div className="criar-vf-container">
-      
-      <aside className="criar-vf-sidebar-left">
-        <div className="criar-vf-brand">
-          <span className="brand-saber">Saber</span>
-          <span className="brand-plus">+</span>
-        </div>
+    <EditorAtividade
+      tipo="v_f"
+      nomeTipo="Verdadeiro ou falso"
+      explicacao="Escreva as afirmações e diga qual é verdadeira e qual é falsa. O aluno escolhe uma das duas."
+      validar={validar}
+      aoSalvar={aoSalvar}
+    >
+      <section className="editor-cartao">
+        <h2>Afirmações</h2>
+        <p className="editor-dica">
+          {afirmacoes.length === 1 ? '1 afirmação' : `${afirmacoes.length} afirmações`} · marque a resposta certa de cada uma.
+        </p>
 
-        <input 
-          type="text" 
-          placeholder="Título da Atividade..." 
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          className="criar-vf-input"
-        />
+        {afirmacoes.map((a, i) => (
+          <div key={a.id} className="editor-item">
+            <div className="editor-item-topo">
+              <span className="editor-selo">{i + 1}</span>
+              <h3>Afirmação {i + 1}</h3>
 
-        <div className="criar-vf-question-list">
-          {perguntas.map((p, index) => (
-            <div 
-              key={p.id}
-              onClick={() => setPerguntaAtiva(index)}
-              className={`criar-vf-question-item ${perguntaAtiva === index ? 'active' : ''}`}
-            >
-              <div className="criar-vf-question-number">
-                {index + 1}
-              </div>
-              
-              <div className="criar-vf-question-text">
-                {p.texto || 'Nova afirmação...'}
-              </div>
-
-              {perguntas.length > 1 && (
-                <button
-                  onClick={(e) => removerPergunta(index, e)}
-                  title="Apagar afirmação"
-                  className="criar-vf-btn-delete"
-                >
-                  🗑️
+              <div className="editor-item-acoes">
+                <button className="editor-icone-btn" onClick={() => mover(i, -1)} disabled={i === 0} title="Subir">
+                  <ArrowUp size={16} strokeWidth={2} />
                 </button>
-              )}
+                <button className="editor-icone-btn" onClick={() => mover(i, 1)} disabled={i === afirmacoes.length - 1} title="Descer">
+                  <ArrowDown size={16} strokeWidth={2} />
+                </button>
+                <button
+                  className="editor-icone-btn perigo"
+                  onClick={() => setAfirmacoes(lista => lista.filter((_, j) => j !== i))}
+                  disabled={afirmacoes.length === 1}
+                  title="Apagar afirmação"
+                >
+                  <Trash2 size={16} strokeWidth={2} />
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
 
-        <button 
-          onClick={adicionarPergunta}
-          className="criar-vf-btn-add"
-        >
-          + Adicionar Afirmação
-        </button>
+            <label className="editor-campo">
+              <span>A afirmação</span>
+              <input
+                className="editor-input"
+                value={a.texto}
+                onChange={e => mudar(i, { texto: e.target.value })}
+                placeholder="Ex.: A água ferve a 100 graus"
+                maxLength={200}
+              />
+            </label>
 
-        <button 
-          onClick={() => navigate('/professor/criar-atividade')}
-          className="criar-vf-btn-exit"
-        >
-          ← Sair
-        </button>
-      </aside>
+            <label className="editor-campo">
+              <span>Imagem (opcional)</span>
+              <div
+                className={`editor-imagem pequena ${a.previa ? 'tem-foto' : ''}`}
+                onClick={() => campos.current[a.id]?.click()}
+              >
+                {a.previa ? (
+                  <>
+                    <img src={a.previa} alt={`imagem da afirmação ${i + 1}`} />
+                    <div className="editor-imagem-acoes">
+                      <button className="editor-mini-btn" onClick={e => { e.stopPropagation(); campos.current[a.id]?.click(); }}>
+                        <RefreshCw size={14} strokeWidth={2.2} /> Trocar
+                      </button>
+                      <button
+                        className="editor-mini-btn perigo"
+                        onClick={e => { e.stopPropagation(); mudar(i, { arquivo: null, previa: null }); }}
+                      >
+                        <Trash2 size={14} strokeWidth={2.2} /> Tirar
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus size={24} strokeWidth={1.6} />
+                    <p>Clique para adicionar uma imagem</p>
+                  </>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                ref={el => { campos.current[a.id] = el; }}
+                onChange={e => escolherImagem(i, e.target.files[0])}
+              />
+            </label>
 
-      <main className="criar-vf-main">
-        
-        <div className="criar-vf-main-input-wrapper">
-          <input 
-            type="text"
-            placeholder="Comece a digitar a afirmação..."
-            value={perguntaAtual.texto}
-            onChange={(e) => atualizarPergunta('texto', e.target.value)}
-            className="criar-vf-main-input"
-          />
-        </div>
-
-        <label className="criar-vf-upload-box">
-          <span className="criar-vf-upload-icon">🖼️</span>
-          <span className="criar-vf-upload-text">
-            {perguntaAtual.imagem ? perguntaAtual.imagem.name : 'Clique para adicionar uma imagem'}
-          </span>
-          <input type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-        </label>
-
-        <div className="criar-vf-choices-wrapper">
-          <button
-            onClick={() => atualizarPergunta('respostaCorreta', 'V')}
-            className={`criar-vf-choice-btn ${perguntaAtual.respostaCorreta === 'V' ? 'active-true' : ''}`}
-          >
-            <div className="criar-vf-choice-icon true">✓</div>
-            <span className="criar-vf-choice-text">Verdadeiro</span>
-            <div className="criar-vf-choice-radio"></div>
-          </button>
-
-          <button
-            onClick={() => atualizarPergunta('respostaCorreta', 'F')}
-            className={`criar-vf-choice-btn ${perguntaAtual.respostaCorreta === 'F' ? 'active-false' : ''}`}
-          >
-            <div className="criar-vf-choice-icon false">✕</div>
-            <span className="criar-vf-choice-text">Falso</span>
-            <div className="criar-vf-choice-radio"></div>
-          </button>
-        </div>
-      </main>
-
-      <aside className="criar-vf-sidebar-right">
-        <h2 className="criar-vf-prop-header">Propriedades</h2>
-        
-        <div className="criar-vf-prop-group">
-          <div className="criar-vf-prop-label">Afirmação Atual</div>
-          <div className="criar-vf-prop-value-highlight">
-            {perguntaAtiva + 1} <span className="criar-vf-prop-value-muted">de {perguntas.length}</span>
-          </div>
-        </div>
-
-        <div className="criar-vf-prop-group">
-          <div className="criar-vf-prop-label">Configuração</div>
-          <div className="criar-vf-prop-value-dark">2 Opções (V/F)</div>
-        </div>
-
-        {/* ==============================================
-            BLOCO DE PRAZO / TEMPO LIMITE ATUALIZADO
-            ============================================== */}
-        <div className="criar-vf-prop-group" style={{ marginTop: '32px', backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <div className="criar-vf-prop-label" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '1rem' }}>⏳</span> PRAZO / TEMPO LIMITE
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <input 
-              type="checkbox" 
-              id="tem-tempo" 
-              checked={temTempo} 
-              onChange={(e) => setTemTempo(e.target.checked)} 
-              style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3b82f6' }}
-            />
-            <label htmlFor="tem-tempo" style={{ color: '#334155', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem' }}>
-              Definir um prazo
+            <label className="editor-campo">
+              <span>Esta afirmação é…</span>
+              <div className="editor-vf">
+                <button
+                  className={`editor-vf-btn sim ${a.resposta === 'V' ? 'ativo' : ''}`}
+                  onClick={() => mudar(i, { resposta: 'V' })}
+                >
+                  <span className="editor-vf-icone"><Check size={17} strokeWidth={3} /></span>
+                  <span>Verdadeira</span>
+                </button>
+                <button
+                  className={`editor-vf-btn nao ${a.resposta === 'F' ? 'ativo' : ''}`}
+                  onClick={() => mudar(i, { resposta: 'F' })}
+                >
+                  <span className="editor-vf-icone"><X size={17} strokeWidth={3} /></span>
+                  <span>Falsa</span>
+                </button>
+              </div>
             </label>
           </div>
-          
-          {temTempo ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px', animation: 'fadeIn 0.2s' }}>
-              <input 
-                type="number" 
+        ))}
+
+        <button className="editor-adicionar" onClick={() => setAfirmacoes(lista => [...lista, novaAfirmacao()])}>
+          <Plus size={16} strokeWidth={2.2} /> Adicionar afirmação
+        </button>
+      </section>
+
+      <section className="editor-cartao">
+        <h2>Prazo</h2>
+        <p className="editor-dica">Sem prazo, a atividade fica disponível para a turma o tempo todo.</p>
+
+        <div className="editor-prazo">
+          <label className="editor-caixinha">
+            <input type="checkbox" checked={temPrazo} onChange={e => setTemPrazo(e.target.checked)} />
+            Definir um prazo
+          </label>
+
+          {temPrazo && (
+            <>
+              <input
+                className="editor-input"
+                type="number"
                 min="1"
-                value={tempoValor}
-                onChange={(e) => setTempoValor(e.target.value)}
-                style={{ width: '70px', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', textAlign: 'center', fontSize: '1rem', color: '#334155', fontWeight: 'bold' }}
+                value={quanto}
+                onChange={e => setQuanto(e.target.value)}
               />
-              <select
-                value={tempoUnidade}
-                onChange={(e) => setTempoUnidade(e.target.value)}
-                style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', fontSize: '0.9rem', color: '#334155', backgroundColor: 'white', cursor: 'pointer' }}
-              >
+              <select value={unidade} onChange={e => setUnidade(e.target.value)}>
                 <option value="minutos">minutos</option>
                 <option value="horas">horas</option>
                 <option value="dias">dias</option>
               </select>
-            </div>
-          ) : (
-             <div style={{ marginTop: '8px', color: '#94a3b8', fontSize: '0.85rem' }}>
-               A atividade ficará disponível sem limite de tempo.
-             </div>
+            </>
           )}
         </div>
-
-        <div className="criar-vf-spacer"></div>
-
-        <button 
-          onClick={handleSubmit}
-          disabled={loading}
-          className="criar-vf-btn-save"
-        >
-          {loading ? 'SALVANDO...' : '💾 SALVAR ATIVIDADE'}
-        </button>
-      </aside>
-
-    </div>
+      </section>
+    </EditorAtividade>
   );
 }
 

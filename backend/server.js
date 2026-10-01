@@ -1249,7 +1249,7 @@ app.post('/professor/atividades/v_f', autenticar, upload.any(), donoDaSala(req =
 
     const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite) VALUES (?, ?, ?, ?, ?, ?)`;
 
-    db.query(sql, [titulo, 'v_f', salaId, professorId, JSON.stringify(conteudoFormatado), tempo_limite], (err, result) => {
+    db.query(sql, [titulo, 'v_f', salaId, professorId, JSON.stringify(conteudoFormatado), tempo_limite > 0 ? tempo_limite : null], (err, result) => {
       if (err) return res.status(500).json({ erro: 'Erro ao salvar atividade V/F no banco.' });
       res.status(201).json({ mensagem: 'Atividade criada com sucesso!', id: result.insertId });
     });
@@ -2236,6 +2236,24 @@ db.query(`SHOW COLUMNS FROM atividade LIKE 'tipo'`, (err, colunas) => {
     db.query(`ALTER TABLE atividade MODIFY tipo VARCHAR(30) NOT NULL`, (erroAlter) => {
       if (erroAlter) console.error('Não consegui liberar os tipos novos de atividade:', erroAlter.message);
       else console.log('✅ Coluna atividade.tipo agora aceita os tipos novos.');
+    });
+  }
+});
+
+/* O prazo do Verdadeiro ou Falso é guardado em MINUTOS (a tela do aluno soma
+   esses minutos à data de criação). A coluna nasceu como DATETIME, então o
+   número virava '0000-00-00' e o prazo nunca valia de verdade. Aqui ela passa
+   a ser um número inteiro; as datas quebradas que ficaram viram NULL, que é
+   exatamente o que a tela entende como 'sem limite de tempo'. */
+db.query(`SHOW COLUMNS FROM atividade LIKE 'tempo_limite'`, (err, colunas) => {
+  if (err || !colunas || colunas.length === 0) return;
+  const tipoDaColuna = String(colunas[0].Type || '').toLowerCase();
+  if (!tipoDaColuna.includes('int')) {
+    db.query(`UPDATE atividade SET tempo_limite = NULL WHERE tempo_limite IS NOT NULL`, () => {
+      db.query(`ALTER TABLE atividade MODIFY tempo_limite INT NULL`, (erroAlter) => {
+        if (erroAlter) console.error('Não consegui ajustar a coluna do prazo:', erroAlter.message);
+        else console.log('✅ Coluna atividade.tempo_limite agora guarda minutos.');
+      });
     });
   }
 });

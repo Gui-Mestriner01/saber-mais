@@ -1,294 +1,299 @@
 import { useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import '../CSS/Quiz.css';
+import { Plus, Trash2, Check, ImagePlus, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
+import EditorAtividade from '../components/EditorAtividade';
 import { API } from '../api';
 
-const CORES = [
-  { bg: '#E23F3F', icon: '▲' },
-  { bg: '#1368CE', icon: '◆' },
-  { bg: '#D89E00', icon: '●' },
-  { bg: '#26890C', icon: '■' },
-  { bg: '#8B44AC', icon: '★' },
-  { bg: '#E07820', icon: '⬟' },
+/* ==========================================================================
+   EDITOR — QUIZ
+
+   As perguntas ficam uma embaixo da outra, cada uma no seu cartão, igual
+   aos outros editores. Antes elas moravam numa barra lateral e só uma
+   aparecia por vez, o que escondia metade do trabalho do professor.
+
+   A imagem agora sobe para o servidor na hora de salvar. Antes ia para o
+   banco o endereço temporário do navegador (blob:...), que morre assim que
+   a aba fecha — a atividade ficava sem imagem para o aluno.
+
+   conteudo = { perguntas: [{ texto, imagem, multiplaEscolha, alternativas }] }
+   ========================================================================== */
+
+const MAX_ALTERNATIVAS = 6;
+const MIN_ALTERNATIVAS = 2;
+
+/* Cada alternativa tem cor e símbolo próprios: o aluno que ainda lê devagar
+   se guia pela forma, e quem não enxerga cor bem não fica sem referência. */
+const MARCAS = [
+  { cor: '#E23F3F', simbolo: '▲' },
+  { cor: '#1368CE', simbolo: '◆' },
+  { cor: '#D89E00', simbolo: '●' },
+  { cor: '#26890C', simbolo: '■' },
+  { cor: '#8B44AC', simbolo: '★' },
+  { cor: '#E07820', simbolo: '⬟' },
 ];
 
-const novaAlternativa = () => ({ id: Date.now() + Math.random(), texto: '', correta: false });
+let contador = 0;
+const novaId = () => `q${Date.now()}_${contador++}`;
+
+const novaAlternativa = () => ({ id: novaId(), texto: '', correta: false });
 
 const novaPergunta = () => ({
-  id: Date.now(),
+  id: novaId(),
   texto: '',
-  imagem: null,
+  arquivo: null,
+  previa: null,
   multiplaEscolha: false,
-  alternativas: [1,2,3,4].map(() => novaAlternativa())
+  alternativas: [novaAlternativa(), novaAlternativa(), novaAlternativa(), novaAlternativa()],
 });
 
 function CriarQuiz() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const salaId = location.state?.salaId;
-  const imgRef = useRef(null);
+  const [perguntas, setPerguntas] = useState([novaPergunta()]);
+  const campos = useRef({});
 
-  const [titulo, setTitulo]         = useState('');
-  const [perguntas, setPerguntas]   = useState([novaPergunta()]);
-  const [idx, setIdx]               = useState(0);
-  const [salvando, setSalvando]     = useState(false);
-  const [modalSair, setModalSair]   = useState(false);
-  const [msgSucesso, setMsgSucesso] = useState(false);
+  const mudarPergunta = (i, mudancas) =>
+    setPerguntas(lista => lista.map((p, j) => (j === i ? { ...p, ...mudancas } : p)));
 
-  const p = perguntas[idx];
+  const mudarAlternativa = (i, a, mudancas) =>
+    setPerguntas(lista => lista.map((p, j) => (
+      j !== i ? p : { ...p, alternativas: p.alternativas.map((alt, k) => (k === a ? { ...alt, ...mudancas } : alt)) }
+    )));
 
-  const setPergunta = (updates) => {
-    setPerguntas(prev => prev.map((q, i) => i === idx ? { ...q, ...updates } : q));
-  };
+  /* Resposta única: marcar uma desmarca as outras. Múltipla: liga e desliga. */
+  const marcarCerta = (i, a) => setPerguntas(lista => lista.map((p, j) => {
+    if (j !== i) return p;
+    if (p.multiplaEscolha) {
+      return { ...p, alternativas: p.alternativas.map((alt, k) => (k === a ? { ...alt, correta: !alt.correta } : alt)) };
+    }
+    return { ...p, alternativas: p.alternativas.map((alt, k) => ({ ...alt, correta: k === a })) };
+  }));
 
-  const setAlt = (altIdx, updates) => {
-    setPergunta({
-      alternativas: p.alternativas.map((a, i) => i === altIdx ? { ...a, ...updates } : a)
+  /* Ao voltar para resposta única, só a primeira marcada continua marcada. */
+  const trocarTipoResposta = (i, multipla) => setPerguntas(lista => lista.map((p, j) => {
+    if (j !== i) return p;
+    if (multipla) return { ...p, multiplaEscolha: true };
+    const primeira = p.alternativas.findIndex(a => a.correta);
+    return { ...p, multiplaEscolha: false, alternativas: p.alternativas.map((a, k) => ({ ...a, correta: k === primeira })) };
+  }));
+
+  const mover = (i, direcao) => {
+    const destino = i + direcao;
+    if (destino < 0 || destino >= perguntas.length) return;
+    setPerguntas(lista => {
+      const nova = [...lista];
+      [nova[i], nova[destino]] = [nova[destino], nova[i]];
+      return nova;
     });
   };
 
-  const toggleCorreta = (altIdx) => {
-    if (!p.multiplaEscolha) {
-      setPergunta({
-        alternativas: p.alternativas.map((a, i) => ({ ...a, correta: i === altIdx }))
-      });
-    } else {
-      setAlt(altIdx, { correta: !p.alternativas[altIdx].correta });
+  const escolherImagem = (i, file) => {
+    if (!file) return;
+    mudarPergunta(i, { arquivo: file, previa: URL.createObjectURL(file) });
+  };
+
+  const validar = () => {
+    for (let i = 0; i < perguntas.length; i++) {
+      const p = perguntas[i];
+      const n = i + 1;
+      if (!p.texto.trim()) return `A pergunta ${n} está sem enunciado.`;
+
+      const usadas = p.alternativas.filter(a => a.texto.trim());
+      if (usadas.length < MIN_ALTERNATIVAS) return `A pergunta ${n} precisa de pelo menos ${MIN_ALTERNATIVAS} alternativas escritas.`;
+
+      const certas = usadas.filter(a => a.correta);
+      if (certas.length === 0) return `Marque a resposta certa da pergunta ${n}.`;
+      if (!p.multiplaEscolha && certas.length > 1) return `A pergunta ${n} é de resposta única, mas tem mais de uma marcada.`;
+      if (p.multiplaEscolha && certas.length === usadas.length) return `Na pergunta ${n} todas as alternativas estão certas — assim não há o que escolher.`;
+
+      const textos = usadas.map(a => a.texto.trim().toLowerCase());
+      if (new Set(textos).size !== textos.length) return `A pergunta ${n} tem duas alternativas iguais.`;
     }
+    return null;
   };
 
-  const adicionarAlternativa = () => {
-    if (p.alternativas.length >= 6) return;
-    setPergunta({ alternativas: [...p.alternativas, novaAlternativa()] });
-  };
+  /* Sobe as imagens e só então salva, para o banco guardar o endereço real. */
+  const aoSalvar = async (titulo, salaId) => {
+    const cracha = { Authorization: `Bearer ${localStorage.getItem('token')}` };
 
-  const removerAlternativa = (altIdx) => {
-    if (p.alternativas.length <= 2) return;
-    setPergunta({ alternativas: p.alternativas.filter((_, i) => i !== altIdx) });
-  };
-
-  const adicionarPergunta = () => {
-    const nova = novaPergunta();
-    setPerguntas(prev => [...prev, nova]);
-    setIdx(perguntas.length);
-  };
-
-  const removerPergunta = (i, e) => {
-    e.stopPropagation();
-    if (perguntas.length === 1) return;
-    const novas = perguntas.filter((_, pi) => pi !== i);
-    setPerguntas(novas);
-    setIdx(Math.min(idx, novas.length - 1));
-  };
-
-  const handleImagem = (e) => {
-    const file = e.target.files[0];
-    if (file) setPergunta({ imagem: URL.createObjectURL(file) });
-  };
-
-  const handleSalvar = async () => {
-    if (!titulo) { alert('Adicione um título ao quiz!'); return; }
-
-    setSalvando(true);
-    try {
-      const response = await fetch(`${API}/professor/atividade`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          titulo,
-          tipo: 'quiz',
-          sala_id: salaId,
-          conteudo: { perguntas }
-        })
+    const prontas = [];
+    for (const p of perguntas) {
+      let imagem = null;
+      if (p.arquivo) {
+        const pacote = new FormData();
+        pacote.append('imagem', p.arquivo);
+        const envio = await fetch(`${API}/professor/pintura/upload`, { method: 'POST', headers: cracha, body: pacote });
+        const dados = await envio.json();
+        if (!envio.ok) throw new Error(dados.erro || 'Não consegui enviar uma das imagens.');
+        imagem = dados.url;
+      }
+      prontas.push({
+        texto: p.texto.trim(),
+        imagem,
+        multiplaEscolha: p.multiplaEscolha,
+        alternativas: p.alternativas
+          .filter(a => a.texto.trim())
+          .map(a => ({ texto: a.texto.trim(), correta: a.correta })),
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.erro);
-
-      setMsgSucesso(true);
-      setTimeout(() => navigate('/professor/dashboard'), 1500);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSalvando(false);
     }
-  };
 
-  const handleSairSemSalvar = () => {
-    navigate('/professor/dashboard');
+    const res = await fetch(`${API}/professor/atividade`, {
+      method: 'POST',
+      headers: { ...cracha, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo, tipo: 'quiz', sala_id: salaId, conteudo: { perguntas: prontas } }),
+    });
+    const dados = await res.json();
+    if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar.');
   };
 
   return (
-    <div className="quiz-builder">
+    <EditorAtividade
+      tipo="quiz"
+      nomeTipo="Quiz"
+      explicacao="Escreva as perguntas e marque a resposta certa de cada uma. O aluno escolhe entre as alternativas."
+      validar={validar}
+      aoSalvar={aoSalvar}
+    >
+      <section className="editor-cartao">
+        <h2>Perguntas</h2>
+        <p className="editor-dica">
+          {perguntas.length === 1 ? '1 pergunta' : `${perguntas.length} perguntas`} · de {MIN_ALTERNATIVAS} a {MAX_ALTERNATIVAS} alternativas em cada.
+        </p>
 
-      {modalSair && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Deseja salvar antes de sair?</h3>
-            <p>Se sair sem salvar, as alterações serão perdidas.</p>
-            <div className="modal-btns">
-              <button className="modal-btn-salvar" onClick={() => { setModalSair(false); handleSalvar(); }}>
-                💾 Salvar e Sair
-              </button>
-              <button className="modal-btn-sair" onClick={handleSairSemSalvar}>
-                Sair sem Salvar
-              </button>
-              <button className="modal-btn-cancelar" onClick={() => setModalSair(false)}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        {perguntas.map((p, i) => (
+          <div key={p.id} className="editor-item">
+            <div className="editor-item-topo">
+              <span className="editor-selo">{i + 1}</span>
+              <h3>Pergunta {i + 1}</h3>
 
-      <aside className="quiz-sidebar">
-        <div className="quiz-brand">
-          <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
-        </div>
-
-        <input
-          className="quiz-titulo-input"
-          type="text"
-          placeholder="Título do Quiz..."
-          value={titulo}
-          onChange={e => setTitulo(e.target.value)}
-        />
-
-        <div className="perguntas-lista">
-          {perguntas.map((q, i) => (
-            <div
-              key={q.id}
-              className={`pergunta-thumb ${i === idx ? 'ativa' : ''}`}
-              onClick={() => setIdx(i)}
-            >
-              <span className="thumb-num">{i + 1}</span>
-              <span className="thumb-texto">{q.texto || 'Pergunta...'}</span>
-              {perguntas.length > 1 && (
-                <button className="thumb-del" onClick={(e) => removerPergunta(i, e)}>🗑</button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <button className="btn-add-pergunta" onClick={adicionarPergunta}>
-          + Adicionar Pergunta
-        </button>
-        <button className="btn-sair-quiz" onClick={() => setModalSair(true)}>
-          ← Sair
-        </button>
-      </aside>
-
-      <main className="quiz-main">
-        <div className="quiz-pergunta-wrap">
-          <input
-            className="quiz-pergunta-input"
-            type="text"
-            placeholder="Comece a digitar a pergunta..."
-            value={p.texto}
-            onChange={e => setPergunta({ texto: e.target.value })}
-          />
-        </div>
-
-        <div className="quiz-imagem-area" onClick={() => imgRef.current.click()}>
-          {p.imagem
-            ? <img src={p.imagem} alt="imagem" className="quiz-img-preview" />
-            : (
-              <div className="quiz-imagem-placeholder">
-                <span>🖼️</span>
-                <p>Clique para adicionar uma imagem</p>
-              </div>
-            )
-          }
-        </div>
-        <input ref={imgRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleImagem} />
-
-        <div className={`alternativas-grid ${p.alternativas.length > 4 ? 'grid-6' : ''}`}>
-          {p.alternativas.map((alt, altIdx) => {
-            const cor = CORES[altIdx];
-            return (
-              <div
-                key={alt.id}
-                className={`alternativa-card ${alt.correta ? 'correta' : ''}`}
-                style={{'--cor': cor.bg}}
-              >
-                <div className="alt-icone" style={{background: cor.bg}}>
-                  {cor.icon}
-                </div>
-                <input
-                  type="text"
-                  className="alt-input"
-                  placeholder={`Alternativa ${altIdx + 1}${altIdx >= 4 ? ' (opcional)' : ''}`}
-                  value={alt.texto}
-                  onChange={e => setAlt(altIdx, { texto: e.target.value })}
-                />
-                <button
-                  className={`alt-correta-btn ${alt.correta ? 'marcada' : ''}`}
-                  onClick={() => toggleCorreta(altIdx)}
-                  title="Marcar como correta"
-                >
-                  {alt.correta ? '✅' : '○'}
+              <div className="editor-segmentado">
+                <button className={!p.multiplaEscolha ? 'ativo' : ''} onClick={() => trocarTipoResposta(i, false)}>
+                  Uma resposta
                 </button>
-                {altIdx >= 4 && (
-                  <button className="alt-del-btn" onClick={() => removerAlternativa(altIdx)}>✕</button>
+                <button className={p.multiplaEscolha ? 'ativo' : ''} onClick={() => trocarTipoResposta(i, true)}>
+                  Várias
+                </button>
+              </div>
+
+              <div className="editor-item-acoes">
+                <button className="editor-icone-btn" onClick={() => mover(i, -1)} disabled={i === 0} title="Subir">
+                  <ArrowUp size={16} strokeWidth={2} />
+                </button>
+                <button className="editor-icone-btn" onClick={() => mover(i, 1)} disabled={i === perguntas.length - 1} title="Descer">
+                  <ArrowDown size={16} strokeWidth={2} />
+                </button>
+                <button
+                  className="editor-icone-btn perigo"
+                  onClick={() => setPerguntas(lista => lista.filter((_, j) => j !== i))}
+                  disabled={perguntas.length === 1}
+                  title="Apagar pergunta"
+                >
+                  <Trash2 size={16} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+
+            <label className="editor-campo">
+              <span>Enunciado</span>
+              <input
+                className="editor-input"
+                value={p.texto}
+                onChange={e => mudarPergunta(i, { texto: e.target.value })}
+                placeholder="Ex.: Qual é a capital do Brasil?"
+                maxLength={200}
+              />
+            </label>
+
+            <label className="editor-campo">
+              <span>Imagem (opcional)</span>
+              <div
+                className={`editor-imagem pequena ${p.previa ? 'tem-foto' : ''}`}
+                onClick={() => campos.current[p.id]?.click()}
+              >
+                {p.previa ? (
+                  <>
+                    <img src={p.previa} alt={`imagem da pergunta ${i + 1}`} />
+                    <div className="editor-imagem-acoes">
+                      <button className="editor-mini-btn" onClick={e => { e.stopPropagation(); campos.current[p.id]?.click(); }}>
+                        <RefreshCw size={14} strokeWidth={2.2} /> Trocar
+                      </button>
+                      <button
+                        className="editor-mini-btn perigo"
+                        onClick={e => { e.stopPropagation(); mudarPergunta(i, { arquivo: null, previa: null }); }}
+                      >
+                        <Trash2 size={14} strokeWidth={2.2} /> Tirar
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus size={24} strokeWidth={1.6} />
+                    <p>Clique para adicionar uma imagem</p>
+                  </>
                 )}
               </div>
-            );
-          })}
-        </div>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                ref={el => { campos.current[p.id] = el; }}
+                onChange={e => escolherImagem(i, e.target.files[0])}
+              />
+            </label>
 
-        {p.alternativas.length < 6 && (
-          <button className="btn-add-alternativa" onClick={adicionarAlternativa}>
-            + Adicionar alternativa
-          </button>
-        )}
-      </main>
+            <label className="editor-campo">
+              <span>Alternativas — clique no ✓ para marcar a certa</span>
+              <div className="editor-alternativas">
+                {p.alternativas.map((alt, a) => {
+                  const marca = MARCAS[a];
+                  return (
+                    <div
+                      key={alt.id}
+                      className={`editor-alt ${alt.correta ? 'certa' : ''}`}
+                      style={{ '--cor': marca.cor }}
+                    >
+                      <span className="editor-alt-marca">{marca.simbolo}</span>
+                      <input
+                        className="editor-input"
+                        value={alt.texto}
+                        onChange={e => mudarAlternativa(i, a, { texto: e.target.value })}
+                        placeholder={`Alternativa ${a + 1}${a >= 4 ? ' (opcional)' : ''}`}
+                        maxLength={140}
+                      />
+                      <button
+                        className={`editor-alt-certa ${alt.correta ? 'marcada' : ''}`}
+                        onClick={() => marcarCerta(i, a)}
+                        title={alt.correta ? 'Esta é a resposta certa' : 'Marcar como certa'}
+                      >
+                        <Check size={16} strokeWidth={3} />
+                      </button>
+                      {p.alternativas.length > MIN_ALTERNATIVAS && (
+                        <button
+                          className="editor-icone-btn perigo"
+                          onClick={() => mudarPergunta(i, { alternativas: p.alternativas.filter((_, k) => k !== a) })}
+                          title="Apagar alternativa"
+                        >
+                          <Trash2 size={15} strokeWidth={2} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </label>
 
-      <aside className="quiz-props">
-        <h3>Propriedades</h3>
-
-        <div className="prop-grupo">
-          <label>Tipo de resposta</label>
-          <div className="toggle-tipo">
             <button
-              className={!p.multiplaEscolha ? 'ativo' : ''}
-              onClick={() => setPergunta({ multiplaEscolha: false })}
+              className="editor-adicionar"
+              onClick={() => mudarPergunta(i, { alternativas: [...p.alternativas, novaAlternativa()] })}
+              disabled={p.alternativas.length >= MAX_ALTERNATIVAS}
             >
-              Única
-            </button>
-            <button
-              className={p.multiplaEscolha ? 'ativo' : ''}
-              onClick={() => setPergunta({ multiplaEscolha: true })}
-            >
-              Múltipla
+              <Plus size={16} strokeWidth={2.2} /> Adicionar alternativa
             </button>
           </div>
-        </div>
+        ))}
 
-        <div className="prop-grupo">
-          <label>Pergunta</label>
-          <span className="prop-info">{idx + 1} de {perguntas.length}</span>
-        </div>
-
-        <div className="prop-grupo">
-          <label>Alternativas</label>
-          <span className="prop-info">{p.alternativas.length} de 6</span>
-        </div>
-
-        {msgSucesso && <div className="msg-sucesso-quiz">✅ Quiz salvo!</div>}
-
-        <button
-          className="btn-salvar-quiz"
-          onClick={handleSalvar}
-          disabled={salvando}
-        >
-          {salvando ? 'Salvando...' : '💾 SALVAR QUIZ'}
+        <button className="editor-adicionar" onClick={() => setPerguntas(lista => [...lista, novaPergunta()])}>
+          <Plus size={16} strokeWidth={2.2} /> Adicionar pergunta
         </button>
-      </aside>
-
-    </div>
+      </section>
+    </EditorAtividade>
   );
 }
 

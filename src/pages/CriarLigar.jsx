@@ -1,261 +1,197 @@
 import { useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import '../CSS/Ligar.css';
+import { Plus, Trash2, Link2, Type, ImagePlus, RefreshCw } from 'lucide-react';
+import EditorAtividade from '../components/EditorAtividade';
 import { API } from '../api';
 
-const novoPar = () => ({
-  id: Date.now() + Math.random(),
-  ladoA: { tipo: 'texto', conteudo: '' },
-  ladoB: { tipo: 'texto', conteudo: '' },
-});
+/* ==========================================================================
+   EDITOR — LIGAR OS PARES
 
-const novaAtividade = () => ({
-  id: Date.now(),
-  titulo: '',
-  pares: [novoPar(), novoPar(), novoPar()],
-});
+   Cada linha é um par: o que está na coluna A combina com o que está na
+   coluna B. Os dois lados podem ser texto ou imagem.
+
+   Duas coisas mudaram junto com o visual:
+   - antes a tela deixava criar várias "atividades" na barra lateral, mas só
+     a que estava aberta era salva — as outras sumiam sem avisar. Agora é
+     uma atividade por vez, como o resto do sistema;
+   - a imagem vai para o servidor em vez de ir inteira dentro do banco
+     (antes ia em base64, o que deixava a atividade pesadíssima).
+
+   conteudo = { pares: [{ ladoA: {tipo, conteudo}, ladoB: {tipo, conteudo} }] }
+   ========================================================================== */
+
+const MIN_PARES = 3;
+const MAX_PARES = 10;
+
+let contador = 0;
+const novaId = () => `lp${Date.now()}_${contador++}`;
+
+const novoLado = () => ({ tipo: 'texto', texto: '', arquivo: null, previa: null });
+const novoPar = () => ({ id: novaId(), ladoA: novoLado(), ladoB: novoLado() });
 
 function CriarLigar() {
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  const salaId    = location.state?.salaId;
+  const [pares, setPares] = useState([novoPar(), novoPar(), novoPar()]);
+  const campos = useRef({});
 
-  const [titulo, setTitulo]           = useState('');
-  const [atividades, setAtividades]   = useState([novaAtividade()]);
-  const [idx, setIdx]                 = useState(0);
-  const [salvando, setSalvando]       = useState(false);
-  const [msgSucesso, setMsgSucesso]   = useState(false);
-  const [modalSair, setModalSair]     = useState(false);
+  const mudarLado = (i, lado, mudancas) =>
+    setPares(lista => lista.map((p, j) => (j === i ? { ...p, [lado]: { ...p[lado], ...mudancas } } : p)));
 
-  const imgRefs = useRef({});
-  const ativ    = atividades[idx];
+  const trocarTipo = (i, lado, tipo) => mudarLado(i, lado, { tipo, texto: '', arquivo: null, previa: null });
 
-  const setAtiv = (updates) => {
-    setAtividades(prev => prev.map((a, i) => i === idx ? { ...a, ...updates } : a));
+  const escolherImagem = (i, lado, file) => {
+    if (!file) return;
+    mudarLado(i, lado, { arquivo: file, previa: URL.createObjectURL(file) });
   };
 
-  const setPar = (parIdx, lado, updates) => {
-    setAtiv({
-      pares: ativ.pares.map((p, i) =>
-        i === parIdx ? { ...p, [lado]: { ...p[lado], ...updates } } : p
-      )
+  const vazio = lado => (lado.tipo === 'texto' ? !lado.texto.trim() : !lado.arquivo);
+
+  const validar = () => {
+    for (let i = 0; i < pares.length; i++) {
+      const p = pares[i];
+      if (vazio(p.ladoA)) return `Falta preencher a coluna A do par ${i + 1}.`;
+      if (vazio(p.ladoB)) return `Falta preencher a coluna B do par ${i + 1}.`;
+    }
+    const textosA = pares.filter(p => p.ladoA.tipo === 'texto').map(p => p.ladoA.texto.trim().toLowerCase());
+    if (new Set(textosA).size !== textosA.length) return 'Dois itens da coluna A estão iguais — o aluno não teria como escolher.';
+    const textosB = pares.filter(p => p.ladoB.tipo === 'texto').map(p => p.ladoB.texto.trim().toLowerCase());
+    if (new Set(textosB).size !== textosB.length) return 'Dois itens da coluna B estão iguais — o aluno não teria como escolher.';
+    return null;
+  };
+
+  const aoSalvar = async (titulo, salaId) => {
+    const cracha = { Authorization: `Bearer ${localStorage.getItem('token')}` };
+
+    const subir = async (lado) => {
+      if (lado.tipo === 'texto') return { tipo: 'texto', conteudo: lado.texto.trim() };
+      const pacote = new FormData();
+      pacote.append('imagem', lado.arquivo);
+      const envio = await fetch(`${API}/professor/pintura/upload`, { method: 'POST', headers: cracha, body: pacote });
+      const dados = await envio.json();
+      if (!envio.ok) throw new Error(dados.erro || 'Não consegui enviar uma das imagens.');
+      return { tipo: 'imagem', conteudo: dados.url };
+    };
+
+    const prontos = [];
+    for (const p of pares) {
+      prontos.push({ ladoA: await subir(p.ladoA), ladoB: await subir(p.ladoB) });
+    }
+
+    const res = await fetch(`${API}/professor/atividade`, {
+      method: 'POST',
+      headers: { ...cracha, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo, tipo: 'ligar', sala_id: salaId, conteudo: { pares: prontos } }),
     });
+    const dados = await res.json();
+    if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar.');
   };
 
-  const adicionarPar = () => {
-    if (ativ.pares.length >= 10) return;
-    setAtiv({ pares: [...ativ.pares, novoPar()] });
-  };
+  /* Os dois lados são iguais por dentro, então desenham pelo mesmo pedaço. */
+  const desenharLado = (par, i, lado, letra) => {
+    const dados = par[lado];
+    const chave = `${par.id}-${lado}`;
+    return (
+      <div className="editor-par-lado">
+        <div className="editor-segmentado">
+          <button className={dados.tipo === 'texto' ? 'ativo' : ''} onClick={() => trocarTipo(i, lado, 'texto')}>
+            <Type size={14} strokeWidth={2.2} /> Texto
+          </button>
+          <button className={dados.tipo === 'imagem' ? 'ativo' : ''} onClick={() => trocarTipo(i, lado, 'imagem')}>
+            <ImagePlus size={14} strokeWidth={2.2} /> Imagem
+          </button>
+        </div>
 
-  const removerPar = (parIdx) => {
-    if (ativ.pares.length <= 3) return;
-    setAtiv({ pares: ativ.pares.filter((_, i) => i !== parIdx) });
-  };
-
-  const adicionarAtividade = () => {
-    const nova = novaAtividade();
-    setAtividades(prev => [...prev, nova]);
-    setIdx(atividades.length);
-  };
-
-  const removerAtividade = (i, e) => {
-    e.stopPropagation();
-    if (atividades.length === 1) return;
-    const novas = atividades.filter((_, ai) => ai !== i);
-    setAtividades(novas);
-    setIdx(Math.min(idx, novas.length - 1));
-  };
-
-  const handleImagem = (parIdx, lado, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // reader.result contém a imagem em formato Base64 (texto)
-        setPar(parIdx, lado, { tipo: 'imagem', conteudo: reader.result });
-      };
-      reader.readAsDataURL(file); // Inicia a leitura do arquivo
-    }
-  };
-
-  const toggleTipo = (parIdx, lado) => {
-    const atual = ativ.pares[parIdx][lado].tipo;
-    setPar(parIdx, lado, { tipo: atual === 'texto' ? 'imagem' : 'texto', conteudo: '' });
-  };
-
-  const handleSalvar = async () => {
-    if (!titulo) { alert('Adicione um título!'); return; }
-
-    setSalvando(true);
-    try {
-      const res = await fetch(`${API}/professor/atividade`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          titulo,
-          tipo: 'ligar',
-          sala_id: salaId,
-          conteudo: { pares: ativ.pares }
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.erro);
-
-      setMsgSucesso(true);
-      setTimeout(() => navigate('/professor/dashboard'), 1500);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSalvando(false);
-    }
+        {dados.tipo === 'texto' ? (
+          <input
+            className="editor-input"
+            value={dados.texto}
+            onChange={e => mudarLado(i, lado, { texto: e.target.value })}
+            placeholder={`Coluna ${letra}…`}
+            maxLength={120}
+          />
+        ) : (
+          <>
+            <div
+              className={`editor-imagem pequena ${dados.previa ? 'tem-foto' : ''}`}
+              onClick={() => campos.current[chave]?.click()}
+            >
+              {dados.previa ? (
+                <>
+                  <img src={dados.previa} alt={`coluna ${letra} do par ${i + 1}`} />
+                  <div className="editor-imagem-acoes">
+                    <button className="editor-mini-btn" onClick={e => { e.stopPropagation(); campos.current[chave]?.click(); }}>
+                      <RefreshCw size={14} strokeWidth={2.2} /> Trocar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <ImagePlus size={22} strokeWidth={1.6} />
+                  <p>Escolher imagem</p>
+                </>
+              )}
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              ref={el => { campos.current[chave] = el; }}
+              onChange={e => escolherImagem(i, lado, e.target.files[0])}
+            />
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="ligar-builder">
+    <EditorAtividade
+      tipo="ligar"
+      nomeTipo="Ligar os pares"
+      explicacao="Monte os pares que combinam. O aluno recebe as duas colunas embaralhadas e liga uma na outra."
+      validar={validar}
+      aoSalvar={aoSalvar}
+    >
+      <section className="editor-cartao">
+        <h2>Pares</h2>
+        <p className="editor-dica">
+          De {MIN_PARES} a {MAX_PARES} pares. Cada lado pode ser uma palavra ou uma imagem.
+        </p>
 
-      {modalSair && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Deseja salvar antes de sair?</h3>
-            <p>Se sair sem salvar, as alterações serão perdidas.</p>
-            <div className="modal-btns">
-              <button className="modal-btn-salvar" onClick={() => { setModalSair(false); handleSalvar(); }}>
-                💾 Salvar e Sair
-              </button>
-              <button className="modal-btn-sair" onClick={() => navigate('/professor/dashboard')}>
-                Sair sem Salvar
-              </button>
-              <button className="modal-btn-cancelar" onClick={() => setModalSair(false)}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <aside className="ligar-sidebar">
-        <div className="quiz-brand">
-          <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
-        </div>
-
-        <input
-          className="quiz-titulo-input"
-          type="text"
-          placeholder="Título da Atividade..."
-          value={titulo}
-          onChange={e => setTitulo(e.target.value)}
-        />
-
-        <div className="perguntas-lista">
-          {atividades.map((a, i) => (
-            <div
-              key={a.id}
-              className={`pergunta-thumb ${i === idx ? 'ativa' : ''}`}
-              onClick={() => setIdx(i)}
-            >
-              <span className="thumb-num">{i + 1}</span>
-              <span className="thumb-texto">{a.titulo || 'Atividade...'}</span>
-              {atividades.length > 1 && (
-                <button className="thumb-del" onClick={(e) => removerAtividade(i, e)}>🗑</button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <button className="btn-add-pergunta" onClick={adicionarAtividade}>
-          + Adicionar Atividade
-        </button>
-        <button className="btn-sair-quiz" onClick={() => setModalSair(true)}>
-          ← Sair
-        </button>
-      </aside>
-
-      <main className="ligar-main">
-        <input
-          className="ligar-titulo-ativ"
-          type="text"
-          placeholder="Título desta atividade..."
-          value={ativ.titulo}
-          onChange={e => setAtiv({ titulo: e.target.value })}
-        />
-
-        <div className="ligar-header-colunas">
+        <div className="editor-colunas">
+          <span />
           <span>Coluna A</span>
-          <span></span>
+          <span />
           <span>Coluna B</span>
+          <span />
         </div>
 
-        <div className="pares-lista">
-          {ativ.pares.map((par, parIdx) => (
-            <div key={par.id} className="par-row">
-              <span className="par-num">{parIdx + 1}</span>
-
-              <div className="par-lado">
-                <div className="par-tipo-toggle">
-                  <button className={par.ladoA.tipo === 'texto'  ? 'ativo' : ''} onClick={() => toggleTipo(parIdx, 'ladoA')}>📝 Texto</button>
-                  <button className={par.ladoA.tipo === 'imagem' ? 'ativo' : ''} onClick={() => toggleTipo(parIdx, 'ladoA')}>🖼️ Imagem</button>
-                </div>
-                {par.ladoA.tipo === 'texto' ? (
-                  <input className="par-input" type="text" placeholder="Texto A..." value={par.ladoA.conteudo} onChange={e => setPar(parIdx, 'ladoA', { conteudo: e.target.value })} />
-                ) : (
-                  <div className="par-img-area" onClick={() => imgRefs.current[`${parIdx}-A`]?.click()}>
-                    {par.ladoA.conteudo ? <img src={par.ladoA.conteudo} alt="lado A" /> : <span>+ Imagem</span>}
-                    <input type="file" accept="image/*" style={{display:'none'}} ref={el => imgRefs.current[`${parIdx}-A`] = el} onChange={e => handleImagem(parIdx, 'ladoA', e)} />
-                  </div>
-                )}
-              </div>
-
-              <div className="par-conector">🔗</div>
-
-              <div className="par-lado">
-                <div className="par-tipo-toggle">
-                  <button className={par.ladoB.tipo === 'texto'  ? 'ativo' : ''} onClick={() => toggleTipo(parIdx, 'ladoB')}>📝 Texto</button>
-                  <button className={par.ladoB.tipo === 'imagem' ? 'ativo' : ''} onClick={() => toggleTipo(parIdx, 'ladoB')}>🖼️ Imagem</button>
-                </div>
-                {par.ladoB.tipo === 'texto' ? (
-                  <input className="par-input" type="text" placeholder="Texto B..." value={par.ladoB.conteudo} onChange={e => setPar(parIdx, 'ladoB', { conteudo: e.target.value })} />
-                ) : (
-                  <div className="par-img-area" onClick={() => imgRefs.current[`${parIdx}-B`]?.click()}>
-                    {par.ladoB.conteudo ? <img src={par.ladoB.conteudo} alt="lado B" /> : <span>+ Imagem</span>}
-                    <input type="file" accept="image/*" style={{display:'none'}} ref={el => imgRefs.current[`${parIdx}-B`] = el} onChange={e => handleImagem(parIdx, 'ladoB', e)} />
-                  </div>
-                )}
-              </div>
-
-              {ativ.pares.length > 3 && (
-                <button className="par-del" onClick={() => removerPar(parIdx)}>✕</button>
-              )}
+        <div className="editor-pares">
+          {pares.map((par, i) => (
+            <div key={par.id} className="editor-par">
+              <span className="editor-selo">{i + 1}</span>
+              {desenharLado(par, i, 'ladoA', 'A')}
+              <span className="editor-par-no"><Link2 size={18} strokeWidth={2} /></span>
+              {desenharLado(par, i, 'ladoB', 'B')}
+              <button
+                className="editor-icone-btn perigo"
+                onClick={() => setPares(lista => lista.filter((_, j) => j !== i))}
+                disabled={pares.length <= MIN_PARES}
+                title="Apagar par"
+              >
+                <Trash2 size={16} strokeWidth={2} />
+              </button>
             </div>
           ))}
         </div>
 
-        {ativ.pares.length < 10 && (
-          <button className="btn-add-par" onClick={adicionarPar}>
-            + Adicionar Par
-          </button>
-        )}
-      </main>
-
-      <aside className="quiz-props">
-        <h3>Propriedades</h3>
-        <div className="prop-grupo">
-          <label>Atividade</label>
-          <span className="prop-info">{idx + 1} de {atividades.length}</span>
-        </div>
-        <div className="prop-grupo">
-          <label>Pares</label>
-          <span className="prop-info">{ativ.pares.length} de 10</span>
-        </div>
-        {msgSucesso && <div className="msg-sucesso-quiz">✅ Salvo com sucesso!</div>}
-        <button className="btn-salvar-quiz" onClick={handleSalvar} disabled={salvando}>
-          {salvando ? 'Salvando...' : '💾 SALVAR'}
+        <button
+          className="editor-adicionar"
+          onClick={() => setPares(lista => [...lista, novoPar()])}
+          disabled={pares.length >= MAX_PARES}
+        >
+          <Plus size={16} strokeWidth={2.2} /> Adicionar par
         </button>
-      </aside>
-    </div>
+      </section>
+    </EditorAtividade>
   );
 }
 

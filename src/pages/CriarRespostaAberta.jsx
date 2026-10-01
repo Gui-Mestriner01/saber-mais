@@ -1,214 +1,156 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import '../CSS/Quiz.css';
+import { Plus, Trash2, ImagePlus, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
+import EditorAtividade from '../components/EditorAtividade';
 
-const novaPergunta = () => ({
-  id: Date.now() + Math.random(),
-  texto: '',
-  imagem: null,
-});
+/* ==========================================================================
+   EDITOR — RESPOSTA ABERTA
+
+   ⚠️ Esta é a única atividade que ainda não tem a tela do aluno. O professor
+   monta as perguntas aqui, mas quem for responder cairia na tela do quiz,
+   que espera alternativas — por isso o salvar está travado de propósito.
+
+   Até a tela do aluno existir, é melhor avisar na cara do que deixar o botão
+   dizer "salvo com sucesso" sem salvar nada, que era o que acontecia antes.
+
+   Quando a tela do aluno ficar pronta, basta trocar o `validar` e o
+   `montarConteudo` abaixo — o resto já está no formato do servidor
+   (tipo 'resposta_aberta', conteudo = { perguntas: [{ texto, imagem }] }).
+   ========================================================================== */
+
+let contador = 0;
+const novaId = () => `ra${Date.now()}_${contador++}`;
+
+const novaPergunta = () => ({ id: novaId(), texto: '', arquivo: null, previa: null });
 
 function CriarRespostaAberta() {
-  const navigate = useNavigate();
-  const imgRefs = useRef({});
+  const [perguntas, setPerguntas] = useState([novaPergunta()]);
+  const campos = useRef({});
 
-  const [titulo, setTitulo]         = useState('');
-  const [perguntas, setPerguntas]   = useState([novaPergunta()]);
-  const [idx, setIdx]               = useState(0);
-  const [salvando, setSalvando]     = useState(false);
-  const [msgSucesso, setMsgSucesso] = useState(false);
-  const [modalSair, setModalSair]   = useState(false);
+  const mudar = (i, mudancas) =>
+    setPerguntas(lista => lista.map((p, j) => (j === i ? { ...p, ...mudancas } : p)));
 
-  const p = perguntas[idx];
-
-  const setPergunta = (updates) => {
-    setPerguntas(prev => prev.map((q, i) => i === idx ? { ...q, ...updates } : q));
+  const mover = (i, direcao) => {
+    const destino = i + direcao;
+    if (destino < 0 || destino >= perguntas.length) return;
+    setPerguntas(lista => {
+      const nova = [...lista];
+      [nova[i], nova[destino]] = [nova[destino], nova[i]];
+      return nova;
+    });
   };
 
-  const adicionarPergunta = () => {
-    const nova = novaPergunta();
-    setPerguntas(prev => [...prev, nova]);
-    setIdx(perguntas.length);
+  const escolherImagem = (i, file) => {
+    if (!file) return;
+    mudar(i, { arquivo: file, previa: URL.createObjectURL(file) });
   };
 
-  const removerPergunta = (i, e) => {
-    e.stopPropagation();
-    if (perguntas.length === 1) return;
-    const novas = perguntas.filter((_, pi) => pi !== i);
-    setPerguntas(novas);
-    setIdx(Math.min(idx, novas.length - 1));
-  };
+  const validar = () =>
+    'A resposta aberta ainda não está liberada para a turma: falta a tela em que o aluno escreve. Por enquanto use outro tipo de atividade.';
 
-  const handleImagem = (e) => {
-    const file = e.target.files[0];
-    if (file) setPergunta({ imagem: URL.createObjectURL(file) });
-  };
-
-  const removerImagem = (e) => {
-    e.stopPropagation();
-    setPergunta({ imagem: null });
-  };
-
-  const handleSalvar = () => {
-    setSalvando(true);
-    setTimeout(() => {
-      setSalvando(false);
-      setMsgSucesso(true);
-      setTimeout(() => navigate('/professor/dashboard'), 1500);
-    }, 1000);
-  };
+  const montarConteudo = () => ({
+    perguntas: perguntas.map(p => ({ texto: p.texto.trim(), imagem: null })),
+  });
 
   return (
-    <div className="quiz-builder">
+    <EditorAtividade
+      tipo="resposta_aberta"
+      nomeTipo="Resposta aberta"
+      explicacao="O aluno escreve a resposta com as próprias palavras e você corrige depois, uma por uma."
+      validar={validar}
+      montarConteudo={montarConteudo}
+      rodapeExtra="Ainda em construção: dá para montar as perguntas, mas não para enviar à turma."
+    >
+      <section className="editor-cartao">
+        <p className="editor-aviso">
+          <strong>Esta atividade ainda está em construção.</strong> Falta a tela em que o aluno
+          escreve a resposta, então ela não pode ser enviada para a turma. Você já pode montar as
+          perguntas aqui para ver como fica.
+        </p>
 
-      {/* MODAL SAIR */}
-      {modalSair && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Deseja salvar antes de sair?</h3>
-            <p>Se sair sem salvar, as alterações serão perdidas.</p>
-            <div className="modal-btns">
-              <button className="modal-btn-salvar" onClick={() => { setModalSair(false); handleSalvar(); }}>
-                💾 Salvar e Sair
-              </button>
-              <button className="modal-btn-sair" onClick={() => navigate('/professor/dashboard')}>
-                Sair sem Salvar
-              </button>
-              <button className="modal-btn-cancelar" onClick={() => setModalSair(false)}>
-                Cancelar
-              </button>
+        <h2>Perguntas</h2>
+        <p className="editor-dica">
+          {perguntas.length === 1 ? '1 pergunta' : `${perguntas.length} perguntas`} · a correção é feita por você, à mão.
+        </p>
+
+        {perguntas.map((p, i) => (
+          <div key={p.id} className="editor-item">
+            <div className="editor-item-topo">
+              <span className="editor-selo">{i + 1}</span>
+              <h3>Pergunta {i + 1}</h3>
+
+              <div className="editor-item-acoes">
+                <button className="editor-icone-btn" onClick={() => mover(i, -1)} disabled={i === 0} title="Subir">
+                  <ArrowUp size={16} strokeWidth={2} />
+                </button>
+                <button className="editor-icone-btn" onClick={() => mover(i, 1)} disabled={i === perguntas.length - 1} title="Descer">
+                  <ArrowDown size={16} strokeWidth={2} />
+                </button>
+                <button
+                  className="editor-icone-btn perigo"
+                  onClick={() => setPerguntas(lista => lista.filter((_, j) => j !== i))}
+                  disabled={perguntas.length === 1}
+                  title="Apagar pergunta"
+                >
+                  <Trash2 size={16} strokeWidth={2} />
+                </button>
+              </div>
             </div>
+
+            <label className="editor-campo">
+              <span>Enunciado</span>
+              <input
+                className="editor-input"
+                value={p.texto}
+                onChange={e => mudar(i, { texto: e.target.value })}
+                placeholder="Ex.: Conte com as suas palavras o que aconteceu na história"
+                maxLength={300}
+              />
+            </label>
+
+            <label className="editor-campo">
+              <span>Imagem (opcional)</span>
+              <div
+                className={`editor-imagem pequena ${p.previa ? 'tem-foto' : ''}`}
+                onClick={() => campos.current[p.id]?.click()}
+              >
+                {p.previa ? (
+                  <>
+                    <img src={p.previa} alt={`imagem da pergunta ${i + 1}`} />
+                    <div className="editor-imagem-acoes">
+                      <button className="editor-mini-btn" onClick={e => { e.stopPropagation(); campos.current[p.id]?.click(); }}>
+                        <RefreshCw size={14} strokeWidth={2.2} /> Trocar
+                      </button>
+                      <button
+                        className="editor-mini-btn perigo"
+                        onClick={e => { e.stopPropagation(); mudar(i, { arquivo: null, previa: null }); }}
+                      >
+                        <Trash2 size={14} strokeWidth={2.2} /> Tirar
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus size={24} strokeWidth={1.6} />
+                    <p>Clique para adicionar uma imagem</p>
+                  </>
+                )}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                ref={el => { campos.current[p.id] = el; }}
+                onChange={e => escolherImagem(i, e.target.files[0])}
+              />
+            </label>
           </div>
-        </div>
-      )}
+        ))}
 
-      {/* SIDEBAR */}
-      <aside className="quiz-sidebar">
-        <div className="quiz-brand">
-          <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
-        </div>
-
-        <input
-          className="quiz-titulo-input"
-          type="text"
-          placeholder="Título da Atividade..."
-          value={titulo}
-          onChange={e => setTitulo(e.target.value)}
-        />
-
-        <div className="perguntas-lista">
-          {perguntas.map((q, i) => (
-            <div
-              key={q.id}
-              className={`pergunta-thumb ${i === idx ? 'ativa' : ''}`}
-              onClick={() => setIdx(i)}
-            >
-              <span className="thumb-num">{i + 1}</span>
-              <span className="thumb-texto">{q.texto || 'Pergunta...'}</span>
-              {perguntas.length > 1 && (
-                <button className="thumb-del" onClick={(e) => removerPergunta(i, e)}>🗑</button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <button className="btn-add-pergunta" onClick={adicionarPergunta}>
-          + Adicionar Pergunta
+        <button className="editor-adicionar" onClick={() => setPerguntas(lista => [...lista, novaPergunta()])}>
+          <Plus size={16} strokeWidth={2.2} /> Adicionar pergunta
         </button>
-        <button className="btn-sair-quiz" onClick={() => setModalSair(true)}>
-          ← Sair
-        </button>
-      </aside>
-
-      {/* MAIN */}
-      <main className="quiz-main">
-
-        {/* PERGUNTA */}
-        <div className="quiz-pergunta-wrap">
-          <textarea
-            className="quiz-pergunta-input resposta-aberta-textarea"
-            placeholder="Digite a pergunta aqui..."
-            value={p.texto}
-            onChange={e => setPergunta({ texto: e.target.value })}
-            rows={3}
-          />
-        </div>
-
-        {/* IMAGEM OPCIONAL */}
-        <div
-          className="quiz-imagem-area"
-          onClick={() => imgRefs.current[idx]?.click()}
-        >
-          {p.imagem ? (
-            <>
-              <img src={p.imagem} alt="imagem da pergunta" className="quiz-img-preview" />
-              <button className="pintura-trocar-btn" onClick={removerImagem}>
-                🗑️ Remover imagem
-              </button>
-            </>
-          ) : (
-            <div className="quiz-imagem-placeholder">
-              <span>🖼️</span>
-              <p>Clique para adicionar uma imagem (opcional)</p>
-            </div>
-          )}
-        </div>
-        <input
-          type="file"
-          accept="image/*"
-          style={{display:'none'}}
-          ref={el => imgRefs.current[idx] = el}
-          onChange={handleImagem}
-        />
-
-        {/* PREVIEW DA RESPOSTA DO ALUNO */}
-        <div className="resposta-preview-card">
-          <div className="resposta-preview-label">✍️ O aluno verá um campo assim para responder:</div>
-          <div className="resposta-preview-campo">
-            <span>Digite sua resposta aqui...</span>
-          </div>
-          <div className="resposta-preview-info">
-            📋 A correção será feita manualmente pelo professor
-          </div>
-        </div>
-
-      </main>
-
-      {/* PROPS */}
-      <aside className="quiz-props">
-        <h3>Propriedades</h3>
-
-        <div className="prop-grupo">
-          <label>Tipo</label>
-          <span className="prop-info">✍️ Resposta Aberta</span>
-        </div>
-
-        <div className="prop-grupo">
-          <label>Pergunta</label>
-          <span className="prop-info">{idx + 1} de {perguntas.length}</span>
-        </div>
-
-        <div className="prop-grupo">
-          <label>Imagem</label>
-          <span className="prop-info">{p.imagem ? '✅ Adicionada' : '➖ Nenhuma'}</span>
-        </div>
-
-        <div className="prop-grupo">
-          <label>Correção</label>
-          <span className="prop-info">👨‍🏫 Manual</span>
-        </div>
-
-        {msgSucesso && <div className="msg-sucesso-quiz">✅ Salvo com sucesso!</div>}
-
-        <button
-          className="btn-salvar-quiz"
-          onClick={handleSalvar}
-          disabled={salvando || !titulo}
-        >
-          {salvando ? 'Salvando...' : '💾 SALVAR'}
-        </button>
-      </aside>
-    </div>
+      </section>
+    </EditorAtividade>
   );
 }
 
