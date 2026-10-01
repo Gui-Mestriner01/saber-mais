@@ -34,6 +34,7 @@ function CriarMemoria() {
 
   return (
     <EditorAtividade
+      semMenu
       tipo="memoria"
       nomeTipo="Jogo da memória"
       explicacao="Cada par vira duas cartas. O aluno vira de duas em duas até achar todos os pares."

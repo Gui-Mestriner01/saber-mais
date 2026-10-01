@@ -43,6 +43,7 @@ function CriarOrdenar() {
 
   return (
     <EditorAtividade
+      semMenu
       tipo="ordenar"
       nomeTipo="Colocar em ordem"
       explicacao="Escreva os itens na ordem certa. O aluno recebe tudo embaralhado e arruma."

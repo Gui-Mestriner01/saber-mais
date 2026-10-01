@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, LayoutList } from 'lucide-react';
 import BarraLateralProfessor from './BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import '../CSS/NovasAtividades.css';
@@ -30,6 +30,7 @@ function EditorAtividade({
   montarConteudo,
   aoSalvar,
   rodapeExtra,
+  semMenu,
   children,
 }) {
   const navigate = useNavigate();
@@ -76,8 +77,8 @@ function EditorAtividade({
   };
 
   return (
-    <div className="dashboard-container">
-      <BarraLateralProfessor ativo="aulas" />
+    <div className={`dashboard-container ${semMenu ? 'editor-sem-menu' : ''}`}>
+      {!semMenu && <BarraLateralProfessor ativo="aulas" />}
 
       <main className="dashboard-main">
         <header className="dashboard-header-painel">
@@ -86,6 +87,12 @@ function EditorAtividade({
             <p>{explicacao}</p>
           </div>
           <div className="header-acoes">
+            {/* Sem o menu lateral, este é o único caminho de volta para o painel. */}
+            {semMenu && (
+              <button className="btn-acao-rapida" onClick={() => navigate('/professor/minhas-aulas')}>
+                <LayoutList size={17} strokeWidth={1.75} /> Minhas aulas
+              </button>
+            )}
             <button className="btn-acao-rapida" onClick={() => navigate('/professor/criar-atividade')}>
               <ArrowLeft size={17} strokeWidth={1.75} /> Trocar o tipo
             </button>
