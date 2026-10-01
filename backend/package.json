@@ -22,7 +22,6 @@
     "jsonwebtoken": "*",
     "multer": "*",
     "mysql2": "*",
-    "nodemailer": "*",
     "socket.io": "^4.8.3"
   }
 }

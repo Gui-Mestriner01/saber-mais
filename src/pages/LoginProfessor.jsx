@@ -6,12 +6,6 @@ const CLIENTE_GOOGLE = '17269757270-gk04h1b82ljnu5ep0fdnctn7gru3aca1.apps.google
 import '../CSS/Login.css';
 import { API } from '../api';
 
-/* O "crachá do aparelho": depois de confirmar o código uma vez, o navegador
-   guarda esse valor e não precisa mais de código por 60 dias. Ele sozinho não
-   dá acesso a nada — só diz ao servidor "este aparelho já foi confirmado". */
-const CHAVE_APARELHO = 'saberPlusAparelho';
-const aparelhoSalvo = () => { try { return localStorage.getItem(CHAVE_APARELHO) || null; } catch { return null; } };
-
 function LoginProfessor() {
   const navigate = useNavigate();
 
@@ -20,18 +14,15 @@ function LoginProfessor() {
   const [erro, setErro]             = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  // Etapa da confirmação por e-mail (aparelho novo)
-  const [confirmacao, setConfirmacao] = useState(null);   // { loginId, email, aparelho }
-  const [codigo, setCodigo]           = useState('');
-  const [aviso, setAviso]             = useState('');
-
-  /* Guarda o login e entra. Usado pelos três caminhos: senha, Google e código. */
+  /* Guarda o login e entra. Vale para os dois caminhos: senha e Google. */
   const entrar = (data) => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('nomeUsuario', data.usuario.nome);
     localStorage.setItem('idUsuario', data.usuario.id);
     localStorage.setItem('tipoUsuario', data.usuario.tipo);
-    if (data.dispositivo) localStorage.setItem(CHAVE_APARELHO, data.dispositivo);
+
+    // Sobra da antiga confirmação por e-mail: não é mais usada.
+    localStorage.removeItem('saberPlusAparelho');
 
     localStorage.removeItem('fotoUsuario');
     if (data.usuario.fotoUrl) {
@@ -43,55 +34,6 @@ function LoginProfessor() {
     navigate(data.usuario.tipo === 'admin' ? '/admin/dashboard' : '/professor/dashboard');
   };
 
-  /* O servidor pediu confirmação: mostra a tela do código de 6 dígitos. */
-  const pedirCodigo = (data) => {
-    setConfirmacao({ loginId: data.loginId, email: data.email, aparelho: data.aparelho });
-    setCodigo('');
-    setErro('');
-    setAviso(`Enviamos um código para ${data.email}.`);
-  };
-
-  const confirmarCodigo = async (e) => {
-    e.preventDefault();
-    if (codigo.length < 6) return;
-    setErro(''); setCarregando(true);
-    try {
-      const res = await fetch(`${API}/login/confirmar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loginId: confirmacao.loginId, codigo, lembrar: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErro(data.erro || 'Código incorreto.'); setCodigo(''); return; }
-      entrar(data);
-    } catch {
-      setErro('Não foi possível conectar ao servidor.');
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const reenviarCodigo = async () => {
-    setErro(''); setAviso('Enviando...'); setCarregando(true);
-    try {
-      const res = await fetch(`${API}/login/reenviar-codigo`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ loginId: confirmacao.loginId }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErro(data.erro || 'Não consegui reenviar.'); setAviso(''); return; }
-      setConfirmacao(c => ({ ...c, loginId: data.loginId }));
-      setAviso(`Código novo enviado para ${data.email}.`);
-      setCodigo('');
-    } catch {
-      setErro('Não foi possível conectar ao servidor.');
-      setAviso('');
-    } finally {
-      setCarregando(false);
-    }
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setErro('');
@@ -101,12 +43,10 @@ function LoginProfessor() {
       const response = await fetch(`${API}/login/professor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha, dispositivo: aparelhoSalvo() }),
+        body: JSON.stringify({ email, senha }),
       });
 
       const data = await response.json();
-
-      if (response.status === 202 && data.precisaConfirmar) { pedirCodigo(data); return; }
 
       if (!response.ok) {
         setErro(data.erro || 'Erro ao fazer login.');
@@ -131,47 +71,8 @@ function LoginProfessor() {
         </div>
 
         <div className="login-card">
-          <h2>{confirmacao ? 'CONFIRME O ACESSO' : 'LOGIN DO PROFESSOR'}</h2>
+          <h2>LOGIN DO PROFESSOR</h2>
 
-          {/* ---------- aparelho novo: código que chegou no e-mail ---------- */}
-          {confirmacao ? (
-            <form onSubmit={confirmarCodigo} className="form-codigo">
-              <p className="codigo-explica">
-                Para proteger sua conta, mandamos um código de 6 dígitos para <strong>{confirmacao.email}</strong>.
-                Ele vale por 10 minutos.
-              </p>
-
-              <input
-                className="campo-codigo"
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="000000"
-                value={codigo}
-                onChange={e => { setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6)); setErro(''); }}
-                autoFocus
-              />
-
-              {erro && <div className="msg-erro">{erro}</div>}
-              {!erro && aviso && <div className="msg-aviso">{aviso}</div>}
-
-              <button className="btn-entrar" type="submit" disabled={carregando || codigo.length < 6}>
-                {carregando ? 'Confirmando...' : 'CONFIRMAR'}
-              </button>
-
-              <p className="cadastro-link">
-                Não chegou? <span onClick={reenviarCodigo}>Enviar de novo</span>
-                {' · '}
-                <span onClick={() => { setConfirmacao(null); setErro(''); setAviso(''); }}>Voltar</span>
-              </p>
-
-              <p className="codigo-rodape">
-                Este aparelho ({confirmacao.aparelho}) fica confirmado por 60 dias.
-              </p>
-            </form>
-          ) : (
-          <>
           <form onSubmit={handleLogin}>
             <div className="input-group">
               <span className="input-icon">@</span>
@@ -202,7 +103,7 @@ function LoginProfessor() {
             </button>
           </form>
 
-          {/* DIVISOR E BOTÃO DO GOOGLE ADICIONADOS AQUI */}
+          {/* DIVISOR E BOTÃO DO GOOGLE */}
           <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
             <div style={{ flex: 1, height: '1px', backgroundColor: '#e0e0e0' }}></div>
             <span style={{ margin: '0 10px', color: '#666', fontSize: '13px', fontWeight: '500' }}>ou entre com</span>
@@ -220,15 +121,10 @@ function LoginProfessor() {
                 const response = await fetch(`${API}/login/google`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    credential: credentialResponse.credential,
-                    dispositivo: aparelhoSalvo(),
-                  }),
+                  body: JSON.stringify({ credential: credentialResponse.credential }),
                 });
 
                 const data = await response.json();
-
-                if (response.status === 202 && data.precisaConfirmar) { pedirCodigo(data); setCarregando(false); return; }
 
                 if (!response.ok) {
                   setErro(data.erro || 'Erro ao logar com o Google.');
@@ -247,8 +143,8 @@ function LoginProfessor() {
             onError={() => {
               setErro('O login com o Google falhou.');
             }}
-            theme="outline" 
-            size="large"    
+            theme="outline"
+            size="large"
           />
             </GoogleOAuthProvider>
           </div>
@@ -256,8 +152,6 @@ function LoginProfessor() {
           <p className="cadastro-link">
             Não tem login? <span onClick={() => navigate('/cadastro/professor')}>Cadastrar-se &gt;</span>
           </p>
-          </>
-          )}
         </div>
 
         <button className="back-btn" onClick={() => navigate('/')}>← Voltar</button>
