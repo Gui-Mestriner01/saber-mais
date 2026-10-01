@@ -179,6 +179,23 @@ if (fs.existsSync(path.join(pastaSite, 'index.html'))) {
   });
 
   console.log('🌐 Site (pasta dist) sendo servido junto com a API');
+} else {
+  /* A pasta dist/ não existe: o 'npm run build' não rodou ou falhou na
+     hospedagem. Sem este aviso o Express responderia só 'Cannot GET /',
+     que não explica nada. */
+  console.error('⚠️  Pasta dist/ não encontrada em ' + pastaSite + ' — rode o \'npm run build\'.');
+  app.get('/', (req, res) => {
+    res.status(503).type('html').send(
+      '<!doctype html><meta charset="utf-8"><title>Saber+ em manutenção</title>' +
+      '<div style="font-family:system-ui,sans-serif;max-width:460px;margin:12vh auto;padding:0 20px;' +
+      'text-align:center;color:#2A4A6A">' +
+      '<p style="font-size:40px;margin:0">🛠️</p>' +
+      '<h1 style="font-size:22px">O Saber+ está em manutenção</h1>' +
+      '<p style="line-height:1.5;color:#5B7E9E">O servidor está no ar, mas a versão do site ainda' +
+      ' não foi gerada (pasta <code>dist</code> ausente). Rode o <code>npm run build</code> na hospedagem.</p>' +
+      '</div>'
+    );
+  });
 }
 
 app.use(cors((req, callback) => {
