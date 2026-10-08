@@ -13,8 +13,11 @@
 
    Mudou este arquivo? Troque a VERSAO para os celulares limparem o cache.
    ========================================================================== */
-const VERSAO = 'saber-v1';
-const ESSENCIAIS = ['/', '/index.html', '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'];
+const VERSAO = 'saber-v2';
+// '/' ficou de fora de propósito: era ele que pedia a raiz com 'Accept: */*'
+// e trazia o 404 do Express para dentro do cache. A tela offline usa o
+// /index.html, que o próprio evento de navegação guarda.
+const ESSENCIAIS = ['/index.html', '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'];
 
 self.addEventListener('install', (evento) => {
   evento.waitUntil(caches.open(VERSAO).then((cache) => cache.addAll(ESSENCIAIS)));

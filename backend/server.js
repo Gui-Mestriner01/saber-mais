@@ -170,6 +170,23 @@ if (fs.existsSync(path.join(pastaSite, 'index.html'))) {
     },
   }));
 
+  /* A raiz nunca depende do cabeçalho Accept.
+
+     O fallback logo abaixo só responde a quem pede 'text/html', porque várias
+     rotas da API têm o mesmo caminho de páginas do site (/professor/salas, por
+     exemplo) e é o Accept que separa as duas. Só que o service worker (sw.js),
+     os robôs de busca e qualquer fetch comum pedem '/' sem pedir text/html e
+     caíam no 404 'Cannot GET /' do Express.
+
+     Isso não ficava só na tela: o navegador e o CDN da Hostinger guardavam
+     esse 404 (ele saía sem Cache-Control, e o Vary do CDN não inclui Accept),
+     e a partir daí o F5 na página inicial mostrava 'Cannot GET /' sem nem
+     chegar no servidor. '/' não é rota de API, então pode responder sempre. */
+  app.get('/', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(pastaSite, 'index.html'));
+  });
+
   app.use((req, res, next) => {
     const querHtml = req.method === 'GET' && (req.headers.accept || '').includes('text/html');
     if (!querHtml || req.path.startsWith('/uploads') || req.path.startsWith('/socket.io')) return next();
@@ -2834,6 +2851,20 @@ app.post('/professor/conquistas/vistas', autenticar, (req, res) => {
 
 /* Qualquer erro que escapar vira uma mensagem simples: nada de mostrar
    pedaço de código, caminho de pasta ou detalhe do banco para quem visita. */
+/* Nada que não existe pode ser guardado em cache.
+
+   O 'Cannot GET /' que o Express responde sozinho sai sem Cache-Control, e foi
+   assim que um 404 de uma hora ruim ficou preso no navegador e no CDN da
+   Hostinger. Com no-store, nenhum 404 pode ser guardado, então um erro de um
+   minuto não vira um site quebrado por dias. */
+app.use((req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if ((req.headers.accept || '').includes('application/json')) {
+    return res.status(404).json({ erro: 'Endereço não encontrado.' });
+  }
+  res.status(404).type('txt').send('Endereço não encontrado.');
+});
+
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   if (err?.message === 'Acesso bloqueado pela política de CORS') return res.status(403).json({ erro: 'Acesso negado.' });
   if (err?.message === 'Formato inválido' || err?.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ erro: 'Imagem inválida ou grande demais (até 10 MB).' });
