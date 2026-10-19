@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 
 /* ==========================================================================
    EDITOR — JOGO DA MEMÓRIA
@@ -16,8 +16,15 @@ const MIN_PARES = 3;
 const MAX_PARES = 8;
 
 function CriarMemoria() {
-  const [instrucao, setInstrucao] = useState('');
-  const [pares, setPares] = useState([{ a: '', b: '' }, { a: '', b: '' }, { a: '', b: '' }]);
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+
+  const [instrucao, setInstrucao] = useState(inicial?.instrucao || '');
+  const [pares, setPares] = useState(() => {
+    const lista = (inicial?.pares || []).map(p => ({ a: String(p?.a ?? ''), b: String(p?.b ?? '') }));
+    return lista.length >= MIN_PARES ? lista : [{ a: '', b: '' }, { a: '', b: '' }, { a: '', b: '' }];
+  });
 
   const mudar = (i, lado, valor) =>
     setPares(lista => lista.map((p, j) => (j === i ? { ...p, [lado]: valor } : p)));

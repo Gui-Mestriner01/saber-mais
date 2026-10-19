@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { ImagePlus, RefreshCw, Trash2 } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 import { API } from '../api';
 
 /* ==========================================================================
@@ -17,14 +17,23 @@ import { API } from '../api';
 function CriarPintura() {
   const campoArquivo = useRef(null);
 
-  const [instrucao, setInstrucao] = useState('');
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+
+  const [instrucao, setInstrucao] = useState(inicial?.instrucao || '');
   const [arquivo, setArquivo]     = useState(null);
-  const [previa, setPrevia]       = useState(null);
+  const [previa, setPrevia]       = useState(inicial?.url_imagem || null);
+  // O desenho que já está no servidor. Enquanto o professor não escolher um
+  // arquivo novo, é este endereço que continua valendo — sem isso, editar a
+  // atividade só para trocar o texto apagaria o desenho.
+  const [urlGuardada, setUrlGuardada] = useState(inicial?.url_imagem || null);
 
   const escolher = (file) => {
     if (!file) return;
     setArquivo(file);
     setPrevia(URL.createObjectURL(file));
+    setUrlGuardada(null);
   };
 
   const soltar = (e) => {
@@ -36,34 +45,48 @@ function CriarPintura() {
     e.stopPropagation();
     setArquivo(null);
     setPrevia(null);
+    setUrlGuardada(null);
   };
 
   const validar = () => {
     if (!instrucao.trim()) return 'Escreva o que o aluno precisa pintar.';
-    if (!arquivo) return 'Escolha o desenho que a turma vai pintar.';
+    if (!arquivo && !urlGuardada) return 'Escolha o desenho que a turma vai pintar.';
     return null;
   };
 
-  /* A pintura salva em dois passos: primeiro a imagem, depois a atividade. */
-  const aoSalvar = async (titulo, salaId) => {
+  /* A pintura salva em dois passos: primeiro a imagem, depois a atividade.
+     Se o desenho não mudou, o primeiro passo é pulado. */
+  const aoSalvar = async (titulo, salaId, extras) => {
     const cracha = { Authorization: `Bearer ${localStorage.getItem('token')}` };
 
-    const pacote = new FormData();
-    pacote.append('imagem', arquivo);
-    const envio = await fetch(`${API}/professor/pintura/upload`, { method: 'POST', headers: cracha, body: pacote });
-    const dadosEnvio = await envio.json();
-    if (!envio.ok) throw new Error(dadosEnvio.erro || 'Não consegui enviar o desenho.');
+    let url = urlGuardada;
+    if (arquivo) {
+      const pacote = new FormData();
+      pacote.append('imagem', arquivo);
+      const envio = await fetch(`${API}/professor/pintura/upload`, { method: 'POST', headers: cracha, body: pacote });
+      const dadosEnvio = await envio.json();
+      if (!envio.ok) throw new Error(dadosEnvio.erro || 'Não consegui enviar o desenho.');
+      url = dadosEnvio.url;
+    }
 
-    const res = await fetch(`${API}/professor/atividade`, {
-      method: 'POST',
-      headers: { ...cracha, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        titulo,
-        tipo: 'pintura',
-        sala_id: salaId,
-        conteudo: { url_imagem: dadosEnvio.url, instrucao: instrucao.trim() },
-      }),
-    });
+    const conteudo = { url_imagem: url, instrucao: instrucao.trim() };
+    const cabecalho = { ...cracha, 'Content-Type': 'application/json' };
+
+    const res = extras.editandoId
+      ? await fetch(`${API}/professor/atividade/${extras.editandoId}`, {
+          method: 'PUT',
+          headers: cabecalho,
+          body: JSON.stringify({ titulo, conteudo, publica: extras.publica }),
+        })
+      : await fetch(`${API}/professor/atividade`, {
+          method: 'POST',
+          headers: cabecalho,
+          body: JSON.stringify({
+            titulo, tipo: 'pintura', sala_id: salaId, conteudo,
+            publica: extras.publica, origem_id: extras.origemId,
+          }),
+        });
+
     const dados = await res.json();
     if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar.');
   };

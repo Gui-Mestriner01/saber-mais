@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 
 /* ==========================================================================
    EDITOR — COLOCAR EM ORDEM
@@ -16,8 +16,15 @@ const MIN_ITENS = 3;
 const MAX_ITENS = 8;
 
 function CriarOrdenar() {
-  const [enunciado, setEnunciado] = useState('');
-  const [itens, setItens] = useState(['', '', '']);
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+
+  const [enunciado, setEnunciado] = useState(inicial?.enunciado || '');
+  const [itens, setItens] = useState(() => {
+    const lista = (inicial?.itens || []).map(t => String(t ?? ''));
+    return lista.length >= MIN_ITENS ? lista : ['', '', ''];
+  });
 
   const mudar = (i, valor) => setItens(lista => lista.map((x, j) => (j === i ? valor : x)));
 

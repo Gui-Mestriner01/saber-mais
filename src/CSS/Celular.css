@@ -178,6 +178,26 @@
     white-space: nowrap;
   }
 
+  /* Busca e filtros: em 360px eles tentavam caber na mesma linha e o
+     "Todos os tipos" virava "T...". Cada um passa a ocupar a linha toda. */
+  .rel-filtros { flex-direction: column; gap: 8px; padding: 12px 14px; }
+  .rel-busca { min-width: 0; width: 100%; }
+  .rel-filtros select { width: 100%; }
+
+  /* Com a Biblioteca são seis itens na barra do professor, e em 360px os
+     nomes compridos começavam a virar "Relatóri...". Menos letra e menos
+     espaço entre eles faz os seis caberem inteiros. */
+  .sidebar-nav:has(.nav-item:nth-child(6)) {
+    gap: 0;
+    padding-inline: 2px;
+  }
+  .sidebar-nav:has(.nav-item:nth-child(6)) .nav-item {
+    padding-inline: 1px;
+    font-size: 10px;
+    letter-spacing: -0.01em;
+  }
+  .sidebar-nav:has(.nav-item:nth-child(6)) .nav-item svg { width: 20px; height: 20px; }
+
   /* No celular o item ativo não fica azul cheio: só o ícone e o texto */
   .nav-item.active,
   .aluno-nav-btn.ativo {

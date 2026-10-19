@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, ChevronDown, Maximize2, Minimize2, ArrowDownUp, LayoutGrid, Shapes } from 'lucide-react';
+import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, ChevronDown, Maximize2, Minimize2, ArrowDownUp, LayoutGrid, Shapes, Pencil, Globe, Lock } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
+import '../CSS/NovasAtividades.css';
 import { API } from '../api';
 
 function MinhasAulas() {
@@ -15,6 +16,7 @@ function MinhasAulas() {
   const [atividadeSelecionada, setAtividadeSelecionada] = useState(null);
   const [salaDestinoId, setSalaDestinoId] = useState('');
   const [clonando, setClonando] = useState(false);
+  const [mudandoVisibilidade, setMudandoVisibilidade] = useState(null);
 
   // Quais turmas estão abertas. Com poucas atividades abre tudo; com muitas
   // começa fechado, senão o professor desce a página inteira para achar uma.
@@ -82,6 +84,60 @@ function MinhasAulas() {
     setAtividadeSelecionada(atividade);
     setSalaDestinoId('');
     setModalAberto(true);
+  };
+
+  // Para onde cada tipo abre no editor.
+  const ROTA_DO_TIPO = {
+    quiz: '/professor/criar-quiz',
+    v_f: '/professor/criar-v-f',
+    ligar: '/professor/criar-ligar',
+    pintura: '/professor/criar-pintura',
+    resposta_aberta: '/professor/criar-resposta-aberta',
+    ordenar: '/professor/criar-ordenar',
+    memoria: '/professor/criar-memoria',
+    grupos: '/professor/criar-grupos',
+  };
+
+  /* Editar: busca a atividade inteira (com gabarito) e abre o editor do tipo
+     dela já preenchido. Como a atividade é do próprio professor, o editor
+     salva por cima dela mesma em vez de criar outra. */
+  const editarAtividade = async (ativ) => {
+    const rota = ROTA_DO_TIPO[ativ.tipo];
+    if (!rota) return alert('Esse tipo de atividade ainda não abre no editor.');
+
+    try {
+      const res = await fetch(`${API}/professor/biblioteca/${ativ.id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const completa = await res.json();
+      if (!res.ok) throw new Error(completa.erro || 'Não consegui abrir a atividade.');
+      navigate(rota, { state: { atividade: completa, salaId: ativ.sala_id } });
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  /* Publicar ou tirar da biblioteca, sem sair da tela. */
+  const trocarVisibilidade = async (ativ) => {
+    const virandoPublica = !ativ.publica;
+    setMudandoVisibilidade(ativ.id);
+    try {
+      const res = await fetch(`${API}/professor/atividade/${ativ.id}/visibilidade`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ publica: virandoPublica })
+      });
+      const dados = await res.json();
+      if (!res.ok) throw new Error(dados.erro || 'Não consegui mudar a visibilidade.');
+      setAtividades(lista => lista.map(a => (a.id === ativ.id ? { ...a, publica: virandoPublica ? 1 : 0 } : a)));
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setMudandoVisibilidade(null);
+    }
   };
 
   const abertasIniciais = atividades.length <= 6 ? salas.map(s => s.id) : [];
@@ -197,14 +253,30 @@ function MinhasAulas() {
                               <span className="badge-data">
                                 <Calendar size={13} strokeWidth={1.75} />
                                 {formatarTipo(ativ.tipo)} · postado em {formatarData(ativ.criado_em)}
+                                <span className={`aula-selo ${ativ.publica ? 'publica' : ''}`}>
+                                  {ativ.publica
+                                    ? <><Globe size={11} strokeWidth={2.4} /> Na biblioteca</>
+                                    : <><Lock size={11} strokeWidth={2.4} /> Só minha</>}
+                                </span>
                               </span>
                             </div>
-                            <button
-                              className="btn-clonar"
-                              onClick={() => abrirModalClonar(ativ)}
-                            >
-                              <Copy size={15} strokeWidth={1.75} /> Copiar aula
-                            </button>
+                            <div className="atividade-acoes">
+                              <button className="btn-clonar" onClick={() => editarAtividade(ativ)}>
+                                <Pencil size={15} strokeWidth={1.75} /> Editar
+                              </button>
+                              <button
+                                className="btn-clonar"
+                                onClick={() => trocarVisibilidade(ativ)}
+                                disabled={mudandoVisibilidade === ativ.id}
+                              >
+                                {ativ.publica
+                                  ? <><Lock size={15} strokeWidth={1.75} /> Tornar só minha</>
+                                  : <><Globe size={15} strokeWidth={1.75} /> Publicar</>}
+                              </button>
+                              <button className="btn-clonar" onClick={() => abrirModalClonar(ativ)}>
+                                <Copy size={15} strokeWidth={1.75} /> Copiar aula
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>

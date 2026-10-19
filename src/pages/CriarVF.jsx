@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Plus, Trash2, Check, X, ImagePlus, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial, usarAtividadeInicial } from '../components/EditorAtividade';
 import { API } from '../api';
 
 /* ==========================================================================
@@ -16,13 +16,47 @@ import { API } from '../api';
 let contador = 0;
 const novaId = () => `vf${Date.now()}_${contador++}`;
 
-const novaAfirmacao = () => ({ id: novaId(), texto: '', arquivo: null, previa: null, resposta: null });
+const novaAfirmacao = () => ({ id: novaId(), texto: '', arquivo: null, previa: null, imagemUrl: null, resposta: null });
+
+/* O V/F é guardado como uma lista pura: [{ texto, imagem_url, resposta_correta }].
+   `imagemUrl` é a imagem que já está no servidor — enquanto o professor não
+   escolher um arquivo novo, é ela que continua valendo. */
+function deConteudo(conteudo) {
+  const lista = Array.isArray(conteudo) ? conteudo : (conteudo?.perguntas || []);
+  if (lista.length === 0) return null;
+
+  return lista.map(p => ({
+    id: novaId(),
+    texto: String(p?.texto ?? ''),
+    arquivo: null,
+    previa: p?.imagem_url || p?.imagem || null,
+    imagemUrl: p?.imagem_url || p?.imagem || null,
+    resposta: p?.resposta_correta === 'V' || p?.resposta_correta === 'F' ? p.resposta_correta : null,
+  }));
+}
 
 function CriarVF() {
-  const [afirmacoes, setAfirmacoes] = useState([novaAfirmacao()]);
-  const [temPrazo, setTemPrazo]     = useState(false);
-  const [quanto, setQuanto]         = useState(5);
-  const [unidade, setUnidade]       = useState('minutos');
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+  // O prazo não mora no conteúdo, e sim numa coluna só dele (em minutos).
+  const minutosGuardados = Number(usarAtividadeInicial()?.tempo_limite) || 0;
+
+  const [afirmacoes, setAfirmacoes] = useState(() => deConteudo(inicial) || [novaAfirmacao()]);
+  const [temPrazo, setTemPrazo]     = useState(minutosGuardados > 0);
+  // Mostra o prazo na maior unidade que der certinho: 120 min vira "2 horas".
+  const [quanto, setQuanto]         = useState(() => {
+    if (minutosGuardados <= 0) return 5;
+    if (minutosGuardados % (24 * 60) === 0) return minutosGuardados / (24 * 60);
+    if (minutosGuardados % 60 === 0) return minutosGuardados / 60;
+    return minutosGuardados;
+  });
+  const [unidade, setUnidade]       = useState(() => {
+    if (minutosGuardados <= 0) return 'minutos';
+    if (minutosGuardados % (24 * 60) === 0) return 'dias';
+    if (minutosGuardados % 60 === 0) return 'horas';
+    return 'minutos';
+  });
   const campos = useRef({});
 
   const mudar = (i, mudancas) =>
@@ -40,7 +74,7 @@ function CriarVF() {
 
   const escolherImagem = (i, file) => {
     if (!file) return;
-    mudar(i, { arquivo: file, previa: URL.createObjectURL(file) });
+    mudar(i, { arquivo: file, previa: URL.createObjectURL(file), imagemUrl: null });
   };
 
   const emMinutos = () => {
@@ -61,26 +95,46 @@ function CriarVF() {
     return null;
   };
 
-  const aoSalvar = async (titulo, salaId) => {
-    const pacote = new FormData();
-    pacote.append('salaId', salaId);
-    pacote.append('tipo', 'v_f');
-    pacote.append('titulo', titulo);
-    pacote.append('tempo_limite', emMinutos());
-    pacote.append('perguntas', JSON.stringify(
-      afirmacoes.map(a => ({ texto: a.texto.trim(), resposta_correta: a.resposta }))
-    ));
-    afirmacoes.forEach((a, i) => { if (a.arquivo) pacote.append(`imagem_${i}`, a.arquivo); });
+  /* As imagens novas sobem primeiro, uma a uma, e o conteúdo vai em JSON —
+     o mesmo caminho dos outros editores. Antes isso ia tudo junto num
+     FormData por uma rota só do V/F, que não sabia editar nem reaproveitar
+     imagem já enviada; o formato guardado no banco continua idêntico. */
+  const aoSalvar = async (titulo, salaId, extras) => {
+    const cracha = { Authorization: `Bearer ${localStorage.getItem('token')}` };
 
-    const res = await fetch(`${API}/professor/atividades/v_f`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: pacote,
-    });
-    if (!res.ok) {
-      const dados = await res.json().catch(() => ({}));
-      throw new Error(dados.erro || 'Não consegui salvar.');
+    const prontas = [];
+    for (const a of afirmacoes) {
+      let imagem = a.imagemUrl || null;
+      if (a.arquivo) {
+        const envelope = new FormData();
+        envelope.append('imagem', a.arquivo);
+        const envio = await fetch(`${API}/professor/pintura/upload`, { method: 'POST', headers: cracha, body: envelope });
+        const dados = await envio.json();
+        if (!envio.ok) throw new Error(dados.erro || 'Não consegui enviar uma das imagens.');
+        imagem = dados.url;
+      }
+      prontas.push({ texto: a.texto.trim(), imagem_url: imagem, resposta_correta: a.resposta });
     }
+
+    const cabecalho = { ...cracha, 'Content-Type': 'application/json' };
+
+    const res = extras.editandoId
+      ? await fetch(`${API}/professor/atividade/${extras.editandoId}`, {
+          method: 'PUT',
+          headers: cabecalho,
+          body: JSON.stringify({ titulo, conteudo: prontas, publica: extras.publica, tempo_limite: emMinutos() }),
+        })
+      : await fetch(`${API}/professor/atividade`, {
+          method: 'POST',
+          headers: cabecalho,
+          body: JSON.stringify({
+            titulo, tipo: 'v_f', sala_id: salaId, conteudo: prontas,
+            tempo_limite: emMinutos(), publica: extras.publica, origem_id: extras.origemId,
+          }),
+        });
+
+    const dados = await res.json();
+    if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar.');
   };
 
   return (
@@ -147,7 +201,7 @@ function CriarVF() {
                       </button>
                       <button
                         className="editor-mini-btn perigo"
-                        onClick={e => { e.stopPropagation(); mudar(i, { arquivo: null, previa: null }); }}
+                        onClick={e => { e.stopPropagation(); mudar(i, { arquivo: null, previa: null, imagemUrl: null }); }}
                       >
                         <Trash2 size={14} strokeWidth={2.2} /> Tirar
                       </button>

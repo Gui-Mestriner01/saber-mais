@@ -29,6 +29,7 @@ const LoginAluno = lazy(() => import('./pages/LoginAluno'));
 const CriarVF = lazy(() => import('./pages/CriarVF'));
 const ResponderVF = lazy(() => import('./pages/ResponderVF'));
 const MinhasAulas = lazy(() => import('./pages/MinhasAulas'));
+const Biblioteca = lazy(() => import('./pages/Biblioteca'));
 const SalaAoVivoAluno = lazy(() => import('./pages/SalaAoVivoAluno'));
 const SalaAoVivoProfessor = lazy(() => import('./pages/SalaAoVivoProfessor'));
 const ConquistasProfessor = lazy(() => import('./pages/ConquistasProfessor'));
@@ -124,6 +125,7 @@ function RotasAnimadas() {
           <Route path="/aluno/atividade/:id" element={<ResponderQuiz />} />
           <Route path="/professor/relatorios" element={<Relatorios />} />
           <Route path="/professor/minhas-aulas" element={<MinhasAulas />} />
+          <Route path="/professor/biblioteca" element={<Biblioteca />} />
           <Route path="/aluno/ligar/:id" element={<LigarAluno />} />
           <Route path="/professor/salas" element={<Salas />} />
           <Route path="/aluno/login" element={<LoginAluno />} />

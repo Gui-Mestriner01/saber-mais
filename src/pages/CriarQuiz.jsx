@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Plus, Trash2, Check, ImagePlus, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 import { API } from '../api';
 
 /* ==========================================================================
@@ -41,12 +41,39 @@ const novaPergunta = () => ({
   texto: '',
   arquivo: null,
   previa: null,
+  imagemUrl: null,
   multiplaEscolha: false,
   alternativas: [novaAlternativa(), novaAlternativa(), novaAlternativa(), novaAlternativa()],
 });
 
+/* Converte o que está guardado no banco no estado que a tela usa.
+   `imagemUrl` é a imagem que já está no servidor: enquanto o professor não
+   escolher um arquivo novo, é ela que continua valendo. */
+function deConteudo(conteudo) {
+  const lista = Array.isArray(conteudo) ? conteudo : (conteudo?.perguntas || []);
+  if (lista.length === 0) return null;
+
+  return lista.map(p => ({
+    id: novaId(),
+    texto: String(p?.texto ?? ''),
+    arquivo: null,
+    previa: p?.imagem || null,
+    imagemUrl: p?.imagem || null,
+    multiplaEscolha: !!p?.multiplaEscolha || (p?.alternativas || []).filter(a => a?.correta).length > 1,
+    alternativas: (p?.alternativas || []).map(a => ({
+      id: novaId(),
+      texto: typeof a === 'object' ? String(a?.texto ?? '') : String(a ?? ''),
+      correta: !!(a && a.correta),
+    })),
+  }));
+}
+
 function CriarQuiz() {
-  const [perguntas, setPerguntas] = useState([novaPergunta()]);
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+
+  const [perguntas, setPerguntas] = useState(() => deConteudo(inicial) || [novaPergunta()]);
   const campos = useRef({});
 
   const mudarPergunta = (i, mudancas) =>
@@ -86,7 +113,7 @@ function CriarQuiz() {
 
   const escolherImagem = (i, file) => {
     if (!file) return;
-    mudarPergunta(i, { arquivo: file, previa: URL.createObjectURL(file) });
+    mudarPergunta(i, { arquivo: file, previa: URL.createObjectURL(file), imagemUrl: null });
   };
 
   const validar = () => {
@@ -109,13 +136,14 @@ function CriarQuiz() {
     return null;
   };
 
-  /* Sobe as imagens e só então salva, para o banco guardar o endereço real. */
-  const aoSalvar = async (titulo, salaId) => {
+  /* Sobe as imagens novas e só então salva, para o banco guardar o endereço
+     real. Imagem que já estava no servidor é reaproveitada sem subir de novo. */
+  const aoSalvar = async (titulo, salaId, extras) => {
     const cracha = { Authorization: `Bearer ${localStorage.getItem('token')}` };
 
     const prontas = [];
     for (const p of perguntas) {
-      let imagem = null;
+      let imagem = p.imagemUrl || null;
       if (p.arquivo) {
         const pacote = new FormData();
         pacote.append('imagem', p.arquivo);
@@ -134,11 +162,24 @@ function CriarQuiz() {
       });
     }
 
-    const res = await fetch(`${API}/professor/atividade`, {
-      method: 'POST',
-      headers: { ...cracha, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, tipo: 'quiz', sala_id: salaId, conteudo: { perguntas: prontas } }),
-    });
+    const conteudo = { perguntas: prontas };
+    const cabecalho = { ...cracha, 'Content-Type': 'application/json' };
+
+    const res = extras.editandoId
+      ? await fetch(`${API}/professor/atividade/${extras.editandoId}`, {
+          method: 'PUT',
+          headers: cabecalho,
+          body: JSON.stringify({ titulo, conteudo, publica: extras.publica }),
+        })
+      : await fetch(`${API}/professor/atividade`, {
+          method: 'POST',
+          headers: cabecalho,
+          body: JSON.stringify({
+            titulo, tipo: 'quiz', sala_id: salaId, conteudo,
+            publica: extras.publica, origem_id: extras.origemId,
+          }),
+        });
+
     const dados = await res.json();
     if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar.');
   };
@@ -216,7 +257,7 @@ function CriarQuiz() {
                       </button>
                       <button
                         className="editor-mini-btn perigo"
-                        onClick={e => { e.stopPropagation(); mudarPergunta(i, { arquivo: null, previa: null }); }}
+                        onClick={e => { e.stopPropagation(); mudarPergunta(i, { arquivo: null, previa: null, imagemUrl: null }); }}
                       >
                         <Trash2 size={14} strokeWidth={2.2} /> Tirar
                       </button>

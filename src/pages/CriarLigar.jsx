@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Plus, Trash2, Link2, Type, ImagePlus, RefreshCw } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 import { API } from '../api';
 
 /* ==========================================================================
@@ -25,24 +25,42 @@ const MAX_PARES = 10;
 let contador = 0;
 const novaId = () => `lp${Date.now()}_${contador++}`;
 
-const novoLado = () => ({ tipo: 'texto', texto: '', arquivo: null, previa: null });
+const novoLado = () => ({ tipo: 'texto', texto: '', arquivo: null, previa: null, imagemUrl: null });
 const novoPar = () => ({ id: novaId(), ladoA: novoLado(), ladoB: novoLado() });
 
+/* Converte o que está guardado no banco no estado que a tela usa.
+   `imagemUrl` é a imagem que já está no servidor: enquanto o professor não
+   escolher um arquivo novo, é ela que continua valendo. */
+function deConteudo(conteudo) {
+  const lista = conteudo?.pares || [];
+  if (lista.length === 0) return null;
+
+  const lado = (l) => (l?.tipo === 'imagem'
+    ? { tipo: 'imagem', texto: '', arquivo: null, previa: l?.conteudo || null, imagemUrl: l?.conteudo || null }
+    : { tipo: 'texto', texto: String(l?.conteudo ?? ''), arquivo: null, previa: null, imagemUrl: null });
+
+  return lista.map(p => ({ id: novaId(), ladoA: lado(p?.ladoA), ladoB: lado(p?.ladoB) }));
+}
+
 function CriarLigar() {
-  const [pares, setPares] = useState([novoPar(), novoPar(), novoPar()]);
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+
+  const [pares, setPares] = useState(() => deConteudo(inicial) || [novoPar(), novoPar(), novoPar()]);
   const campos = useRef({});
 
   const mudarLado = (i, lado, mudancas) =>
     setPares(lista => lista.map((p, j) => (j === i ? { ...p, [lado]: { ...p[lado], ...mudancas } } : p)));
 
-  const trocarTipo = (i, lado, tipo) => mudarLado(i, lado, { tipo, texto: '', arquivo: null, previa: null });
+  const trocarTipo = (i, lado, tipo) => mudarLado(i, lado, { tipo, texto: '', arquivo: null, previa: null, imagemUrl: null });
 
   const escolherImagem = (i, lado, file) => {
     if (!file) return;
-    mudarLado(i, lado, { arquivo: file, previa: URL.createObjectURL(file) });
+    mudarLado(i, lado, { arquivo: file, previa: URL.createObjectURL(file), imagemUrl: null });
   };
 
-  const vazio = lado => (lado.tipo === 'texto' ? !lado.texto.trim() : !lado.arquivo);
+  const vazio = lado => (lado.tipo === 'texto' ? !lado.texto.trim() : !lado.arquivo && !lado.imagemUrl);
 
   const validar = () => {
     for (let i = 0; i < pares.length; i++) {
@@ -57,11 +75,13 @@ function CriarLigar() {
     return null;
   };
 
-  const aoSalvar = async (titulo, salaId) => {
+  const aoSalvar = async (titulo, salaId, extras) => {
     const cracha = { Authorization: `Bearer ${localStorage.getItem('token')}` };
 
     const subir = async (lado) => {
       if (lado.tipo === 'texto') return { tipo: 'texto', conteudo: lado.texto.trim() };
+      // Imagem que já está no servidor é reaproveitada sem subir de novo.
+      if (!lado.arquivo && lado.imagemUrl) return { tipo: 'imagem', conteudo: lado.imagemUrl };
       const pacote = new FormData();
       pacote.append('imagem', lado.arquivo);
       const envio = await fetch(`${API}/professor/pintura/upload`, { method: 'POST', headers: cracha, body: pacote });
@@ -75,11 +95,24 @@ function CriarLigar() {
       prontos.push({ ladoA: await subir(p.ladoA), ladoB: await subir(p.ladoB) });
     }
 
-    const res = await fetch(`${API}/professor/atividade`, {
-      method: 'POST',
-      headers: { ...cracha, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, tipo: 'ligar', sala_id: salaId, conteudo: { pares: prontos } }),
-    });
+    const conteudo = { pares: prontos };
+    const cabecalho = { ...cracha, 'Content-Type': 'application/json' };
+
+    const res = extras.editandoId
+      ? await fetch(`${API}/professor/atividade/${extras.editandoId}`, {
+          method: 'PUT',
+          headers: cabecalho,
+          body: JSON.stringify({ titulo, conteudo, publica: extras.publica }),
+        })
+      : await fetch(`${API}/professor/atividade`, {
+          method: 'POST',
+          headers: cabecalho,
+          body: JSON.stringify({
+            titulo, tipo: 'ligar', sala_id: salaId, conteudo,
+            publica: extras.publica, origem_id: extras.origemId,
+          }),
+        });
+
     const dados = await res.json();
     if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar.');
   };

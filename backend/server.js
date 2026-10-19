@@ -1228,12 +1228,16 @@ app.post('/professor/atividade', autenticar, donoDaSala(req => req.body.sala_id)
   const { titulo, tipo, sala_id, conteudo } = req.body;
   const professorId = req.usuario.id;
   const tempo_limite = parseInt(req.body.tempo_limite) || 0; 
+  // Sem dizer nada, a atividade nasce privada — como era antes da biblioteca.
+  const publica = req.body.publica ? 1 : 0;
+  const origemId = Number(req.body.origem_id) || null;
 
   if (!titulo || !tipo || !sala_id || !conteudo) return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
 
-  const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite) VALUES (?, ?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  db.query(sql, [titulo, tipo, sala_id, professorId, JSON.stringify(conteudo), tempo_limite], (err, result) => {
+  db.query(sql, [titulo, tipo, sala_id, professorId, JSON.stringify(conteudo), tempo_limite, publica, origemId], (err, result) => {
     if (err) return res.status(500).json({ erro: 'Erro ao salvar atividade.' });
     res.status(201).json({ mensagem: 'Atividade salva com sucesso!', id: result.insertId });
   });
@@ -1264,9 +1268,13 @@ app.post('/professor/atividades/v_f', autenticar, upload.any(), donoDaSala(req =
       conteudoFormatado.push({ texto: pergunta.texto, imagem_url: imagemUrl, resposta_correta: pergunta.resposta_correta });
     }
 
-    const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite) VALUES (?, ?, ?, ?, ?, ?)`;
+    const publica = req.body.publica === '1' || req.body.publica === 'true' ? 1 : 0;
+    const origemId = Number(req.body.origem_id) || null;
 
-    db.query(sql, [titulo, 'v_f', salaId, professorId, JSON.stringify(conteudoFormatado), tempo_limite > 0 ? tempo_limite : null], (err, result) => {
+    const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    db.query(sql, [titulo, 'v_f', salaId, professorId, JSON.stringify(conteudoFormatado), tempo_limite > 0 ? tempo_limite : null, publica, origemId], (err, result) => {
       if (err) return res.status(500).json({ erro: 'Erro ao salvar atividade V/F no banco.' });
       res.status(201).json({ mensagem: 'Atividade criada com sucesso!', id: result.insertId });
     });
@@ -1335,7 +1343,8 @@ app.get('/atividade/:id', (req, res) => {
 
 app.get('/professor/atividades', autenticar, (req, res) => {
   const sql = `
-    SELECT a.id, a.titulo, a.tipo, a.criado_em, s.nome AS nome_sala, s.serie, s.materia, COUNT(r.id) AS total_respostas
+    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.publica, a.sala_id,
+           s.nome AS nome_sala, s.serie, s.materia, COUNT(r.id) AS total_respostas
     FROM atividade a
     JOIN sala s ON a.sala_id = s.id
     LEFT JOIN resposta_aluno r ON a.id = r.atividade_id
@@ -1379,6 +1388,201 @@ app.post('/professor/atividade/:id/clonar', autenticar, donoDaSala(req => req.bo
       
       res.status(201).json({ mensagem: 'Atividade copiada com sucesso!', id: resultInsert.insertId });
     });
+  });
+});
+
+/* ==========================================================================
+   7b. BIBLIOTECA DE ATIVIDADES PÚBLICAS
+
+   O professor pode publicar uma atividade. Publicada, ela aparece na
+   biblioteca para os outros professores, que podem copiá-la para as turmas
+   deles e mexer à vontade.
+
+   A regra que sustenta tudo: a cópia é SEMPRE uma linha nova no banco, do
+   professor que copiou. Ninguém escreve na atividade de outra pessoa — por
+   isso editar a cópia nunca mexe na original, e as respostas e os relatórios
+   de cada uma seguem separados.
+
+   Quem é o dono: o professor da SALA da atividade. É o mesmo critério que o
+   resto do sistema usa (donoDaSala, GET /atividade/:id), então não existe
+   uma segunda definição de dono para alguém contornar.
+   ========================================================================== */
+
+/* Devolve a atividade e quem manda nela, conferindo pela sala. */
+function buscarAtividadeComDono(id, pronto) {
+  db.query(
+    `SELECT a.*, s.professor_id AS dono, s.nome AS nome_sala
+       FROM atividade a JOIN sala s ON s.id = a.sala_id
+      WHERE a.id = ? LIMIT 1`,
+    [Number(id) || 0],
+    (err, linhas) => pronto(err, linhas && linhas[0])
+  );
+}
+
+/* --------------------------------------------------------------------------
+   EDITAR UMA ATIVIDADE — só o dono, e a atividade continua sendo a mesma.
+
+   Quem quer mudar a atividade de outra pessoa não edita: copia (mais abaixo)
+   e edita a própria cópia.
+   -------------------------------------------------------------------------- */
+app.put('/professor/atividade/:id', autenticar, (req, res) => {
+  const { titulo, conteudo } = req.body;
+  if (!titulo || !conteudo) return res.status(400).json({ erro: 'Título e conteúdo são obrigatórios.' });
+
+  buscarAtividadeComDono(req.params.id, (err, atv) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar a atividade.' });
+    if (!atv) return res.status(404).json({ erro: 'Atividade não encontrada.' });
+    if (Number(atv.dono) !== Number(req.usuario.id)) {
+      return res.status(403).json({ erro: 'Essa atividade é de outro professor. Copie para a sua turma e edite a cópia.' });
+    }
+
+    // A visibilidade só muda se vier no pedido; senão fica como está.
+    const publica = req.body.publica === undefined ? atv.publica : (req.body.publica ? 1 : 0);
+    const tempo = req.body.tempo_limite === undefined
+      ? atv.tempo_limite
+      : (parseInt(req.body.tempo_limite) || 0) || null;
+
+    db.query(
+      `UPDATE atividade SET titulo = ?, conteudo = ?, tempo_limite = ?, publica = ? WHERE id = ?`,
+      [titulo, JSON.stringify(conteudo), tempo, publica, atv.id],
+      (erroUpdate) => {
+        if (erroUpdate) return res.status(500).json({ erro: 'Erro ao salvar as alterações.' });
+        res.json({ mensagem: 'Atividade atualizada!', id: atv.id });
+      }
+    );
+  });
+});
+
+/* --------------------------------------------------------------------------
+   PUBLICAR OU DESPUBLICAR — o botão da tela Minhas aulas.
+   -------------------------------------------------------------------------- */
+app.put('/professor/atividade/:id/visibilidade', autenticar, (req, res) => {
+  const publica = req.body.publica ? 1 : 0;
+
+  buscarAtividadeComDono(req.params.id, (err, atv) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar a atividade.' });
+    if (!atv) return res.status(404).json({ erro: 'Atividade não encontrada.' });
+    if (Number(atv.dono) !== Number(req.usuario.id)) return res.status(403).json({ erro: 'Essa atividade não é sua.' });
+
+    db.query(`UPDATE atividade SET publica = ? WHERE id = ?`, [publica, atv.id], (erroUpdate) => {
+      if (erroUpdate) return res.status(500).json({ erro: 'Erro ao mudar a visibilidade.' });
+      res.json({
+        mensagem: publica ? 'Atividade publicada na biblioteca!' : 'Atividade voltou a ser só sua.',
+        publica: !!publica,
+      });
+    });
+  });
+});
+
+/* --------------------------------------------------------------------------
+   A BIBLIOTECA — só o que está publicado.
+
+   A busca é feita no banco (LIKE no título, na matéria, na série e no nome
+   do autor) em vez de mandar a biblioteca inteira para o navegador e filtrar
+   lá: com o tempo ela cresce, e o celular do professor não precisa baixar
+   tudo para achar um quiz.
+   -------------------------------------------------------------------------- */
+app.get('/professor/biblioteca', autenticar, (req, res) => {
+  const filtros = ['a.publica = 1'];
+  const valores = [];
+
+  const busca = String(req.query.busca || '').trim();
+  if (busca) {
+    filtros.push('(a.titulo LIKE ? OR s.materia LIKE ? OR s.serie LIKE ? OR u.nome LIKE ?)');
+    const curinga = `%${busca}%`;
+    valores.push(curinga, curinga, curinga, curinga);
+  }
+
+  const tipo = String(req.query.tipo || '').trim();
+  if (tipo && TIPOS_DE_ATIVIDADE.includes(tipo)) {
+    filtros.push('a.tipo = ?');
+    valores.push(tipo);
+  }
+
+  // "minhas=nao" esconde as próprias; por padrão o professor vê as dele também,
+  // para conferir como a atividade dele aparece para os outros.
+  if (String(req.query.minhas || '') === 'nao') {
+    filtros.push('s.professor_id <> ?');
+    valores.push(req.usuario.id);
+  }
+
+  const sql = `
+    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.origem_id,
+           s.serie, s.materia,
+           u.nome AS autor,
+           (s.professor_id = ?) AS minha,
+           (SELECT COUNT(*) FROM atividade c WHERE c.origem_id = a.id) AS copias
+      FROM atividade a
+      JOIN sala s ON s.id = a.sala_id
+      JOIN usuario u ON u.id = s.professor_id
+     WHERE ${filtros.join(' AND ')}
+     ORDER BY a.criado_em DESC
+     LIMIT 200
+  `;
+
+  db.query(sql, [req.usuario.id, ...valores], (err, linhas) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar a biblioteca.' });
+    res.json(linhas.map(l => ({ ...l, minha: !!l.minha })));
+  });
+});
+
+/* --------------------------------------------------------------------------
+   VER UMA ATIVIDADE DA BIBLIOTECA INTEIRA — com o gabarito.
+
+   Aqui o gabarito pode sair mesmo não sendo o dono: é exatamente disso que
+   se trata publicar. Mas só de atividade PUBLICADA, e só para professor —
+   aluno nenhum passa por esta rota.
+   -------------------------------------------------------------------------- */
+app.get('/professor/biblioteca/:id', autenticar, (req, res) => {
+  buscarAtividadeComDono(req.params.id, (err, atv) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar a atividade.' });
+    if (!atv) return res.status(404).json({ erro: 'Atividade não encontrada.' });
+
+    const minha = Number(atv.dono) === Number(req.usuario.id);
+    if (!atv.publica && !minha) return res.status(403).json({ erro: 'Essa atividade não está na biblioteca.' });
+
+    db.query(`SELECT nome FROM usuario WHERE id = ? LIMIT 1`, [atv.dono], (e, donos) => {
+      res.json({
+        id: atv.id,
+        titulo: atv.titulo,
+        tipo: atv.tipo,
+        tempo_limite: atv.tempo_limite,
+        publica: !!atv.publica,
+        conteudo: lerConteudo(atv),
+        minha,
+        autor: (donos && donos[0] && donos[0].nome) || 'professor(a)',
+        nome_sala: atv.nome_sala,
+      });
+    });
+  });
+});
+
+/* --------------------------------------------------------------------------
+   COPIAR DA BIBLIOTECA para uma turma do professor, sem passar pelo editor.
+
+   É o atalho de quem gostou da atividade do jeito que está. Quem quer mexer
+   abre no editor e salva — aí o próprio POST de criar já grava a cópia.
+   -------------------------------------------------------------------------- */
+app.post('/professor/biblioteca/:id/copiar', autenticar, donoDaSala(req => req.body.sala_destino_id), (req, res) => {
+  buscarAtividadeComDono(req.params.id, (err, atv) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar a atividade.' });
+    if (!atv) return res.status(404).json({ erro: 'Atividade não encontrada.' });
+    if (!atv.publica && Number(atv.dono) !== Number(req.usuario.id)) {
+      return res.status(403).json({ erro: 'Essa atividade não está na biblioteca.' });
+    }
+
+    const conteudo = typeof atv.conteudo === 'object' ? JSON.stringify(atv.conteudo) : atv.conteudo;
+
+    db.query(
+      `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
+      [atv.titulo, atv.tipo, req.body.sala_destino_id, req.usuario.id, conteudo, atv.tempo_limite, atv.id],
+      (erroInsert, resultado) => {
+        if (erroInsert) return res.status(500).json({ erro: 'Erro ao copiar a atividade.' });
+        // A cópia nasce privada: quem copiou decide depois se quer publicar a dele.
+        res.status(201).json({ mensagem: 'Atividade copiada para a sua turma!', id: resultado.insertId });
+      }
+    );
   });
 });
 
@@ -2262,6 +2466,30 @@ db.query(`SHOW COLUMNS FROM atividade LIKE 'tipo'`, (err, colunas) => {
    número virava '0000-00-00' e o prazo nunca valia de verdade. Aqui ela passa
    a ser um número inteiro; as datas quebradas que ficaram viram NULL, que é
    exatamente o que a tela entende como 'sem limite de tempo'. */
+/* Biblioteca de atividades: 'publica' diz se a atividade aparece para os
+   outros professores, e 'origem_id' guarda de qual atividade ela foi copiada
+   (serve para dar crédito a quem montou primeiro). As duas nascem sozinhas,
+   e tudo que já existia continua privado, que era o comportamento de antes. */
+db.query(`SHOW COLUMNS FROM atividade LIKE 'publica'`, (err, colunas) => {
+  if (err) return;
+  if (!colunas || colunas.length === 0) {
+    db.query(`ALTER TABLE atividade ADD COLUMN publica TINYINT(1) NOT NULL DEFAULT 0`, (e) => {
+      if (e) console.error('Não consegui criar a coluna atividade.publica:', e.message);
+      else console.log('✅ Coluna atividade.publica criada (tudo que já existia ficou privado).');
+    });
+  }
+});
+
+db.query(`SHOW COLUMNS FROM atividade LIKE 'origem_id'`, (err, colunas) => {
+  if (err) return;
+  if (!colunas || colunas.length === 0) {
+    db.query(`ALTER TABLE atividade ADD COLUMN origem_id INT NULL`, (e) => {
+      if (e) console.error('Não consegui criar a coluna atividade.origem_id:', e.message);
+      else console.log('✅ Coluna atividade.origem_id criada.');
+    });
+  }
+});
+
 db.query(`SHOW COLUMNS FROM atividade LIKE 'tempo_limite'`, (err, colunas) => {
   if (err || !colunas || colunas.length === 0) return;
   const tipoDaColuna = String(colunas[0].Type || '').toLowerCase();

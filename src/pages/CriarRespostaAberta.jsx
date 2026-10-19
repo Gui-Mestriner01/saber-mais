@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Plus, Trash2, ImagePlus, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 
 /* ==========================================================================
    EDITOR — RESPOSTA ABERTA
@@ -23,7 +23,19 @@ const novaId = () => `ra${Date.now()}_${contador++}`;
 const novaPergunta = () => ({ id: novaId(), texto: '', arquivo: null, previa: null });
 
 function CriarRespostaAberta() {
-  const [perguntas, setPerguntas] = useState([novaPergunta()]);
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+
+  const [perguntas, setPerguntas] = useState(() => {
+    const lista = (inicial?.perguntas || []).map(p => ({
+      id: novaId(),
+      texto: String(p?.texto ?? ''),
+      arquivo: null,
+      previa: p?.imagem || null,
+    }));
+    return lista.length > 0 ? lista : [novaPergunta()];
+  });
   const campos = useRef({});
 
   const mudar = (i, mudancas) =>

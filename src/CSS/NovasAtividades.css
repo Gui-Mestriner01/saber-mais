@@ -532,6 +532,208 @@
 }
 
 /* ==========================================================================
+   1c. BIBLIOTECA DE ATIVIDADES PÚBLICAS
+
+   Duas peças: a escolha de quem vê a atividade (no rodapé dos editores) e a
+   tela da biblioteca em si. Tudo com as mesmas variáveis do resto, então o
+   tema escuro e o menu de acessibilidade valem aqui também.
+   ========================================================================== */
+
+/* ---------- selo de "editando" / "cópia" no cabeçalho ---------- */
+.editor-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 10px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--azul-lavado);
+  color: var(--azul);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.editor-marca.copia { background: var(--laranja-lavado); color: var(--laranja-escuro); }
+
+/* ---------- escolher quem vê a atividade ---------- */
+.editor-visibilidade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.editor-visib-btn {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 16px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r);
+  background: var(--superficie);
+  font: inherit;
+  color: var(--tinta);
+  cursor: pointer;
+  text-align: left;
+}
+.editor-visib-btn:hover { border-color: var(--borda-forte); }
+.editor-visib-btn.ativo { border-color: var(--azul); background: var(--azul-lavado); }
+
+.editor-visib-btn strong { display: block; font-weight: 900; font-size: .97rem; }
+.editor-visib-btn em {
+  display: block;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: .84rem;
+  line-height: 1.45;
+  color: var(--tinta-media);
+}
+
+.editor-visib-icone {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.editor-visib-icone.privada { background: var(--tinta-clara); }
+.editor-visib-icone.publica { background: var(--verde); }
+
+/* ---------- a tela da biblioteca ---------- */
+.bib-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.bib-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+}
+
+.bib-card-topo { display: flex; align-items: flex-start; gap: 11px; }
+
+.bib-card-icone {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--azul-lavado);
+  color: var(--azul);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bib-card h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: var(--tinta);
+  line-height: 1.35;
+}
+
+.bib-card-tipo {
+  display: block;
+  margin-top: 3px;
+  font-size: .83rem;
+  font-weight: 700;
+  color: var(--tinta-media);
+}
+
+.bib-card-autor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--tinta-media);
+}
+
+.bib-etiquetas { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.bib-etiqueta {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  border: 1px solid var(--borda);
+  font-size: .76rem;
+  font-weight: 800;
+  color: var(--tinta-media);
+}
+.bib-etiqueta.minha { background: var(--verde-lavado); border-color: var(--verde); color: var(--verde); }
+
+.bib-card-acoes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.bib-vazio {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--tinta-media);
+  font-weight: 700;
+  line-height: 1.6;
+}
+.bib-vazio strong { display: block; color: var(--tinta); font-size: 1.05rem; margin-bottom: 6px; }
+
+/* ---------- selo de pública/privada na tela Minhas aulas ---------- */
+.aula-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: .71rem;
+  font-weight: 900;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  background: var(--superficie-2);
+  border: 1px solid var(--borda);
+  color: var(--tinta-media);
+  vertical-align: middle;
+}
+.aula-selo.publica { background: var(--verde-lavado); border-color: var(--verde); color: var(--verde); }
+
+/* Três botões por linha pediam espaço: ficam compactos e sem quebrar o
+   texto, e a linha inteira passa a alinhar pelo topo. */
+.atividade-item-row { align-items: center; gap: 14px; }
+.atividade-item-row .atividade-acoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+.atividade-item-row .atividade-acoes .btn-clonar {
+  padding: 7px 12px;
+  font-size: .82rem;
+  white-space: nowrap;
+}
+.atividade-item-row .badge-data { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.atividade-item-row h3 { min-width: 0; }
+
+@media (max-width: 860px) {
+  .editor-visibilidade { grid-template-columns: 1fr; }
+  .bib-lista { grid-template-columns: 1fr; }
+  .atividade-item-row .atividade-acoes { width: 100%; }
+}
+
+/* ==========================================================================
    2. TELAS DO ALUNO
    ========================================================================== */
 

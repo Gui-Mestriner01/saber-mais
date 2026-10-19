@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trash2, Plus, X } from 'lucide-react';
-import EditorAtividade from '../components/EditorAtividade';
+import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 import { CORES_GRUPOS } from '../components/JogoAluno';
 
 /* ==========================================================================
@@ -19,8 +19,21 @@ const MAX_ITENS_POR_GRUPO = 8;
 const grupoVazio = () => ({ nome: '', itens: [], rascunho: '' });
 
 function CriarGrupos() {
-  const [enunciado, setEnunciado] = useState('');
-  const [grupos, setGrupos] = useState([grupoVazio(), grupoVazio()]);
+  // Vem preenchido quando o professor está editando a própria atividade ou
+  // copiando uma da biblioteca; vazio quando está criando do zero.
+  const inicial = usarConteudoInicial();
+
+  const [enunciado, setEnunciado] = useState(inicial?.enunciado || '');
+  const [grupos, setGrupos] = useState(() => {
+    // "rascunho" é o campo de digitar um item novo: existe só na tela, não
+    // vem do banco, então cada grupo que chega de lá começa com ele vazio.
+    const lista = (inicial?.grupos || []).map(g => ({
+      nome: String(g?.nome ?? ''),
+      itens: (g?.itens || []).map(t => String(t ?? '')),
+      rascunho: '',
+    }));
+    return lista.length >= 2 ? lista : [grupoVazio(), grupoVazio()];
+  });
 
   const mudarGrupo = (i, mudancas) =>
     setGrupos(lista => lista.map((g, j) => (j === i ? { ...g, ...mudancas } : g)));

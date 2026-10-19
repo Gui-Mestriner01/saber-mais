@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, School, FileText, BarChart3, Award, LogOut, Moon, Sun } from 'lucide-react';
+import { Home, School, FileText, Library, BarChart3, Award, LogOut, Moon, Sun } from 'lucide-react';
 import FestaInsignias from './FestaInsignias';
 import '../CSS/Conquistas.css';
 import { API } from '../api';
@@ -22,6 +22,7 @@ const ITENS = [
   { chave: 'home',       rotulo: 'Página inicial', curto: 'Início',     rota: '/professor/dashboard',    Icone: Home },
   { chave: 'salas',      rotulo: 'Salas',          curto: 'Salas',      rota: '/professor/salas',        Icone: School },
   { chave: 'aulas',      rotulo: 'Minhas aulas',   curto: 'Aulas',      rota: '/professor/minhas-aulas', Icone: FileText },
+  { chave: 'biblioteca', rotulo: 'Biblioteca',     curto: 'Acervo',     rota: '/professor/biblioteca',   Icone: Library },
   { chave: 'relatorios', rotulo: 'Relatórios',     curto: 'Relatórios', rota: '/professor/relatorios',   Icone: BarChart3 },
   { chave: 'conquistas', rotulo: 'Conquistas',     curto: 'Conquistas', rota: '/professor/conquistas',   Icone: Award },
 ];
