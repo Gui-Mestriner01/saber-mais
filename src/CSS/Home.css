@@ -11,26 +11,108 @@
   overflow: hidden;
 }
 
-.floating-items {
+/* ==========================================================================
+   FUNDO ANIMADO (components/FundoHome.jsx)
+
+   Só transform e opacity animam — são as duas propriedades que o navegador
+   move sem redesenhar a página, então não pesa nem no celular simples.
+   ========================================================================== */
+
+.home-fundo {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  animation: fundo-aparece 1.2s ease-out both;
 }
 
-.floating-items span {
+@keyframes fundo-aparece {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ---------- nuvens: atravessam a tela da esquerda para a direita ---------- */
+.nuvem {
   position: absolute;
-  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.15));
-  animation: float 4s ease-in-out infinite;
+  left: 0;
+  width: 220px;
+  height: auto;
+  opacity: .75;
+  filter: drop-shadow(0 6px 10px rgba(26, 111, 196, .08));
+  will-change: transform;
+  animation: nuvem-passa linear infinite;
 }
 
-.floating-items span:nth-child(odd) {
-  animation-duration: 5s;
-  animation-direction: alternate;
+/* O atraso negativo faz cada nuvem já estar no meio do caminho quando a
+   página abre, em vez de todas nascerem juntas na borda esquerda. */
+/* Ficam na faixa de cima, acima do "Saber+", para não passarem atrás do texto. */
+.nuvem-1 { top: 3%;  width: 210px; animation-duration: 85s;  animation-delay: -20s; }
+.nuvem-2 { top: 11%; width: 140px; animation-duration: 115s; animation-delay: -70s; opacity: .6; }
+.nuvem-3 { top: 1%;  width: 170px; animation-duration: 100s; animation-delay: -48s; opacity: .55; }
+
+@keyframes nuvem-passa {
+  from { transform: translateX(-260px); }
+  to   { transform: translateX(calc(100vw + 40px)); }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
+/* ---------- formas: sobem e descem devagar, girando um pouquinho ---------- */
+.forma {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  opacity: .38;
+  will-change: transform;
+  animation: forma-flutua ease-in-out infinite alternate;
+}
+
+/* Cores da marca, alternadas. */
+.forma-1, .forma-4, .forma-7 { color: #1A6FC4; }
+.forma-2, .forma-5, .forma-8 { color: #F5812A; }
+.forma-3, .forma-6           { color: #3DAA5C; }
+
+/* Sempre nas laterais (até 15% de cada lado) e nos cantos de baixo, para
+   nunca passar por trás dos cartões nem do título. */
+.forma-1 { left: 6%;   top: 18%; width: 52px; height: 52px; --giro: -8deg; animation-duration: 7s; }
+.forma-2 { left: 12%;  top: 48%; width: 40px; height: 40px; --giro: 12deg; animation-duration: 9s;  animation-delay: -3s; }
+.forma-3 { left: 4%;   top: 74%; width: 54px; height: 54px; --giro: 6deg;  animation-duration: 8s;  animation-delay: -5s; }
+.forma-4 { left: 18%;  top: 90%; width: 34px; height: 34px; --giro: 20deg; animation-duration: 10s; animation-delay: -2s; }
+.forma-5 { right: 6%;  top: 16%; width: 48px; height: 48px; --giro: 10deg; animation-duration: 8s;  animation-delay: -4s; }
+.forma-6 { right: 11%; top: 44%; width: 50px; height: 50px; --giro: -6deg; animation-duration: 9s;  animation-delay: -6s; }
+.forma-7 { right: 4%;  top: 70%; width: 38px; height: 38px; --giro: 0deg;  animation-duration: 11s; animation-delay: -1s; }
+.forma-8 { right: 18%; top: 88%; width: 56px; height: 56px; --giro: -12deg; animation-duration: 7s; animation-delay: -3s; }
+
+@keyframes forma-flutua {
+  from { transform: translateY(0) rotate(0deg); }
+  to   { transform: translateY(-18px) rotate(var(--giro, 8deg)); }
+}
+
+/* ---------- quem pediu menos movimento vê o desenho parado ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .home-fundo, .nuvem, .forma { animation: none; }
+  .nuvem-1 { transform: translateX(8vw); }
+  .nuvem-2 { transform: translateX(62vw); }
+  .nuvem-3 { transform: translateX(80vw); }
+}
+body.a11y-sem-animacao .home-fundo,
+body.a11y-sem-animacao .nuvem,
+body.a11y-sem-animacao .forma { animation: none; }
+body.a11y-sem-animacao .nuvem-1 { transform: translateX(8vw); }
+body.a11y-sem-animacao .nuvem-2 { transform: translateX(62vw); }
+body.a11y-sem-animacao .nuvem-3 { transform: translateX(80vw); }
+
+/* ---------- tela de notebook menor: os cartões chegam mais perto das
+   bordas, então as formas de dentro saem para não ficarem atrás deles ---------- */
+@media (max-width: 1200px) {
+  .forma-2, .forma-6 { display: none; }
+}
+
+/* ---------- celular: sem fundo animado ----------
+   No celular o "Saber+" fica colado no topo e os cartões ocupam a largura
+   toda, então não sobra céu livre: qualquer nuvem passaria atrás do texto.
+   Fica o degradê de sempre, e o aparelho não gasta bateria com isso. */
+@media (max-width: 860px) {
+  .home-fundo { display: none; }
 }
 
 .home-content {

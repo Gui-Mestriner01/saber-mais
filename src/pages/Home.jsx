@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Home.css';
 import BotaoInstalar from '../components/BotaoInstalar';
+import FundoHome from '../components/FundoHome';
 
 /* As ilustrações da tela inicial mudam a cada visita.
    São várias versões dos mesmos dois cartões, com pessoas diferentes —
@@ -23,6 +24,8 @@ function Home() {
 
   return (
     <div className="home-container">
+      <FundoHome />
+
       <div className="home-content">
         <div className="brand">
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
