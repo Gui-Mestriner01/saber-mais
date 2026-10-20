@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { UserRound, AtSign, Lock } from 'lucide-react';
 import '../CSS/Cadastro.css';
 import FundoAnimado from '../components/FundoAnimado';
 import { API } from '../api';
@@ -67,7 +68,6 @@ export default function CadastroProfessor() {
         </div>
 
         <div className="cadastro-card">
-          <div className="cadastro-avatar">👨‍🏫</div>
           <h2>CADASTRO DO PROFESSOR</h2>
           <p className="subtitulo">Crie sua conta para gerenciar suas turmas!</p>
 
@@ -78,25 +78,25 @@ export default function CadastroProfessor() {
 
             <span className="campo-label">Nome Completo</span>
             <div className="input-group">
-              <span className="input-icon">👤</span>
+              <span className="input-icon"><UserRound size={18} strokeWidth={1.75} /></span>
               <input name="nome" value={form.nome} onChange={handleChange} required placeholder="Seu nome completo" />
             </div>
 
             <span className="campo-label">E-mail</span>
             <div className="input-group">
-              <span className="input-icon">@</span>
+              <span className="input-icon"><AtSign size={18} strokeWidth={1.75} /></span>
               <input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="seu@email.com" />
             </div>
 
             <span className="campo-label">Senha</span>
             <div className="input-group">
-              <span className="input-icon">🔒</span>
+              <span className="input-icon"><Lock size={18} strokeWidth={1.75} /></span>
               <input name="senha" type="password" value={form.senha} onChange={handleChange} required placeholder="Mínimo 8 caracteres" />
             </div>
 
             <span className="campo-label">Confirmar Senha</span>
             <div className="input-group">
-              <span className="input-icon">🔒</span>
+              <span className="input-icon"><Lock size={18} strokeWidth={1.75} /></span>
               <input name="confirmarSenha" type="password" value={form.confirmarSenha} onChange={handleChange} required placeholder="Repita sua senha" />
             </div>
 

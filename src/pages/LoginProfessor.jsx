@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { AtSign, Lock } from 'lucide-react';
 
 const CLIENTE_GOOGLE = '17269757270-gk04h1b82ljnu5ep0fdnctn7gru3aca1.apps.googleusercontent.com';
 import '../CSS/Login.css';
@@ -77,7 +78,7 @@ function LoginProfessor() {
 
           <form onSubmit={handleLogin}>
             <div className="input-group">
-              <span className="input-icon">@</span>
+              <span className="input-icon"><AtSign size={18} strokeWidth={1.75} /></span>
               <input
                 type="email"
                 placeholder="Digite seu e-mail"
@@ -88,7 +89,7 @@ function LoginProfessor() {
             </div>
 
             <div className="input-group">
-              <span className="input-icon">🔒</span>
+              <span className="input-icon"><Lock size={18} strokeWidth={1.75} /></span>
               <input
                 type="password"
                 placeholder="Digite sua senha"

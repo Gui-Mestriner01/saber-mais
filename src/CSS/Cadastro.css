@@ -52,14 +52,8 @@
   gap: 18px;
 }
 
-/* Avatar / ícone do tipo */
-.cadastro-avatar {
-  font-size: 72px;
-  text-align: center;
-  line-height: 1;
-  margin-bottom: 4px;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
-}
+/* O emoji grande de professor saiu daqui: os campos usam os mesmos ícones de
+   traço (lucide) do resto do sistema, igual ao login e às telas do professor. */
 
 /* Título */
 .cadastro-card h2 {
