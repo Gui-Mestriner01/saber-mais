@@ -4,6 +4,7 @@ import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 
 const CLIENTE_GOOGLE = '17269757270-gk04h1b82ljnu5ep0fdnctn7gru3aca1.apps.googleusercontent.com';
 import '../CSS/Login.css';
+import FundoAnimado from '../components/FundoAnimado';
 import { API } from '../api';
 
 function LoginProfessor() {
@@ -65,6 +66,7 @@ function LoginProfessor() {
 
   return (
     <div className="login-container">
+      <FundoAnimado />
       <div className="login-content">
         <div className="brand">
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>

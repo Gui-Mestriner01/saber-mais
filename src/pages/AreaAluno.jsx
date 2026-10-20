@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/AreaAluno.css';
+import FundoAnimado from '../components/FundoAnimado';
 import { API, salvarAcessoSala } from '../api';
 import { aplicarTemaAluno } from '../temaAluno';
 
@@ -83,6 +84,7 @@ function AreaAluno() {
 
   return (
     <div className="area-aluno-container">
+      <FundoAnimado />
       <header className="area-aluno-header">
         <div className="area-aluno-brand" onClick={() => navigate('/')}>
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/LoginAluno.css';
+import FundoAnimado from '../components/FundoAnimado';
 import { API, acessoSala, comToken, salvarTokenAluno } from '../api';
 import { aplicarTemaAluno } from '../temaAluno';
 
@@ -205,6 +206,7 @@ function LoginAluno() {
 
   return (
     <div className="login-aluno-container">
+      <FundoAnimado />
       <header className="login-aluno-header">
         <div className="login-aluno-brand">
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>

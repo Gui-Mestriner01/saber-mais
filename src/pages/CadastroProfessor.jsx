@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../CSS/Cadastro.css';
+import FundoAnimado from '../components/FundoAnimado';
 import { API } from '../api';
 
 export default function CadastroProfessor() {
@@ -58,6 +59,7 @@ export default function CadastroProfessor() {
 
   return (
     <div className="cadastro-container">
+      <FundoAnimado />
       <div className="cadastro-content">
         <div className="brand">
           <span className="brand-saber">Saber</span>

@@ -1,16 +1,22 @@
 /* ==========================================================================
-   FUNDO ANIMADO DA TELA INICIAL
+   FUNDO ANIMADO
 
    Nuvens passando devagar pelo céu e algumas formas de sala de aula (lápis,
    livro, estrela, lâmpada...) flutuando nas bordas. É só enfeite: fica atrás
    dos cartões, não recebe clique e o leitor de tela pula (aria-hidden).
 
+   Aparece nas telas de entrada, que têm o mesmo céu azul:
+   Home, login e cadastro do professor, área do aluno e login do aluno.
+   Para usar em outra tela, basta colocar <FundoAnimado /> como primeiro
+   filho do container da página e pôr o container na lista do
+   FundoAnimado.css.
+
    Tudo é SVG escrito aqui mesmo e animado só com CSS — nenhuma imagem a mais
    para baixar e nenhum JavaScript rodando, para a nota do PageSpeed não cair.
 
-   Quem pediu menos movimento (no aparelho ou no menu de acessibilidade do
-   Saber+) vê o mesmo desenho parado. No celular o fundo não aparece.
-   As regras de animação moram no Home.css, na seção "FUNDO ANIMADO".
+   Quem clicar em "desativar animações" no menu de acessibilidade (ou já usa
+   "reduzir movimento" no aparelho) fica só com o degradê de sempre.
+   No celular o fundo também não aparece.
    ========================================================================== */
 
 function Nuvem({ classe }) {
@@ -50,9 +56,9 @@ const FORMAS = [
   { desenho: 'regua',   classe: 'forma-8' },
 ];
 
-function FundoHome() {
+function FundoAnimado() {
   return (
-    <div className="home-fundo" aria-hidden="true">
+    <div className="fundo-animado" aria-hidden="true">
       <Nuvem classe="nuvem-1" />
       <Nuvem classe="nuvem-2" />
       <Nuvem classe="nuvem-3" />
@@ -77,4 +83,4 @@ function FundoHome() {
   );
 }
 
-export default FundoHome;
+export default FundoAnimado;
