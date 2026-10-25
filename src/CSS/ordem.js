@@ -24,6 +24,8 @@ import './AreaAluno.css';
 import './Cadastro.css';
 import './Conquistas.css';
 import './Dashboard.css';
+import './EditorQuiz.css';
+import './TemaFundo.css';
 import './FundoAnimado.css';
 import './Home.css';
 import './LigarAluno.css';

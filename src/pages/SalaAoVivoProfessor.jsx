@@ -1,18 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Play, SkipForward, Square, Timer, Users, Check, BellRing, UserCheck } from 'lucide-react';
+import { ArrowLeft, Play, SkipForward, Square, Timer, Users, Check, X, BellRing, UserCheck } from 'lucide-react';
+import { FormaMarca, marca, COR_VERDADEIRO, COR_FALSO } from '../components/MarcasQuiz';
+import { CenaTema } from '../components/TemaFundo';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import '../CSS/AoVivo.css';
 import { API } from '../api';
 
 
-const ESTILOS = [
-  { classe: 'alt-azul',    simbolo: '▲' },
-  { classe: 'alt-laranja', simbolo: '◆' },
-  { classe: 'alt-verde',   simbolo: '●' },
-  { classe: 'alt-roxo',    simbolo: '■' }
-];
+/* Mesmas cores e formas do quiz e da tela do aluno (MarcasQuiz). Verdadeiro
+   ou falso: verde com ✓ e vermelho com ✗. */
+const estiloDa = (pergunta, i) => {
+  if (pergunta?.tipo === 'v_f') {
+    return i === 0
+      ? { cor: COR_VERDADEIRO, simbolo: <Check size={18} strokeWidth={3} /> }
+      : { cor: COR_FALSO, simbolo: <X size={18} strokeWidth={3} /> };
+  }
+  return { cor: marca(i).cor, simbolo: <FormaMarca indice={i} tamanho={18} /> };
+};
 
 const TIPOS_AO_VIVO = ['quiz', 'v_f'];
 
@@ -218,7 +224,9 @@ function SalaAoVivoProfessor() {
           </div>
         </header>
 
-        <div className="aovivo-prof">
+        <div className={`aovivo-prof ${estado.tema ? 'com-cenario' : ''}`}>
+        {/* Cenário de fundo da atividade, só na área da partida (não atrás do menu). */}
+        <CenaTema tema={estado.tema} modo="caixa" />
         {erro && <p className="prof-alerta">{erro}</p>}
 
       {/* ---------------- SALA DE ESPERA ---------------- */}
@@ -376,19 +384,19 @@ function SalaAoVivoProfessor() {
 
             <ul className="prof-contagem">
               {estado.pergunta?.alternativas.map((texto, i) => {
-                const estilo = ESTILOS[i % ESTILOS.length];
+                const estilo = estiloDa(estado.pergunta, i);
                 const quantos = estado.contagem?.[i] || 0;
                 const porcento = totalAlunos > 0 ? Math.round((quantos / totalAlunos) * 100) : 0;
                 const certa = estado.estado !== 'pergunta' && (estado.gabarito || []).includes(i);
 
                 return (
                   <li key={i} className={certa ? 'certa' : ''}>
-                    <span className={`contagem-marca ${estilo.classe}`}>{estilo.simbolo}</span>
+                    <span className="contagem-marca" style={{ background: estilo.cor }}>{estilo.simbolo}</span>
                     <span className="contagem-texto">{texto}</span>
                     {estado.estado !== 'pergunta' && (
                       <>
                         <span className="contagem-barra">
-                          <span className={estilo.classe} style={{ width: `${porcento}%` }} />
+                          <span style={{ width: `${porcento}%`, background: estilo.cor }} />
                         </span>
                         <span className="contagem-numero">{quantos}</span>
                       </>

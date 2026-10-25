@@ -24,7 +24,7 @@ function estrelasDaMemoria(tentativas, pares) {
 const PONTOS_POR_ESTRELAS = { 3: 10, 2: 8, 1: 6 }; // por par encontrado
 
 function MemoriaAluno() {
-  const { atividade, conteudo, erro, enviar, voltar } = useAtividadeAluno();
+  const { atividade, conteudo, erro, enviar, voltar, tema } = useAtividadeAluno();
 
   const [cartas, setCartas] = useState([]);      // { id, par, texto }
   const [viradas, setViradas] = useState([]);    // ids viradas agora (0, 1 ou 2)
@@ -98,7 +98,7 @@ function MemoriaAluno() {
 
   if (resultado) {
     return (
-      <JogoAluno titulo={atividade?.titulo} voltar={voltar}>
+      <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
         {erroEnvio && <p className="editor-erro">{erroEnvio}</p>}
         <ResultadoAtividade
           titulo={resultado.estrelas === 3 ? 'Memória de elefante!' : 'Você achou todos!'}
@@ -112,7 +112,7 @@ function MemoriaAluno() {
   }
 
   return (
-    <JogoAluno titulo={atividade?.titulo} voltar={voltar}>
+    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
       {erro && <p className="editor-erro">{erro}</p>}
       {!conteudo && !erro && <p className="jogo-carregando">Embaralhando as cartas…</p>}
 

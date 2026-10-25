@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/LigarAluno.css';
 import '../CSS/ResponderVF.css'; // <-- Importando o CSS para usarmos as telas bonitas de troféu e confirmação
+import { FundoTema, classeTema } from '../components/TemaFundo';
 import { API, cabecalhoAluno } from '../api';
 
 function LigarAluno() {
@@ -139,7 +140,8 @@ function LigarAluno() {
   // 1. TELA DE CONCLUSÃO (Com Design do Troféu)
   // ==========================================
   if (finalizado && resultado) return (
-    <div className="vf-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
+    <div className={`vf-container ${classeTema(atividade?.tema)}`} style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <FundoTema tema={atividade?.tema} />
       <div className="vf-conclusion-card">
         <div className="vf-trophy">🏆</div>
         <h2 className="vf-conclusion-title">Você terminou!</h2>
@@ -161,7 +163,8 @@ function LigarAluno() {
   );
 
   return (
-    <div className="ligar-container">
+    <div className={`ligar-container ${classeTema(atividade?.tema)}`}>
+      <FundoTema tema={atividade?.tema} />
 
       {/* ==========================================
           2. TELA DE CONFIRMAÇÃO (Sobreposta ao jogo)

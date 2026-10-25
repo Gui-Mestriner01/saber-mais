@@ -86,7 +86,32 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
      QUIZ: quantos alunos marcaram cada alternativa
      ------------------------------------------------------------------------ */
   const analisarQuiz = () => perguntas.map((pergunta, i) => {
+    /* Puzzle (pôr em ordem, 25/10/2026): o servidor guarda as posições que
+       o aluno deu (0, 1, 2...). Acertou se ficou 0, 1, 2... na sequência. */
+    if (pergunta.tipo === 'puzzle') {
+      const total = (pergunta.itens || []).length;
+      let semResposta = 0, acertaram = 0, fora = 0;
+      respostas.forEach(r => {
+        const posicoes = r.resposta?.respostas?.[i] ?? r.resposta?.respostas?.[String(i)];
+        if (!Array.isArray(posicoes) || posicoes.length === 0) { semResposta++; return; }
+        if (posicoes.length === total && posicoes.every((v, k) => Number(v) === k)) acertaram++;
+        else fora++;
+      });
+      return {
+        texto: pergunta.texto || `Pergunta ${i + 1}`,
+        detalhe: `Puzzle · ordem certa: ${(pergunta.itens || []).join(' → ')}`,
+        opcoes: [
+          { rotulo: 'Montou na ordem certa', quantidade: acertaram, correta: true },
+          { rotulo: 'Montou fora de ordem', quantidade: fora, correta: false },
+        ],
+        semResposta,
+        acertaram,
+      };
+    }
+
     const alternativas = pergunta.alternativas || [];
+    // Verdadeiro ou falso dentro do quiz: sem as letras A/B na frente.
+    const ehVF = pergunta.tipo === 'v_f';
     const contagem = alternativas.map(() => 0);
     let semResposta = 0;
     let acertaram = 0;
@@ -116,8 +141,9 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
 
     return {
       texto: pergunta.texto || `Pergunta ${i + 1}`,
+      detalhe: ehVF ? 'Verdadeiro ou falso' : null,
       opcoes: alternativas.map((alt, idx) => ({
-        rotulo: `${LETRAS[idx]}. ${alt.texto || '(sem texto)'}`,
+        rotulo: ehVF ? (alt.texto || '') : `${LETRAS[idx]}. ${alt.texto || '(sem texto)'}`,
         quantidade: contagem[idx],
         correta: !!alt.correta,
       })),
@@ -307,7 +333,10 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
                   <section key={i} className={`pergunta-card ${dificil ? 'dificil' : ''} ${aberta ? 'aberta' : ''}`}>
                     <button className="pergunta-topo" onClick={() => alternarPergunta(i)}>
                       <span className="pergunta-num">{i + 1}</span>
-                      <h3>{p.texto}</h3>
+                      <h3>
+                        {p.texto}
+                        {p.detalhe && <small className="pergunta-detalhe">{p.detalhe}</small>}
+                      </h3>
                       <span
                         className="pergunta-acerto"
                         style={{
@@ -470,8 +499,23 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
   const linhas = () => {
     if (tipo === 'quiz') {
       return perguntas.map((pergunta, i) => {
-        const alternativas = pergunta.alternativas || [];
         const escolhidas = resposta.resposta?.respostas?.[i] ?? resposta.resposta?.respostas?.[String(i)] ?? [];
+
+        // Puzzle: a ordem que o aluno montou × a ordem certa
+        if (pergunta.tipo === 'puzzle') {
+          const itens = pergunta.itens || [];
+          const montou = Array.isArray(escolhidas) && escolhidas.length ? escolhidas.map(k => itens[k]).filter(Boolean).join(' → ') : null;
+          const certo = Array.isArray(escolhidas) && escolhidas.length === itens.length && escolhidas.every((v, k) => Number(v) === k);
+          return {
+            pergunta: pergunta.texto || `Pergunta ${i + 1}`,
+            escolha: montou,
+            correto: itens.join(' → '),
+            estado: montou === null ? 'branco' : certo ? 'certo' : 'errado',
+          };
+        }
+
+        const alternativas = pergunta.alternativas || [];
+        const letra = (idx) => (pergunta.tipo === 'v_f' ? '' : `${LETRAS[idx]}. `);
         const corretas = alternativas.map((a, idx) => (a.correta ? idx : null)).filter(x => x !== null);
 
         const acertou =
@@ -480,10 +524,10 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
           corretas.every(c => escolhidas.includes(c));
 
         const textoEscolhido = Array.isArray(escolhidas) && escolhidas.length > 0
-          ? escolhidas.map(idx => `${LETRAS[idx]}. ${alternativas[idx]?.texto || ''}`).join(' · ')
+          ? escolhidas.map(idx => `${letra(idx)}${alternativas[idx]?.texto || ''}`).join(' · ')
           : null;
 
-        const textoCorreto = corretas.map(idx => `${LETRAS[idx]}. ${alternativas[idx]?.texto || ''}`).join(' · ');
+        const textoCorreto = corretas.map(idx => `${letra(idx)}${alternativas[idx]?.texto || ''}`).join(' · ');
 
         return {
           pergunta: pergunta.texto || `Pergunta ${i + 1}`,

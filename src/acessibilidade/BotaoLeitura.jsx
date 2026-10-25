@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Volume2, Square } from 'lucide-react';
 
 function BotaoLeitura({ texto }) {
   const [lendo, setLendo] = useState(false);
@@ -60,7 +61,7 @@ function BotaoLeitura({ texto }) {
       onClick={lerTexto}
       title={lendo ? "Parar leitura" : "Ouvir pergunta"}
       style={{
-        backgroundColor: lendo ? '#f87171' : '#3b82f6', // Vermelho quando lendo, Azul quando parado
+        backgroundColor: lendo ? '#D9435C' : '#1A6FC4', // Vermelho quando lendo, azul do Saber+ quando parado
         color: 'white',
         border: 'none',
         borderRadius: '24px',
@@ -78,7 +79,8 @@ function BotaoLeitura({ texto }) {
         fontFamily: 'inherit'
       }}
     >
-      <span style={{ fontSize: '1.2rem' }}>{lendo ? '⏹️' : '🔊'}</span>
+      {/* Ícones de traço no lugar dos emojis ⏹️/🔊 (25/10/2026), igual ao resto do sistema */}
+      {lendo ? <Square size={16} strokeWidth={2.6} fill="currentColor" /> : <Volume2 size={20} strokeWidth={2.4} />}
       {lendo ? 'Parar' : 'Ouvir a pergunta'}
     </button>
   );

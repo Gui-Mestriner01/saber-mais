@@ -474,6 +474,41 @@ function listaDePerguntas(conteudo) {
   return Array.isArray(conteudo) ? conteudo : (conteudo?.perguntas || []);
 }
 
+/* --------------------------------------------------------------------------
+   QUIZ COM VÁRIOS TIPOS DE PERGUNTA (25/10/2026)
+
+   Cada pergunta do quiz agora tem um tipo:
+   - 'quiz'   → alternativas, uma ou mais certas (o de sempre)
+   - 'v_f'    → verdadeiro ou falso. Fica guardada como um quiz de duas
+                alternativas ("Verdadeiro" e "Falso"), então a correção, o
+                modo ao vivo e os relatórios funcionam sem nada especial.
+   - 'puzzle' → itens para pôr em ordem. `itens` guarda a ordem CERTA; o
+                aluno recebe embaralhado e com ids secretos.
+
+   E duas propriedades por pergunta:
+   - tempo  → segundos para responder (0 ou vazio = sem tempo)
+   - pontos → 'padrao' (10), 'dobro' (20) ou 'nenhum' (0)
+
+   Pergunta antiga, sem nada disso, vale como 'quiz', sem tempo, 10 pontos.
+   -------------------------------------------------------------------------- */
+const VALOR_DOS_PONTOS = { padrao: 10, dobro: 20, nenhum: 0 };
+
+function tipoDaPergunta(p) {
+  return p && (p.tipo === 'v_f' || p.tipo === 'puzzle') ? p.tipo : 'quiz';
+}
+
+function valorDaPergunta(p) {
+  return VALOR_DOS_PONTOS[p?.pontos] ?? 10;
+}
+
+/* Os temas de fundo que existem no front (src/components/temas). Qualquer
+   outra coisa vira "sem tema", para ninguém gravar lixo na coluna. */
+const TEMAS_DE_FUNDO = ['selva', 'mar', 'espaco', 'neve', 'praia', 'lousa'];
+
+function temaValido(tema) {
+  return TEMAS_DE_FUNDO.includes(tema) ? tema : null;
+}
+
 function corretasDoQuiz(pergunta) {
   return (pergunta.alternativas || [])
     .map((a, i) => (a && typeof a === 'object' && a.correta ? i : null))
@@ -486,14 +521,27 @@ function conteudoParaAluno(atividade) {
 
   switch (atividade.tipo) {
     case 'quiz': {
-      const perguntas = listaDePerguntas(c).map(p => ({
-        ...p,
-        alternativas: (p.alternativas || []).map(a => {
-          if (!a || typeof a !== 'object') return { texto: String(a ?? '') };
-          const { correta, ...resto } = a; // eslint-disable-line no-unused-vars
-          return resto;
-        })
-      }));
+      const perguntas = listaDePerguntas(c).map((p, i) => {
+        // Puzzle: a ordem guardada É a resposta, então os itens saem
+        // embaralhados e com um id secreto no lugar da posição.
+        if (tipoDaPergunta(p) === 'puzzle') {
+          const { itens, ...resto } = p;
+          const lista = (itens || []).map((texto, k) => ({ id: idSecreto(atividade.id, `P${i}`, k), texto: String(texto ?? '') }));
+          let misturados = embaralharServidor(lista);
+          for (let t = 0; t < 10 && lista.length > 1 && misturados.every((x, k) => x.id === lista[k].id); t++) {
+            misturados = embaralharServidor(lista);
+          }
+          return { ...resto, tipo: 'puzzle', itens: misturados };
+        }
+        return {
+          ...p,
+          alternativas: (p.alternativas || []).map(a => {
+            if (!a || typeof a !== 'object') return { texto: String(a ?? '') };
+            const { correta, ...resto } = a; // eslint-disable-line no-unused-vars
+            return resto;
+          })
+        };
+      });
       return Array.isArray(c) ? perguntas : { ...c, perguntas };
     }
 
@@ -544,22 +592,50 @@ function corrigirResposta(atividade, resposta = {}) {
       const perguntas = listaDePerguntas(c);
       const enviadas = resposta.respostas || {};
       const respostas = {};
+      const acertou = [];
       let acertos = 0;
+      let pontos = 0;
+      let total = 0;
+
       const corretas = perguntas.map((p, i) => {
-        const certas = corretasDoQuiz(p);
         const brutas = enviadas[i] ?? enviadas[String(i)] ?? [];
+        const valor = valorDaPergunta(p);
+        total += valor;
+
+        // Puzzle: o aluno manda a lista de ids na ordem que montou. Só vale
+        // se a ordem inteira estiver certa (igual ao Ordenar no modo jogo).
+        if (tipoDaPergunta(p) === 'puzzle') {
+          const itens = p.itens || [];
+          const posicaoDe = {};
+          itens.forEach((_, k) => { posicaoDe[idSecreto(atividade.id, `P${i}`, k)] = k; });
+          const ordem = (Array.isArray(brutas) ? brutas : []).filter(id => posicaoDe[id] !== undefined);
+          const valida = ordem.length === itens.length && new Set(ordem).size === itens.length;
+          const certo = valida && ordem.every((id, k) => posicaoDe[id] === k);
+          // Guarda as posições (0, 1, 2...) em vez dos ids, que só fazem
+          // sentido aqui dentro — é isso que o relatório lê.
+          respostas[i] = valida ? ordem.map(id => posicaoDe[id]) : [];
+          acertou[i] = certo;
+          if (certo) { acertos++; pontos += valor; }
+          return itens.map((_, k) => idSecreto(atividade.id, `P${i}`, k));
+        }
+
+        const certas = corretasDoQuiz(p);
         const escolhidas = [...new Set((Array.isArray(brutas) ? brutas : [brutas])
           .map(Number)
           .filter(n => Number.isInteger(n) && n >= 0 && n < (p.alternativas || []).length))];
         respostas[i] = escolhidas;
-        if (escolhidas.length > 0 && escolhidas.length === certas.length && certas.every(x => escolhidas.includes(x))) acertos++;
+        const certo = escolhidas.length > 0 && escolhidas.length === certas.length && certas.every(x => escolhidas.includes(x));
+        acertou[i] = certo;
+        if (certo) { acertos++; pontos += valor; }
         return certas;
       });
-      const pontos = acertos * 10;
+
       return {
-        armazenar: { respostas, pontos, total: perguntas.length * 10, acertos },
+        // `perguntas` entrou para a insígnia "acertou tudo" saber quantas
+        // eram (o total em pontos não diz mais, com pergunta valendo 0 ou 20).
+        armazenar: { respostas, pontos, total, acertos, perguntas: perguntas.length },
         pontos,
-        resultado: { pontos, acertos, total: perguntas.length, corretas }
+        resultado: { pontos, acertos, total: perguntas.length, totalPontos: total, corretas, acertou }
       };
     }
 
@@ -1231,13 +1307,14 @@ app.post('/professor/atividade', autenticar, donoDaSala(req => req.body.sala_id)
   // Sem dizer nada, a atividade nasce privada — como era antes da biblioteca.
   const publica = req.body.publica ? 1 : 0;
   const origemId = Number(req.body.origem_id) || null;
+  const tema = temaValido(req.body.tema);
 
   if (!titulo || !tipo || !sala_id || !conteudo) return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
 
-  const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id, tema)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  db.query(sql, [titulo, tipo, sala_id, professorId, JSON.stringify(conteudo), tempo_limite, publica, origemId], (err, result) => {
+  db.query(sql, [titulo, tipo, sala_id, professorId, JSON.stringify(conteudo), tempo_limite, publica, origemId, tema], (err, result) => {
     if (err) return res.status(500).json({ erro: 'Erro ao salvar atividade.' });
     res.status(201).json({ mensagem: 'Atividade salva com sucesso!', id: result.insertId });
   });
@@ -1271,10 +1348,10 @@ app.post('/professor/atividades/v_f', autenticar, upload.any(), donoDaSala(req =
     const publica = req.body.publica === '1' || req.body.publica === 'true' ? 1 : 0;
     const origemId = Number(req.body.origem_id) || null;
 
-    const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id, tema)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    db.query(sql, [titulo, 'v_f', salaId, professorId, JSON.stringify(conteudoFormatado), tempo_limite > 0 ? tempo_limite : null, publica, origemId], (err, result) => {
+    db.query(sql, [titulo, 'v_f', salaId, professorId, JSON.stringify(conteudoFormatado), tempo_limite > 0 ? tempo_limite : null, publica, origemId, temaValido(req.body.tema)], (err, result) => {
       if (err) return res.status(500).json({ erro: 'Erro ao salvar atividade V/F no banco.' });
       res.status(201).json({ mensagem: 'Atividade criada com sucesso!', id: result.insertId });
     });
@@ -1292,7 +1369,7 @@ app.get('/sala/:salaId/atividades', acessoASala(req => req.params.salaId), (req,
   const aluno = req.acesso?.tipo === 'aluno' ? req.acesso.nome : '';
 
   const sql = `
-    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.tempo_limite,
+    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.tempo_limite, a.tema,
            (SELECT COUNT(*) FROM resposta_aluno r WHERE r.atividade_id = a.id AND r.nome_aluno = ?) AS respondida
     FROM atividade a
     WHERE a.sala_id = ?
@@ -1365,7 +1442,7 @@ app.post('/professor/atividade/:id/clonar', autenticar, donoDaSala(req => req.bo
 
   if (!sala_destino_id) return res.status(400).json({ erro: 'Sala de destino não informada.' });
 
-  const sqlSelect = `SELECT titulo, tipo, conteudo, tempo_limite FROM atividade WHERE id = ? AND professor_id = ?`;
+  const sqlSelect = `SELECT titulo, tipo, conteudo, tempo_limite, tema FROM atividade WHERE id = ? AND professor_id = ?`;
   
   db.query(sqlSelect, [atividadeId, professorId], (err, results) => {
     if (err) {
@@ -1378,9 +1455,9 @@ app.post('/professor/atividade/:id/clonar', autenticar, donoDaSala(req => req.bo
 
     const conteudoParaSalvar = typeof ativ.conteudo === 'object' ? JSON.stringify(ativ.conteudo) : ativ.conteudo;
 
-    const sqlInsert = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite) VALUES (?, ?, ?, ?, ?, ?)`;
+    const sqlInsert = `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, tema) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     
-    db.query(sqlInsert, [ativ.titulo, ativ.tipo, sala_destino_id, professorId, conteudoParaSalvar, ativ.tempo_limite], (errInsert, resultInsert) => {
+    db.query(sqlInsert, [ativ.titulo, ativ.tipo, sala_destino_id, professorId, conteudoParaSalvar, ativ.tempo_limite, temaValido(ativ.tema)], (errInsert, resultInsert) => {
       if (errInsert) {
         console.error('Erro no INSERT de clonagem:', errInsert);
         return res.status(500).json({ erro: 'Erro ao clonar a atividade no banco de dados.' });
@@ -1441,10 +1518,12 @@ app.put('/professor/atividade/:id', autenticar, (req, res) => {
     const tempo = req.body.tempo_limite === undefined
       ? atv.tempo_limite
       : (parseInt(req.body.tempo_limite) || 0) || null;
+    // O tema de fundo também só muda se vier no pedido.
+    const tema = req.body.tema === undefined ? temaValido(atv.tema) : temaValido(req.body.tema);
 
     db.query(
-      `UPDATE atividade SET titulo = ?, conteudo = ?, tempo_limite = ?, publica = ? WHERE id = ?`,
-      [titulo, JSON.stringify(conteudo), tempo, publica, atv.id],
+      `UPDATE atividade SET titulo = ?, conteudo = ?, tempo_limite = ?, publica = ?, tema = ? WHERE id = ?`,
+      [titulo, JSON.stringify(conteudo), tempo, publica, tema, atv.id],
       (erroUpdate) => {
         if (erroUpdate) return res.status(500).json({ erro: 'Erro ao salvar as alterações.' });
         res.json({ mensagem: 'Atividade atualizada!', id: atv.id });
@@ -1548,6 +1627,7 @@ app.get('/professor/biblioteca/:id', autenticar, (req, res) => {
         tipo: atv.tipo,
         tempo_limite: atv.tempo_limite,
         publica: !!atv.publica,
+        tema: temaValido(atv.tema),
         conteudo: lerConteudo(atv),
         minha,
         autor: (donos && donos[0] && donos[0].nome) || 'professor(a)',
@@ -1574,9 +1654,9 @@ app.post('/professor/biblioteca/:id/copiar', autenticar, donoDaSala(req => req.b
     const conteudo = typeof atv.conteudo === 'object' ? JSON.stringify(atv.conteudo) : atv.conteudo;
 
     db.query(
-      `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-      [atv.titulo, atv.tipo, req.body.sala_destino_id, req.usuario.id, conteudo, atv.tempo_limite, atv.id],
+      `INSERT INTO atividade (titulo, tipo, sala_id, professor_id, conteudo, tempo_limite, publica, origem_id, tema)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      [atv.titulo, atv.tipo, req.body.sala_destino_id, req.usuario.id, conteudo, atv.tempo_limite, atv.id, temaValido(atv.tema)],
       (erroInsert, resultado) => {
         if (erroInsert) return res.status(500).json({ erro: 'Erro ao copiar a atividade.' });
         // A cópia nasce privada: quem copiou decide depois se quer publicar a dele.
@@ -1812,13 +1892,27 @@ function montarPerguntas(atividade) {
 
   if (atividade.tipo === 'quiz') {
     const lista = Array.isArray(conteudo) ? conteudo : (conteudo.perguntas || []);
-    return lista.map(p => {
+    return lista.map((p, indiceOriginal) => {
+      // O Puzzle (pôr em ordem) ainda não tem tela no modo ao vivo: fica de
+      // fora da partida, e as outras perguntas seguem normalmente.
+      if (tipoDaPergunta(p) === 'puzzle') return null;
       const alternativas = (p.alternativas || []).map(a => ({
         texto: typeof a === 'string' ? a : (a.texto || ''),
         correta: typeof a === 'object' && !!a.correta
       }));
-      return { texto: p.texto || p.pergunta || '', imagem: p.imagem_url || p.imagem || null, alternativas };
-    }).filter(p => p.alternativas.length > 0);
+      return {
+        texto: p.texto || p.pergunta || '',
+        imagem: p.imagem_url || p.imagem || null,
+        alternativas,
+        tipo: tipoDaPergunta(p),
+        tempo: Number(p.tempo) > 0 ? Number(p.tempo) : 0,
+        valor: valorDaPergunta(p),
+        // Posição da pergunta na atividade. Como o Puzzle sai da partida, o
+        // índice da partida pode não bater com o da atividade — o relatório
+        // precisa do original.
+        indiceOriginal
+      };
+    }).filter(p => p && p.alternativas.length > 0);
   }
 
   if (atividade.tipo === 'v_f') {
@@ -1829,11 +1923,22 @@ function montarPerguntas(atividade) {
       alternativas: [
         { texto: 'Verdadeiro', correta: letraVF(p.resposta_correta) === 'V' },
         { texto: 'Falso',      correta: letraVF(p.resposta_correta) === 'F' }
-      ]
+      ],
+      tipo: 'v_f',
+      tempo: 0,
+      valor: 10
     }));
   }
 
   return [];
+}
+
+/* Quanto tempo a pergunta da vez tem: o que o professor pôs NELA, ou, se ela
+   é "sem tempo", o tempo que ele escolheu ao começar a partida. */
+function segundosDaPergunta(partida, indice = partida.indice) {
+  const p = partida.perguntas[indice];
+  const proprio = Number(p?.tempo) || 0;
+  return proprio > 0 ? Math.min(240, Math.max(5, proprio)) : partida.segundos;
 }
 
 function indicesCorretos(pergunta) {
@@ -1897,9 +2002,10 @@ function retrato(partida, { professor = false, jogadorId = null } = {}) {
     codigo: partida.codigo,
     atividadeId: partida.atividadeId,
     titulo: partida.titulo,
+    tema: partida.estado === 'lobby' ? null : (partida.tema || null),
     indice: partida.indice,
     total: partida.perguntas.length,
-    segundos: partida.segundos,
+    segundos: pergunta ? segundosDaPergunta(partida) : partida.segundos,
     restanteMs: emPergunta ? Math.max(0, partida.terminaEm - Date.now()) : 0,
     tipoSala: partida.tipoSala,
     convite: partida.convite,
@@ -1915,7 +2021,9 @@ function retrato(partida, { professor = false, jogadorId = null } = {}) {
       imagem: pergunta.imagem,
       alternativas: pergunta.alternativas.map(a => a.texto),
       // Avisa a tela que dá para marcar mais de uma (sem dizer quais são)
-      multipla: indicesCorretos(pergunta).length > 1
+      multipla: indicesCorretos(pergunta).length > 1,
+      tipo: pergunta.tipo || 'quiz',
+      valor: pergunta.valor ?? 10
     };
     if (!emPergunta) dados.gabarito = indicesCorretos(pergunta);
   }
@@ -2118,8 +2226,11 @@ app.post('/live/responder', acessoASala(req => req.body.sala_id), (req, res) => 
   const acertou = marcadas.length === corretas.length && corretas.every(c => marcadas.includes(c));
 
   const restante = Math.max(0, partida.terminaEm - Date.now());
-  const fracao = partida.segundos > 0 ? restante / (partida.segundos * 1000) : 0;
-  const ganhou = acertou ? Math.round(PONTOS_MINIMOS + PONTOS_BONUS * fracao) : 0;
+  const segundos = segundosDaPergunta(partida);
+  const fracao = segundos > 0 ? restante / (segundos * 1000) : 0;
+  // Pergunta "pontos em dobro" vale o dobro; "nenhum ponto" conta o acerto, mas não soma.
+  const multiplicador = (pergunta.valor ?? 10) / 10;
+  const ganhou = acertou ? Math.round((PONTOS_MINIMOS + PONTOS_BONUS * fracao) * multiplicador) : 0;
 
   // Trocar de resposta refaz a conta: tira o que a resposta antiga valia
   if (anterior) {
@@ -2133,7 +2244,7 @@ app.post('/live/responder', acessoASala(req => req.body.sala_id), (req, res) => 
     acertou,
     ganhou,
     confirmado: !!confirmar,
-    ms: partida.segundos * 1000 - restante
+    ms: segundos * 1000 - restante
   };
   jogador.pontos += ganhou;
   if (acertou) jogador.acertos += 1;
@@ -2216,7 +2327,7 @@ app.post('/live/iniciar', autenticar, (req, res) => {
   if (!partida) return res.status(404).json({ erro: 'Abra o painel da sala antes de começar.' });
 
   db.query(
-    `SELECT a.id, a.titulo, a.tipo, a.conteudo
+    `SELECT a.id, a.titulo, a.tipo, a.conteudo, a.tema
        FROM atividade a
        JOIN sala s ON a.sala_id = s.id
       WHERE a.id = ? AND s.id = ? AND s.professor_id = ?`,
@@ -2230,7 +2341,9 @@ app.post('/live/iniciar', autenticar, (req, res) => {
 
       if (perguntas.length === 0) {
         return res.status(400).json({
-          erro: 'Por enquanto o modo ao vivo funciona com Quiz e Verdadeiro ou Falso.'
+          erro: atividade.tipo === 'quiz'
+            ? 'Este quiz só tem perguntas de Puzzle, que ainda não funcionam no modo ao vivo.'
+            : 'Por enquanto o modo ao vivo funciona com Quiz e Verdadeiro ou Falso.'
         });
       }
       if (Object.keys(partida.jogadores).length === 0) {
@@ -2239,12 +2352,13 @@ app.post('/live/iniciar', autenticar, (req, res) => {
 
       partida.atividadeId = atividade.id;
       partida.titulo = atividade.titulo;
+      partida.tema = temaValido(atividade.tema); // cenário de fundo da atividade
       partida.perguntas = perguntas;
       partida.segundos = Math.min(120, Math.max(5, Number(segundos) || SEGUNDOS_PADRAO));
       partida.indice = 0;
       partida.rodada = Date.now(); // identifica esta partida nas conquistas do professor
       partida.estado = 'pergunta';
-      partida.terminaEm = Date.now() + partida.segundos * 1000;
+      partida.terminaEm = Date.now() + segundosDaPergunta(partida) * 1000;
       partida.salvo = false;
 
       // Zera a pontuação: quem estava na sala de espera começa do zero.
@@ -2281,7 +2395,7 @@ app.post('/live/proxima', autenticar, donoDaSala(req => req.body.sala_id), (req,
   } else {
     partida.indice += 1;
     partida.estado = 'pergunta';
-    partida.terminaEm = Date.now() + partida.segundos * 1000;
+    partida.terminaEm = Date.now() + segundosDaPergunta(partida) * 1000;
   }
 
   io.to(String(partida.salaId)).emit('partida_mudou', { estado: partida.estado, indice: partida.indice });
@@ -2347,7 +2461,12 @@ function gravarResultado(partida) {
 
   jogadores.forEach(jogador => {
     const respostas = {};
-    Object.entries(jogador.respostas).forEach(([i, r]) => { respostas[i] = r.escolhas || [r.escolha]; });
+    // Guarda pela posição da pergunta NA ATIVIDADE (o Puzzle não entra na
+    // partida, então o índice da partida pode ser diferente).
+    Object.entries(jogador.respostas).forEach(([i, r]) => {
+      const original = partida.perguntas[i]?.indiceOriginal ?? i;
+      respostas[original] = r.escolhas || [r.escolha];
+    });
 
     const conteudo = {
       respostas,
@@ -2476,6 +2595,18 @@ db.query(`SHOW COLUMNS FROM atividade LIKE 'publica'`, (err, colunas) => {
     db.query(`ALTER TABLE atividade ADD COLUMN publica TINYINT(1) NOT NULL DEFAULT 0`, (e) => {
       if (e) console.error('Não consegui criar a coluna atividade.publica:', e.message);
       else console.log('✅ Coluna atividade.publica criada (tudo que já existia ficou privado).');
+    });
+  }
+});
+
+/* Tema de fundo da atividade (selva, fundo do mar...). Vazio = sem tema,
+   que é como tudo que já existia continua. */
+db.query(`SHOW COLUMNS FROM atividade LIKE 'tema'`, (err, colunas) => {
+  if (err) return console.error('Não consegui conferir a coluna atividade.tema:', err.message);
+  if (colunas.length === 0) {
+    db.query(`ALTER TABLE atividade ADD COLUMN tema VARCHAR(30) NULL`, (e) => {
+      if (e) console.error('Não consegui criar a coluna atividade.tema:', e.message);
+      else console.log('✅ Coluna atividade.tema criada (atividades antigas ficam sem tema).');
     });
   }
 });
@@ -2622,6 +2753,13 @@ function acertouTudo(resposta, nota) {
 
   if (Array.isArray(resposta)) {
     return resposta.length > 0 && resposta.every(r => r && r.acertou === true);
+  }
+  // Quiz respondido no ritmo do aluno: { respostas, acertos, total (em pontos) }.
+  // Antes caía na regra de baixo e comparava acertos (3) com pontos (30), então
+  // o quiz nunca contava como "acertou tudo".
+  if (resposta.modo !== 'ao_vivo' && resposta.respostas && !Array.isArray(resposta.respostas) && typeof resposta.acertos === 'number') {
+    const perguntas = Number(resposta.perguntas) || Object.keys(resposta.respostas).length;
+    return perguntas > 0 && resposta.acertos >= perguntas;
   }
   if (resposta.modo !== 'ao_vivo' && typeof resposta.acertos === 'number' && Number(resposta.total) > 0) {
     return resposta.acertos >= Number(resposta.total);

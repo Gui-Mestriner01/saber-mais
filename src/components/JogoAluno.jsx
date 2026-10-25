@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star } from 'lucide-react';
 import '../CSS/NovasAtividades.css';
+import { FundoTema, classeTema } from './TemaFundo';
 import { API, cabecalhoAluno } from '../api';
 
 /* ==========================================================================
@@ -48,6 +49,8 @@ export function useAtividadeAluno() {
 
   const [conteudo, setConteudo] = useState(null);
   const [erro, setErro] = useState('');
+  // Cenário de fundo escolhido pelo professor (vem na lista e na atividade).
+  const [tema, setTema] = useState(atividade?.tema || null);
 
   const voltar = () => navigate('/aluno/home', { state: { sala, nomeAluno, alunoId } });
 
@@ -59,7 +62,7 @@ export function useAtividadeAluno() {
         if (!r.ok) throw new Error();
         return r.json();
       })
-      .then(dados => { if (dados) setConteudo(dados.conteudo || {}); })
+      .then(dados => { if (dados) { setConteudo(dados.conteudo || {}); setTema(dados.tema || null); } })
       .catch(() => setErro('Não consegui abrir a atividade. Tente de novo.'));
   }, []);
 
@@ -76,12 +79,13 @@ export function useAtividadeAluno() {
     return dados.resultado;
   };
 
-  return { atividade, conteudo, erro, enviar, voltar };
+  return { atividade, conteudo, erro, enviar, voltar, tema };
 }
 
-export function JogoAluno({ titulo, voltar, children }) {
+export function JogoAluno({ titulo, voltar, tema, children }) {
   return (
-    <div className="jogo-aluno">
+    <div className={`jogo-aluno ${classeTema(tema)}`}>
+      <FundoTema tema={tema} />
       <header className="jogo-topo">
         <span><span className="marca-saber">Saber</span><span className="marca-mais">+</span></span>
         <h1>{titulo}</h1>

@@ -1,259 +1,390 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import {
+  ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Check, X, Send, Timer, Award, ListChecks,
+  ToggleLeft, ListOrdered, CircleAlert,
+} from 'lucide-react';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
+import {
+  useAtividadeAluno, JogoAluno, JanelaConfirmar, ResultadoAtividade, estrelasPorAproveitamento,
+} from '../components/JogoAluno';
+import { FormaMarca, marca, COR_VERDADEIRO, COR_FALSO } from '../components/MarcasQuiz';
 import '../CSS/ResponderQuiz.css';
-import '../CSS/ResponderVF.css'; 
-import { API, cabecalhoAluno } from '../api';
+
+/* ==========================================================================
+   ALUNO — QUIZ (refeito em 25/10/2026)
+
+   O quiz agora mistura três tipos de pergunta:
+   - Quiz ............... toca na(s) alternativa(s)
+   - Verdadeiro ou falso  dois botões grandes
+   - Puzzle ............. sobe e desce os itens até ficar na ordem certa
+
+   CRONÔMETRO: cada pergunta pode ter um tempo. Ele começa quando a pergunta
+   aparece; quando acaba, a pergunta trava e o quiz passa para a próxima
+   sozinho (na última, abre o "enviar"). Pergunta com tempo também trava
+   quando o aluno avança — senão bastaria voltar para ganhar mais tempo.
+   Pergunta "sem tempo" funciona como antes: dá para voltar e trocar.
+
+   O gabarito não vem para o navegador: o servidor corrige e devolve os
+   pontos, quais acertou e as respostas certas para a tela de correção.
+   ========================================================================== */
+
+const NOME_DO_TIPO = {
+  quiz:   { nome: 'Quiz', Icone: ListChecks },
+  v_f:    { nome: 'Verdadeiro ou falso', Icone: ToggleLeft },
+  puzzle: { nome: 'Puzzle', Icone: ListOrdered },
+};
+
+const tipoDe = (p) => (p?.tipo === 'v_f' || p?.tipo === 'puzzle' ? p.tipo : 'quiz');
+
+function textoValor(p) {
+  if (p?.pontos === 'dobro') return 'Vale o dobro: 20 pontos';
+  if (p?.pontos === 'nenhum') return 'Só para treinar';
+  return '10 pontos';
+}
+
+/* Relógio redondo que vai esvaziando. */
+function Cronometro({ restanteMs, totalMs }) {
+  const segundos = Math.max(0, Math.ceil(restanteMs / 1000));
+  const fracao = totalMs > 0 ? Math.max(0, Math.min(1, restanteMs / totalMs)) : 0;
+  const nivel = segundos <= 5 ? 'pouco' : segundos <= 10 ? 'atencao' : '';
+  const R = 22;
+  const volta = 2 * Math.PI * R;
+  return (
+    <div className={`qa-relogio ${nivel}`} role="timer" aria-label={`${segundos} segundos restantes`}>
+      <svg viewBox="0 0 52 52" aria-hidden="true">
+        <circle cx="26" cy="26" r={R} className="qa-relogio-fundo" />
+        <circle cx="26" cy="26" r={R} className="qa-relogio-anel"
+          strokeDasharray={volta} strokeDashoffset={volta * (1 - fracao)} />
+      </svg>
+      <span>{segundos}</span>
+    </div>
+  );
+}
 
 function ResponderQuiz() {
-  const { state } = useLocation();
-  const navigate = useNavigate();
-  
-  // 🛠️ Recebe os dados da Sala Temporária
-  const { atividade, nomeAluno, sala, aluno, modoLive } = state || {};
+  const { atividade, conteudo, erro, enviar, voltar, tema } = useAtividadeAluno();
 
-
-  const [perguntas, setPerguntas]     = useState([]);
-  const [idxAtual, setIdxAtual]       = useState(0);
-  const [respostas, setRespostas]     = useState({});
-  const [enviando, setEnviando]       = useState(false);
-  const [finalizado, setFinalizado]   = useState(false);
-  const [pontos, setPontos]           = useState(0);
-  
-  const [showConfirmacao, setShowConfirmacao] = useState(false); 
+  const [perguntas, setPerguntas] = useState([]);
+  const [idx, setIdx]             = useState(0);
+  const [respostas, setRespostas] = useState({});   // quiz/v_f: [índices]; puzzle: [ids na ordem do aluno]
+  const [inicio, setInicio]       = useState({});   // quando cada pergunta com tempo começou
+  const [travadas, setTravadas]   = useState({});   // perguntas que não dá mais para mexer
+  const [agora, setAgora]         = useState(Date.now());
+  const [esgotou, setEsgotou]     = useState(false); // aviso "o tempo acabou"
+  const [mexido, setMexido]       = useState(null);  // item do puzzle que acabou de mexer (brilha)
+  const [confirmar, setConfirmar] = useState(false);
+  const [enviando, setEnviando]   = useState(false);
+  const [resultado, setResultado] = useState(null);
+  const [erroEnvio, setErroEnvio] = useState('');
+  const avancando = useRef(false);
+  const timerFim = useRef(null);
 
   useEffect(() => {
-    // Se não tiver bagagem nenhuma, expulsa
-    if (!atividade && !aluno && !nomeAluno) { 
-      navigate('/aluno'); 
-      return; 
-    }
+    const lista = Array.isArray(conteudo) ? conteudo : (conteudo?.perguntas || []);
+    if (!lista.length) return;
+    setPerguntas(lista);
+    // O puzzle começa na ordem embaralhada que veio do servidor.
+    const iniciais = {};
+    lista.forEach((p, i) => { if (tipoDe(p) === 'puzzle') iniciais[i] = (p.itens || []).map(it => it.id); });
+    setRespostas(iniciais);
+  }, [conteudo]);
 
-    // 🚀 A MÁGICA AQUI: Se a atividade já veio completa do Lobby, não precisa de Fetch!
-    if (atividade && atividade.conteudo) {
-      // Tenta ler como .perguntas (Quiz) ou direto o array (V/F)
-      const listaPerguntas = atividade.conteudo.perguntas || atividade.conteudo;
-      
-      if (Array.isArray(listaPerguntas) && listaPerguntas.length > 0) {
-        setPerguntas(listaPerguntas);
-      } else {
-        buscarAtividade(); // Fallback de emergência
-      }
-    } else if (atividade) {
-      buscarAtividade();
-    }
-  }, []);
+  const p = perguntas[idx];
+  const tipo = tipoDe(p);
+  const tempoMs = (Number(p?.tempo) || 0) * 1000;
+  const travada = !!travadas[idx];
+  const ultima = idx === perguntas.length - 1;
 
-  const buscarAtividade = async () => {
-    try {
-      const res = await fetch(`${API}/atividade/${atividade.id}`, { headers: cabecalhoAluno() });
-      if (res.status === 401) { navigate('/aluno/area'); return; }
-      const data = await res.json();
-      const lista = data.conteudo?.perguntas || data.conteudo || [];
-      setPerguntas(Array.isArray(lista) ? lista : []);
-    } catch {
-      setPerguntas([]);
+  /* Liga o relógio da pergunta na primeira vez que ela aparece. */
+  useEffect(() => {
+    if (!p || tempoMs <= 0 || travadas[idx] || inicio[idx]) return;
+    setInicio(atual => ({ ...atual, [idx]: Date.now() }));
+  }, [idx, p, tempoMs]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Faz o relógio andar só enquanto tem uma pergunta com tempo na tela. */
+  useEffect(() => {
+    if (tempoMs <= 0 || travada || resultado || confirmar) return;
+    const t = setInterval(() => setAgora(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [idx, tempoMs, travada, resultado, confirmar]);
+
+  const restanteMs = tempoMs > 0 && inicio[idx] ? Math.max(0, tempoMs - (agora - inicio[idx])) : tempoMs;
+
+  /* Acabou o tempo: trava, avisa e segue. O timeout fica guardado num ref
+     (e não na limpeza do efeito): travar a pergunta muda as dependências, e
+     a limpeza cancelaria o "seguir para a próxima" no meio do caminho. */
+  useEffect(() => () => clearTimeout(timerFim.current), []);
+  useEffect(() => {
+    if (tempoMs <= 0 || travada || !inicio[idx] || restanteMs > 0 || avancando.current) return;
+    avancando.current = true;
+    setTravadas(atual => ({ ...atual, [idx]: true }));
+    setEsgotou(true);
+    const daVez = idx;
+    timerFim.current = setTimeout(() => {
+      setEsgotou(false);
+      avancando.current = false;
+      if (daVez < perguntas.length - 1) setIdx(daVez + 1);
+      else setConfirmar(true);
+    }, 1400);
+  }, [restanteMs, tempoMs, travada, idx, perguntas.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const escolher = (k) => {
+    if (travada) return;
+    const atual = respostas[idx] || [];
+    if (tipo === 'quiz' && p.multiplaEscolha) {
+      setRespostas({ ...respostas, [idx]: atual.includes(k) ? atual.filter(x => x !== k) : [...atual, k] });
+    } else {
+      setRespostas({ ...respostas, [idx]: [k] });
     }
   };
 
-  const perguntaAtual = perguntas[idxAtual];
-
-  // ==========================================
-  // TEXTO INTELIGENTE PARA O LEITOR DE VOZ
-  // ==========================================
-  let textoParaLeitura = '';
-  if (perguntaAtual && perguntaAtual.alternativas) {
-    textoParaLeitura = `${perguntaAtual.texto}. As opções de resposta são: `;
-    perguntaAtual.alternativas.forEach((alt, index) => {
-      textoParaLeitura += `Opção ${index + 1}: ${alt.texto}. `;
-    });
-  }
-  // ==========================================
-
-  const selecionarResposta = (altIdx) => {
-    if (finalizado) return;
-    const p = perguntas[idxAtual];
-    if (p.multiplaEscolha) {
-      const atual = respostas[idxAtual] || [];
-      if (atual.includes(altIdx)) {
-        setRespostas({ ...respostas, [idxAtual]: atual.filter(i => i !== altIdx) });
-      } else {
-        setRespostas({ ...respostas, [idxAtual]: [...atual, altIdx] });
-      }
-    } else {
-      setRespostas({ ...respostas, [idxAtual]: [altIdx] });
-    }
+  const moverItem = (k, direcao) => {
+    if (travada) return;
+    const ordem = [...(respostas[idx] || [])];
+    const destino = k + direcao;
+    if (destino < 0 || destino >= ordem.length) return;
+    [ordem[k], ordem[destino]] = [ordem[destino], ordem[k]];
+    setRespostas({ ...respostas, [idx]: ordem });
+    setMexido(ordem[destino]);
   };
 
   const proxima = () => {
-    if (idxAtual < perguntas.length - 1) setIdxAtual(idxAtual + 1);
+    // Na última, só abre o "enviar": se o aluno cancelar, ainda pode mexer
+    // (o relógio fica parado enquanto a janela está aberta).
+    if (ultima) { setConfirmar(true); return; }
+    // Pergunta com tempo não volta: senão era só voltar para ganhar mais tempo.
+    if (tempoMs > 0) setTravadas(atual => ({ ...atual, [idx]: true }));
+    setIdx(idx + 1);
   };
 
-  const anterior = () => {
-    if (idxAtual > 0) setIdxAtual(idxAtual - 1);
-  };
+  const anterior = () => { if (idx > 0 && !travadas[idx - 1]) setIdx(idx - 1); };
 
-  // A resposta certa não vem mais para o navegador: quem corrige é o servidor,
-  // que devolve os pontos já calculados.
-  const handleEnviar = async () => {
+  const semResposta = perguntas.filter((q, i) => tipoDe(q) !== 'puzzle' && !(respostas[i] || []).length).length;
+
+  const enviarTudo = async () => {
     setEnviando(true);
-
+    setErroEnvio('');
     try {
-      const res = await fetch(`${API}/atividade/${atividade.id}/resposta`, {
-        method: 'POST',
-        headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ resposta: { respostas } })
-      });
-      const dados = await res.json().catch(() => ({}));
-      if (!res.ok) { alert(dados.erro || 'Não consegui enviar. Tente de novo.'); return; }
-      setPontos(dados.resultado?.pontos ?? 0);
-      setFinalizado(true);
-      setShowConfirmacao(false); 
-    } catch {
-      alert('Não consegui falar com o servidor. Confira a internet.');
+      const corrigido = await enviar({ respostas });
+      setResultado(corrigido);
+      setConfirmar(false);
+    } catch (e) {
+      setErroEnvio(e.message || 'Não consegui enviar. Confira a internet e tente de novo.');
+      setConfirmar(false);
     } finally {
       setEnviando(false);
     }
   };
 
-  const CORES = ['#E23F3F','#1368CE','#D89E00','#26890C','#8B44AC','#E07820'];
-  const ICONS = ['▲','◆','●','■','★','⬟'];
+  /* ---------------------------------------------------------------- */
+  if (erro) {
+    return (
+      <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+        <p className="jogo-carregando">{erro}</p>
+      </JogoAluno>
+    );
+  }
 
-  if (!perguntaAtual && !finalizado) return (
-    <div className="rq-container" style={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
-      <h2>⏳ Carregando a atividade... (Prepare-se!)</h2>
-    </div>
-  );
+  if (!p) {
+    return (
+      <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+        <p className="jogo-carregando">Preparando as perguntas…</p>
+      </JogoAluno>
+    );
+  }
 
-  if (finalizado) return (
-    <div className="vf-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <div className="vf-conclusion-card">
-        <div className="vf-trophy">🏆</div>
-        <h2 className="vf-conclusion-title">Você terminou!</h2>
-        
-        <div style={{ marginBottom: '24px' }}>
-            <p style={{ fontSize: '1.2rem', color: '#64748b', margin: 0 }}>Você fez</p>
-            <strong style={{ fontSize: '2.5rem', color: '#f59e0b' }}>{pontos}</strong>
-            <p style={{ fontSize: '1.2rem', color: '#64748b', margin: 0 }}>de {perguntas.length * 10} pontos!</p>
-        </div>
-
-        <button 
-          className="vf-btn-back"
-          onClick={() => {
-            if (modoLive || aluno) {
-              navigate('/aluno/lobby');
-            } else {
-              navigate('/aluno/home', { state: { sala, nomeAluno } });
-            }
-          }}
+  /* ---------------------------------------------------------- resultado */
+  if (resultado) {
+    const total = resultado.total ?? perguntas.length;
+    return (
+      <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+        <ResultadoAtividade
+          estrelas={estrelasPorAproveitamento(resultado.acertos, total)}
+          pontos={resultado.pontos}
+          titulo={resultado.acertos === total ? 'Acertou tudo!' : 'Você terminou!'}
+          subtitulo={`Você acertou ${resultado.acertos} de ${total} ${total === 1 ? 'pergunta' : 'perguntas'}.`}
+          voltar={voltar}
         >
-          {aluno ? '← Voltar para a Sala de Espera' : '← Voltar para as Atividades'}
-        </button>
-      </div>
-    </div>
-  );
+          <ol className="qa-correcao">
+            {perguntas.map((q, i) => {
+              const certo = resultado.acertou?.[i];
+              const certas = resultado.corretas?.[i] || [];
+              let resposta = '';
+              if (tipoDe(q) === 'puzzle') {
+                const textoDe = Object.fromEntries((q.itens || []).map(it => [it.id, it.texto]));
+                resposta = certas.map(id => textoDe[id]).filter(Boolean).join(' → ');
+              } else {
+                resposta = certas.map(k => q.alternativas?.[k]?.texto).filter(Boolean).join(', ');
+              }
+              return (
+                <li key={i} className={certo ? 'certo' : 'errado'}>
+                  <span className="qa-correcao-icone">{certo ? <Check size={16} strokeWidth={3} /> : <X size={16} strokeWidth={3} />}</span>
+                  <span className="qa-correcao-texto">
+                    <strong>{q.texto}</strong>
+                    {!certo && resposta && <em>Resposta certa: {resposta}</em>}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </ResultadoAtividade>
+      </JogoAluno>
+    );
+  }
 
-  if (showConfirmacao) return (
-    <div className="vf-container" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <div className="vf-conclusion-card">
-        <h2 style={{ fontSize: '2rem', color: '#1e293b', marginBottom: '16px' }}>Enviar atividade?</h2>
-        <p style={{ fontSize: '1.1rem', color: '#64748b', marginBottom: '32px' }}>
-          Após enviar você não poderá mais editar.
-        </p>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-          <button 
-            onClick={handleEnviar}
-            disabled={enviando}
-            style={{ width: '100%', maxWidth: '300px', padding: '16px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1.2rem', fontWeight: 'bold', cursor: enviando ? 'not-allowed' : 'pointer' }}
-          >
-            {enviando ? 'Enviando...' : '✓ Enviar'}
-          </button>
-          
-          {!enviando && (
-            <button 
-              onClick={() => setShowConfirmacao(false)}
-              style={{ width: '100%', maxWidth: '300px', padding: '16px', backgroundColor: 'transparent', color: '#3b82f6', border: 'none', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer' }}
-            >
-              Cancelar
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  /* ---------------------------------------------------------- pergunta */
+  const escolhidas = respostas[idx] || [];
+  const { nome: nomeTipo, Icone: IconeTipo } = NOME_DO_TIPO[tipo];
+
+  let leitura = `${p.texto}. `;
+  if (tipo === 'v_f') leitura += 'Verdadeiro ou falso?';
+  else if (tipo === 'puzzle') leitura += 'Coloque em ordem: ' + (p.itens || []).map(it => it.texto).join(', ') + '.';
+  else leitura += 'As opções são: ' + (p.alternativas || []).map((a, k) => `${marca(k).nome}, ${a.texto}`).join('. ') + '.';
+
+  const itensPorId = Object.fromEntries((p.itens || []).map(it => [it.id, it]));
 
   return (
-    <div className="rq-container">
-      <header className="rq-header">
-        <div className="rq-brand">
-          <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
-        </div>
-        <h2>{atividade.titulo}</h2>
-        <span className="rq-progresso">{idxAtual + 1} / {perguntas.length}</span>
-      </header>
-
-      <main className="rq-main">
-        <div className="rq-pergunta-card">
-          <p className="rq-num">Pergunta {idxAtual + 1}</p>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            <h2 className="rq-pergunta-texto" style={{ margin: '0', textAlign: 'center' }}>
-              {perguntaAtual.texto}
-            </h2>
-            <BotaoLeitura texto={textoParaLeitura} />
+    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+      <div className="qa">
+        {/* barra: progresso, valor e relógio */}
+        <div className="qa-barra">
+          <div className="qa-barra-texto">
+            <span className="qa-contador">Pergunta {idx + 1} de {perguntas.length}</span>
+            <span className={`qa-valor ${p.pontos === 'dobro' ? 'dobro' : p.pontos === 'nenhum' ? 'nenhum' : ''}`}>
+              <Award size={14} strokeWidth={2.4} /> {textoValor(p)}
+            </span>
           </div>
+          <div className="qa-progresso" aria-hidden="true">
+            <span style={{ width: `${((idx + 1) / perguntas.length) * 100}%` }} />
+          </div>
+          {tempoMs > 0 && !travada && <Cronometro restanteMs={restanteMs} totalMs={tempoMs} />}
+          {tempoMs > 0 && travada && <span className="qa-relogio-fim"><Timer size={16} strokeWidth={2.4} /> Encerrada</span>}
+        </div>
 
-          {perguntaAtual.imagem && (
-            <img src={perguntaAtual.imagem} alt="imagem" className="rq-imagem" />
+        {/* enunciado */}
+        <div className="qa-pergunta">
+          <span className={`qa-tipo tipo-${tipo}`}><IconeTipo size={14} strokeWidth={2.4} /> {nomeTipo}</span>
+          <h2>{p.texto}</h2>
+          <div className="qa-leitura"><BotaoLeitura texto={leitura} /></div>
+          {p.imagem && <img src={p.imagem} alt="Imagem da pergunta" className="qa-imagem" />}
+          {tipo === 'quiz' && p.multiplaEscolha && <p className="qa-aviso">Pode ter mais de uma certa: marque todas.</p>}
+          {tipo === 'puzzle' && <p className="qa-aviso">Use as setas para deixar na ordem certa, de cima para baixo.</p>}
+        </div>
+
+        {/* respostas */}
+        <div className={`qa-area ${travada ? 'travada' : ''}`}>
+          {tipo === 'quiz' && (
+            <div className="qa-alternativas">
+              {(p.alternativas || []).map((a, k) => {
+                const marcada = escolhidas.includes(k);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    className={`qa-alt ${marcada ? 'marcada' : ''} ${escolhidas.length && !marcada && !p.multiplaEscolha ? 'apagada' : ''}`}
+                    style={{ '--cor': marca(k).cor }}
+                    aria-pressed={marcada}
+                    disabled={travada}
+                    onClick={() => escolher(k)}
+                  >
+                    <span className="qa-alt-marca"><FormaMarca indice={k} tamanho={26} /></span>
+                    <span className="qa-alt-texto">{a.texto}</span>
+                    <span className="qa-alt-check">{marcada && <Check size={18} strokeWidth={3} />}</span>
+                  </button>
+                );
+              })}
+            </div>
           )}
-          {perguntaAtual.multiplaEscolha && (
-            <p className="rq-multipla-info">✏️ Selecione todas as corretas</p>
+
+          {tipo === 'v_f' && (
+            <div className="qa-vf">
+              {[
+                { k: 0, nome: 'Verdadeiro', cor: COR_VERDADEIRO, Icone: Check },
+                { k: 1, nome: 'Falso',      cor: COR_FALSO,      Icone: X },
+              ].map(o => {
+                const marcada = escolhidas.includes(o.k);
+                return (
+                  <button
+                    key={o.k}
+                    type="button"
+                    className={`qa-vf-btn ${marcada ? 'marcada' : ''} ${escolhidas.length && !marcada ? 'apagada' : ''}`}
+                    style={{ '--cor': o.cor }}
+                    aria-pressed={marcada}
+                    disabled={travada}
+                    onClick={() => escolher(o.k)}
+                  >
+                    <span className="qa-vf-icone"><o.Icone size={34} strokeWidth={3} /></span>
+                    <span>{o.nome}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {tipo === 'puzzle' && (
+            <ol className="qa-puzzle">
+              {escolhidas.map((id, k) => (
+                <li key={id} className={`qa-puzzle-item ${mexido === id ? 'mexido' : ''}`} style={{ '--cor': marca(k).cor }}>
+                  <span className="qa-puzzle-pos">{k + 1}º</span>
+                  <span className="qa-alt-marca"><FormaMarca indice={k} tamanho={22} /></span>
+                  <span className="qa-puzzle-texto">{itensPorId[id]?.texto}</span>
+                  <span className="qa-puzzle-setas">
+                    <button type="button" onClick={() => moverItem(k, -1)} disabled={travada || k === 0}
+                      aria-label={`Subir ${itensPorId[id]?.texto}`}>
+                      <ArrowUp size={20} strokeWidth={2.6} />
+                    </button>
+                    <button type="button" onClick={() => moverItem(k, 1)} disabled={travada || k === escolhidas.length - 1}
+                      aria-label={`Descer ${itensPorId[id]?.texto}`}>
+                      <ArrowDown size={20} strokeWidth={2.6} />
+                    </button>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          {esgotou && (
+            <div className="qa-esgotou" role="alert">
+              <Timer size={30} strokeWidth={2.4} />
+              <strong>O tempo acabou!</strong>
+              <span>{ultima ? 'Vamos enviar as respostas.' : 'Indo para a próxima…'}</span>
+            </div>
           )}
         </div>
 
-        <div className="rq-alternativas">
-          {perguntaAtual.alternativas && perguntaAtual.alternativas.map((alt, altIdx) => {
-            const selecionadas = respostas[idxAtual] || [];
-            const selecionada = selecionadas.includes(altIdx);
-            return (
-              <button
-                key={altIdx}
-                className={`rq-alternativa ${selecionada ? 'selecionada' : ''}`}
-                style={{'--cor': CORES[altIdx]}}
-                onClick={() => selecionarResposta(altIdx)}
-              >
-                <div className="rq-alt-icone" style={{background: CORES[altIdx]}}>
-                  {ICONS[altIdx]}
-                </div>
-                <span>{alt.texto}</span>
-                {selecionada && <span className="rq-check">✓</span>}
-              </button>
-            );
-          })}
-        </div>
+        {erroEnvio && <p className="qa-erro"><CircleAlert size={16} strokeWidth={2.4} /> {erroEnvio}</p>}
 
-        <div className="rq-navegacao">
-          <button className="rq-btn-nav" onClick={anterior} disabled={idxAtual === 0}>
-            ← Anterior
+        <div className="qa-nav">
+          <button type="button" className="jogo-btn secundario" onClick={anterior}
+            disabled={idx === 0 || !!travadas[idx - 1] || esgotou}
+            title={idx > 0 && travadas[idx - 1] ? 'A pergunta anterior tinha tempo e já foi encerrada' : undefined}>
+            <ArrowLeft size={18} strokeWidth={2.4} /> Anterior
           </button>
 
-          {idxAtual < perguntas.length - 1 ? (
-            <button className="rq-btn-nav próxima" onClick={proxima}>
-              Próxima →
-            </button>
-          ) : (
-            <button 
-               className="rq-btn-enviar" 
-               onClick={() => setShowConfirmacao(true)} 
-               disabled={enviando}
-            >
-              ✅ Enviar Quiz
-            </button>
-          )}
+          <div className="qa-pontinhos" aria-hidden="true">
+            {perguntas.map((q, i) => (
+              <span key={i} className={`${i === idx ? 'atual' : ''} ${(tipoDe(q) === 'puzzle' || (respostas[i] || []).length) ? 'feita' : ''}`} />
+            ))}
+          </div>
+
+          <button type="button" className={`jogo-btn ${ultima ? '' : 'azul'}`} onClick={proxima} disabled={esgotou}>
+            {ultima ? <><Send size={18} strokeWidth={2.4} /> Enviar</> : <>Próxima <ArrowRight size={18} strokeWidth={2.4} /></>}
+          </button>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {confirmar && (
+        <JanelaConfirmar
+          titulo="Enviar suas respostas?"
+          texto={semResposta > 0
+            ? `Ainda ${semResposta === 1 ? 'tem 1 pergunta' : `tem ${semResposta} perguntas`} sem resposta. Depois de enviar não dá para mudar.`
+            : 'Depois de enviar não dá para mudar. Valendo!'}
+          aoConfirmar={enviarTudo}
+          aoCancelar={() => setConfirmar(false)}
+          enviando={enviando}
+        />
+      )}
+    </JogoAluno>
   );
 }
 

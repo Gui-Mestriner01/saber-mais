@@ -122,14 +122,14 @@ function CriarVF() {
       ? await fetch(`${API}/professor/atividade/${extras.editandoId}`, {
           method: 'PUT',
           headers: cabecalho,
-          body: JSON.stringify({ titulo, conteudo: prontas, publica: extras.publica, tempo_limite: emMinutos() }),
+          body: JSON.stringify({ titulo, conteudo: prontas, publica: extras.publica, tema: extras.tema, tempo_limite: emMinutos() }),
         })
       : await fetch(`${API}/professor/atividade`, {
           method: 'POST',
           headers: cabecalho,
           body: JSON.stringify({
             titulo, tipo: 'v_f', sala_id: salaId, conteudo: prontas,
-            tempo_limite: emMinutos(), publica: extras.publica, origem_id: extras.origemId,
+            tempo_limite: emMinutos(), publica: extras.publica, tema: extras.tema, origem_id: extras.origemId,
           }),
         });
 

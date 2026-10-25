@@ -1,20 +1,26 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Check, X, CircleCheck } from 'lucide-react';
 import '../CSS/AoVivo.css';
 import { API, comToken, tokenAluno, acessoSala } from '../api';
+import { FormaMarca, marca, COR_VERDADEIRO, COR_FALSO } from '../components/MarcasQuiz';
+import { FundoTema, classeTema } from '../components/TemaFundo';
 
 // Crachá para falar com a partida: o do aluno logado ou o da senha da sala
 const crachaDe = (dados) => (dados?.alunoId ? tokenAluno() : null) || dados?.token || acessoSala(dados?.salaId);
 
 
-// Cada alternativa tem cor e símbolo. O símbolo existe para quem não
-// distingue bem as cores continuar conseguindo jogar.
-const ESTILOS = [
-  { classe: 'alt-azul',   simbolo: '▲', nome: 'triângulo' },
-  { classe: 'alt-laranja', simbolo: '◆', nome: 'losango'   },
-  { classe: 'alt-verde',  simbolo: '●', nome: 'círculo'   },
-  { classe: 'alt-roxo',   simbolo: '■', nome: 'quadrado'  }
-];
+// Cada alternativa tem cor e forma (as mesmas do quiz: estrela, coração,
+// nuvem...). A forma existe para quem não distingue bem as cores continuar
+// conseguindo jogar. Verdadeiro/falso usa verde e vermelho, com ✓ e ✗.
+const estiloDa = (p, i) => {
+  if (p?.tipo === 'v_f') {
+    return i === 0
+      ? { cor: COR_VERDADEIRO, simbolo: <Check size={24} strokeWidth={3} /> }
+      : { cor: COR_FALSO, simbolo: <X size={24} strokeWidth={3} /> };
+  }
+  return { cor: marca(i).cor, simbolo: <FormaMarca indice={i} tamanho={24} /> };
+};
 
 function SalaAoVivoAluno() {
   const navigate = useNavigate();
@@ -202,7 +208,8 @@ function SalaAoVivoAluno() {
   }
 
   return (
-    <div className="aovivo-aluno">
+    <div className={`aovivo-aluno ${classeTema(estado.tema)}`}>
+      <FundoTema tema={estado.tema} />
       <header className="aovivo-topo">
         <div className="aovivo-marca">
           <span className="marca-saber">Saber</span><span className="marca-mais">+</span>
@@ -283,7 +290,7 @@ function Pergunta({ estado, relogio, selecao, marcar, confirmar }) {
 
       <p className="pergunta-dica">
         {confirmado
-          ? '✅ Resposta confirmada! Agora é esperar os colegas.'
+          ? <><CircleCheck size={17} strokeWidth={2.4} className="dica-icone" /> Resposta confirmada! Agora é esperar os colegas.</>
           : multipla
             ? 'Esta pergunta tem mais de uma resposta certa: marque todas e confirme.'
             : 'Dá para trocar de resposta até confirmar. Quanto antes confirmar, mais pontos.'}
@@ -291,19 +298,20 @@ function Pergunta({ estado, relogio, selecao, marcar, confirmar }) {
 
       <div className={`alternativas ${p.alternativas.length === 2 ? 'duas' : ''}`}>
         {p.alternativas.map((texto, i) => {
-          const estilo = ESTILOS[i % ESTILOS.length];
+          const estilo = estiloDa(p, i);
           const marcada = marcadas.includes(i);
           return (
             <button
               key={i}
-              className={`alternativa ${estilo.classe} ${marcada ? 'marcada' : ''} ${confirmado && !marcada ? 'apagada' : ''}`}
+              style={{ background: estilo.cor }}
+              className={`alternativa ${marcada ? 'marcada' : ''} ${confirmado && !marcada ? 'apagada' : ''}`}
               onClick={() => marcar(i)}
               disabled={confirmado}
               aria-pressed={marcada}
             >
               <span className="alternativa-simbolo" aria-hidden="true">{estilo.simbolo}</span>
               <span className="alternativa-texto">{texto}</span>
-              {marcada && <span className="alternativa-check" aria-hidden="true">✓</span>}
+              {marcada && <span className="alternativa-check" aria-hidden="true"><Check size={16} strokeWidth={3} /></span>}
             </button>
           );
         })}

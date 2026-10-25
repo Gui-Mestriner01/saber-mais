@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
 import '../CSS/ResponderVF.css'; 
+import { FundoTema, classeTema } from '../components/TemaFundo';
 import { API, cabecalhoAluno } from '../api';
 
 function ResponderVF() {
@@ -101,7 +102,8 @@ function ResponderVF() {
   const respostaAtual = respostas[perguntaAtual]; 
 
   return (
-    <div className="vf-container">
+    <div className={`vf-container ${classeTema(atividade?.tema)}`}>
+      <FundoTema tema={atividade?.tema} />
       
       {/* Cabeçalho do Jogo */}
       <header className="vf-header">

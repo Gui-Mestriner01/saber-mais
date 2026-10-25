@@ -16,7 +16,7 @@ import {
    ========================================================================== */
 
 function OrdenarAluno() {
-  const { atividade, conteudo, erro, enviar, voltar } = useAtividadeAluno();
+  const { atividade, conteudo, erro, enviar, voltar, tema } = useAtividadeAluno();
 
   const [ordem, setOrdem] = useState([]);          // { id, texto }, na ordem do aluno
   const [mexido, setMexido] = useState(null);      // último item movido (brilha)
@@ -56,7 +56,7 @@ function OrdenarAluno() {
   if (resultado) {
     const tudo = resultado.acertos === resultado.total;
     return (
-      <JogoAluno titulo={atividade?.titulo} voltar={voltar}>
+      <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
         <ResultadoAtividade
           titulo={tudo ? 'Ordem perfeita!' : 'Quase lá!'}
           estrelas={estrelasPorAproveitamento(resultado.acertos, resultado.total)}
@@ -86,7 +86,7 @@ function OrdenarAluno() {
   }
 
   return (
-    <JogoAluno titulo={atividade?.titulo} voltar={voltar}>
+    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
       {erro && <p className="editor-erro">{erro}</p>}
       {!conteudo && !erro && <p className="jogo-carregando">Preparando a atividade…</p>}
 

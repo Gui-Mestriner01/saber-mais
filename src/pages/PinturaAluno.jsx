@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../CSS/Pintura.css';
+import { FundoTema, classeTema } from '../components/TemaFundo';
 import { API, cabecalhoAluno } from '../api';
 
 const CORES = [
@@ -141,7 +142,8 @@ function PinturaAluno() {
   };
 
   return (
-    <div className="pintura-container">
+    <div className={`pintura-container ${classeTema(atividade?.tema)}`}>
+      <FundoTema tema={atividade?.tema} />
 
       {modalEnviar && (
         <div className="modal-overlay">

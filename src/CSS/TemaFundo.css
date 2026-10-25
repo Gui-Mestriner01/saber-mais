@@ -1,0 +1,196 @@
+/* ==========================================================================
+   TEMAS DE FUNDO DAS ATIVIDADES (components/TemaFundo.jsx)
+
+   Só transform e opacity animam — o navegador move isso sem redesenhar a
+   página, então dá para ter folhas, bolhas e neve até no celular simples.
+   ========================================================================== */
+
+.cena-tema { display: block; }
+
+/* Atrás da tela inteira do aluno */
+.cena-tela {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Prévia dentro de uma caixa (palco do editor do quiz) */
+.cena-caixa {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Miniatura do seletor: sempre parada */
+.cena-miniatura { width: 100%; height: 100%; }
+.cena-miniatura * { animation: none !important; }
+
+/* ---------- a tela do aluno com tema ----------
+   O container perde o degradê de sempre para o cenário aparecer. O
+   "isolation" cria uma camada própria: o cenário (z-index -1) fica atrás do
+   conteúdo da tela, mas na frente do fundo da página. */
+.com-tema {
+  background: transparent !important;
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---------- movimentos ---------- */
+.tema-balanca { animation: tema-balanca 5.5s ease-in-out infinite alternate; }
+.tema-balanca.devagar { animation-duration: 8s; }
+@keyframes tema-balanca { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+
+.tema-cipo { animation: tema-cipo 6s ease-in-out infinite alternate; }
+@keyframes tema-cipo { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+
+.tema-alga { animation: tema-alga 4.5s ease-in-out infinite alternate; }
+@keyframes tema-alga { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+
+/* Peixe: atravessa a tela. Parado, fica na posição --parado. */
+.tema-peixe { transform: translateX(var(--parado, 400px)); animation: tema-peixe linear infinite; }
+.tema-peixe.volta { animation-name: tema-peixe-volta; }
+@keyframes tema-peixe      { from { transform: translateX(-200px); } to { transform: translateX(1800px); } }
+@keyframes tema-peixe-volta { from { transform: translateX(1800px); } to { transform: translateX(-200px); } }
+
+.tema-bolha { animation: tema-bolha linear infinite; }
+@keyframes tema-bolha {
+  0%   { transform: translateY(0);      opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(-620px); opacity: 0; }
+}
+
+.tema-pisca { animation: tema-pisca 2.6s ease-in-out infinite alternate; }
+@keyframes tema-pisca { from { opacity: 1; } to { opacity: .2; } }
+
+/* Estrela cadente: passa rapidinho de vez em quando */
+.tema-cometa { opacity: 0; animation: tema-cometa 11s ease-in infinite; animation-delay: 3s; }
+@keyframes tema-cometa {
+  0%   { transform: translate(260px, 60px);  opacity: 0; }
+  3%   { opacity: .9; }
+  12%  { transform: translate(980px, 370px); opacity: 0; }
+  100% { transform: translate(980px, 370px); opacity: 0; }
+}
+
+.tema-floco { animation: tema-floco linear infinite; }
+@keyframes tema-floco {
+  0%   { transform: translate(0, -950px); }
+  50%  { transform: translate(30px, -475px); }
+  100% { transform: translate(0, 0); }
+}
+
+.tema-nuvem-praia { animation: tema-nuvem-praia 22s ease-in-out infinite alternate; }
+.tema-nuvem-praia.devagar { animation-duration: 30s; }
+@keyframes tema-nuvem-praia { from { transform: translateX(0); } to { transform: translateX(140px); } }
+
+.tema-onda { animation: tema-onda 5s linear infinite; }
+@keyframes tema-onda { from { transform: translateX(0); } to { transform: translateX(-160px); } }
+
+/* ---------- "Reduzir animações" ----------
+   O cenário fica, só que parado. O "none" (e não a duração curtinha da regra
+   geral do menu) é para nada parar no fim do caminho — o peixe sairia da
+   tela e as bolhas sumiriam. */
+body.a11y-sem-animacao .cena-tema *,
+body.a11y-sem-animacao .cena-tema *::before,
+body.a11y-sem-animacao .cena-tema *::after { animation: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cena-tema * { animation: none !important; }
+}
+
+/* ==========================================================================
+   SELETOR DE TEMA (editor)
+   ========================================================================== */
+.seletor-tema {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 12px;
+}
+.seletor-tema.compacto { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+.seletor-tema-opcao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.seletor-tema-figura {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 10;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--superficie-2, #F4F9FD);
+  color: var(--tinta-clara, #7AAAC8);
+  border: 2px solid var(--borda, #C8DFF0);
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.seletor-tema-opcao:hover .seletor-tema-figura { border-color: var(--azul, #1A6FC4); transform: translateY(-2px); }
+.seletor-tema-opcao:focus-visible .seletor-tema-figura { outline: 3px solid var(--azul, #1A6FC4); outline-offset: 2px; }
+.seletor-tema-opcao.ativo .seletor-tema-figura {
+  border-color: var(--azul, #1A6FC4);
+  box-shadow: 0 0 0 3px rgba(26, 111, 196, .2);
+}
+
+.seletor-tema-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--azul, #1A6FC4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seletor-tema-nome {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tinta, #2A4A6A);
+}
+.seletor-tema-opcao.ativo .seletor-tema-nome { color: var(--azul, #1A6FC4); }
+
+/* ==========================================================================
+   LEITURA EM CIMA DO CENÁRIO
+   Algumas telas têm texto direto no fundo (contador, título de coluna,
+   enunciado do V/F antigo). Com cenário — principalmente os escuros, como
+   espaço e lousa — esse texto ganha um fundo branco para continuar legível.
+   ========================================================================== */
+.com-tema .vf-header,
+.com-tema .ligar-header,
+.com-tema .ligar-footer { background: var(--superficie) !important; }
+
+.com-tema .vf-question-wrapper {
+  background: var(--superficie);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra);
+  padding: 18px 22px;
+}
+
+.com-tema .ligar-coluna-titulo,
+.com-tema .memoria-placar {
+  align-self: center;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  background: var(--superficie);
+  border-radius: 999px;
+  box-shadow: var(--sombra);
+  padding: 5px 14px;
+}

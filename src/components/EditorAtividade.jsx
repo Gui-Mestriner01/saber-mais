@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, LayoutList, Lock, Globe, Pencil, Copy } from 'lucide-react';
 import BarraLateralProfessor from './BarraLateralProfessor';
+import { SeletorTema, TemaEditorContext } from './TemaFundo';
 import '../CSS/Dashboard.css';
 import '../CSS/NovasAtividades.css';
 import { API } from '../api';
@@ -31,7 +32,13 @@ import { API } from '../api';
    Quando o salvamento é diferente do normal (o V/F manda imagens, a pintura
    sobe o desenho antes), o editor passa `aoSalvar(titulo, salaId, extras)` e
    cuida do envio por conta própria. `extras` traz { publica, origemId,
-   editandoId } para o editor repassar ao servidor.
+   editandoId, tema } para o editor repassar ao servidor.
+
+   TEMA DE FUNDO (25/10/2026): toda atividade pode ter um cenário de fundo
+   (selva, fundo do mar...). A escolha mora aqui e vai junto em qualquer
+   salvamento. O seletor aparece num cartão próprio, menos no quiz, que
+   mostra o seletor no painel lateral dele (`temaNoPainel`) e lê/escreve o
+   tema pelo TemaEditorContext.
    ========================================================================== */
 
 /* O conteúdo que o editor usa para se preencher. Cada editor chama isto. */
@@ -56,6 +63,8 @@ function EditorAtividade({
   aoSalvar,
   rodapeExtra,
   semMenu,
+  temaNoPainel,
+  largo,
   children,
 }) {
   const navigate = useNavigate();
@@ -69,6 +78,8 @@ function EditorAtividade({
   const [salas, setSalas]       = useState([]);
   const [titulo, setTitulo]     = useState(original?.titulo || '');
   const [publica, setPublica]   = useState(!!original?.publica && !copiando);
+  // A cópia leva o cenário junto; quem copiou troca se quiser.
+  const [tema, setTema]         = useState(original?.tema || null);
   const [erro, setErro]         = useState('');
   const [salvo, setSalvo]       = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -105,12 +116,13 @@ function EditorAtividade({
           publica,
           origemId: copiando ? original.id : null,
           editandoId: editando ? original.id : null,
+          tema,
         });
       } else if (editando) {
         const res = await fetch(`${API}/professor/atividade/${original.id}`, {
           method: 'PUT',
           headers: cracha,
-          body: JSON.stringify({ titulo: titulo.trim(), conteudo: montarConteudo(), publica }),
+          body: JSON.stringify({ titulo: titulo.trim(), conteudo: montarConteudo(), publica, tema }),
         });
         const dados = await res.json();
         if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar as alterações.');
@@ -125,6 +137,7 @@ function EditorAtividade({
             conteudo: montarConteudo(),
             publica,
             origem_id: copiando ? original.id : null,
+            tema,
           }),
         });
         const dados = await res.json();
@@ -176,7 +189,8 @@ function EditorAtividade({
           </div>
         </header>
 
-        <div className="editor-nova">
+        <TemaEditorContext.Provider value={{ tema, setTema }}>
+        <div className={`editor-nova ${largo ? 'editor-larga' : ''}`}>
           <section className="editor-cartao">
             <label className="editor-campo">
               <span>Título da atividade</span>
@@ -204,6 +218,16 @@ function EditorAtividade({
           </section>
 
           {children}
+
+          {!temaNoPainel && (
+            <section className="editor-cartao">
+              <h2>Tema de fundo</h2>
+              <p className="editor-dica">
+                O cenário que aparece atrás da atividade quando o aluno for responder. Sem tema, fica o fundo de sempre.
+              </p>
+              <SeletorTema valor={tema} aoMudar={setTema} />
+            </section>
+          )}
 
           <section className="editor-cartao">
             <h2>Quem pode ver esta atividade?</h2>
@@ -254,6 +278,7 @@ function EditorAtividade({
             </button>
           </section>
         </div>
+        </TemaEditorContext.Provider>
       </main>
     </div>
   );

@@ -1042,3 +1042,46 @@ body.a11y-sem-animacao .confete { display: none; }
 body.a11y-sem-animacao .aovivo-chamado-fundo,
 body.a11y-sem-animacao .aovivo-chamado,
 body.a11y-sem-animacao .chamado-luz { animation: none !important; }
+
+/* ==========================================================================
+   TEMA DE FUNDO E FORMAS DO QUIZ NO AO VIVO (25/10/2026)
+   ========================================================================== */
+/* A forma (estrela, coração...) fica num quadradinho, igual no quiz. */
+.alternativa-simbolo {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.alternativa-check { display: flex; align-items: center; }
+.dica-icone { vertical-align: -3px; color: var(--verde); }
+
+/* Com cenário, o que ficaria direto em cima do desenho ganha um cartão
+   para ler bem até nos temas escuros (espaço, lousa, fundo do mar). */
+.aovivo-aluno.com-tema .pergunta-texto,
+.aovivo-aluno.com-tema .pergunta-dica {
+  background: var(--superficie);
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  padding: 10px 16px;
+}
+
+/* Professor: o cenário fica só na área da partida, não atrás do menu. */
+.aovivo-prof.com-cenario {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  padding: 16px;
+}
+.aovivo-prof.com-cenario > .cena-caixa { z-index: -1; }
+.aovivo-prof.com-cenario .prof-pergunta {
+  background: var(--superficie);
+  border-radius: var(--r);
+  box-shadow: var(--sombra);
+  padding: 12px 18px;
+}

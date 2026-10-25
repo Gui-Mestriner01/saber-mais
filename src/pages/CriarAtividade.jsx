@@ -2,19 +2,22 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, School, Check,
-  ListChecks, PenLine, Link2, Palette, CircleCheck,
+  ListChecks, PenLine, Link2, Palette,
   ArrowDownUp, LayoutGrid, Shapes
 } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import { API } from '../api';
 
+/* O "Verdadeiro ou falso" saiu desta lista em 25/10/2026: agora ele é um
+   tipo de pergunta dentro do Quiz (dá para misturar os dois). As atividades
+   V/F antigas continuam funcionando — a rota do editor dele (criar-v-f)
+   segue existindo para quem for editar uma delas. */
 const tiposAtividade = [
-  { id: 'quiz',            Icone: ListChecks,  nome: 'Quiz',                  desc: 'Perguntas de múltipla escolha' },
+  { id: 'quiz',            Icone: ListChecks,  nome: 'Quiz',                  desc: 'Múltipla escolha, verdadeiro ou falso e puzzle' },
   { id: 'resposta_aberta', Icone: PenLine,     nome: 'Resposta aberta',       desc: 'O aluno digita a resposta' },
   { id: 'ligar',           Icone: Link2,       nome: 'Ligar correspondentes', desc: 'Conectar as duas colunas' },
   { id: 'pintar',          Icone: Palette,     nome: 'Pintar cenário',        desc: 'O aluno pinta os elementos da cena' },
-  { id: 'v_f',             Icone: CircleCheck, nome: 'Verdadeiro ou falso',   desc: 'Julgar se a afirmação está certa' },
   { id: 'ordenar',         Icone: ArrowDownUp, nome: 'Colocar em ordem',      desc: 'Arrumar os itens na sequência certa' },
   { id: 'memoria',         Icone: LayoutGrid,  nome: 'Jogo da memória',       desc: 'Virar as cartas e achar os pares' },
   { id: 'grupos',          Icone: Shapes,      nome: 'Separar em grupos',     desc: 'Colocar cada item no grupo dele' },

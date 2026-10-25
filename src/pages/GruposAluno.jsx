@@ -20,7 +20,7 @@ import {
    ========================================================================== */
 
 function GruposAluno() {
-  const { atividade, conteudo, erro, enviar, voltar } = useAtividadeAluno();
+  const { atividade, conteudo, erro, enviar, voltar, tema } = useAtividadeAluno();
 
   const [lugar, setLugar] = useState({});         // id do item -> índice do grupo (ou ausente = no monte)
   const [ordemBanco, setOrdemBanco] = useState([]);
@@ -74,7 +74,7 @@ function GruposAluno() {
 
   if (resultado) {
     return (
-      <JogoAluno titulo={atividade?.titulo} voltar={voltar}>
+      <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
         <ResultadoAtividade
           titulo={resultado.acertos === resultado.total ? 'Tudo no lugar certo!' : 'Boa tentativa!'}
           estrelas={estrelasPorAproveitamento(resultado.acertos, resultado.total)}
@@ -104,7 +104,7 @@ function GruposAluno() {
   }
 
   return (
-    <JogoAluno titulo={atividade?.titulo} voltar={voltar}>
+    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
       {erro && <p className="editor-erro">{erro}</p>}
       {!conteudo && !erro && <p className="jogo-carregando">Misturando os itens…</p>}
 
