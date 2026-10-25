@@ -181,7 +181,15 @@ body.modo-escuro .login-aluno-container {
   white-space: nowrap;
 }
 
-.aluno-btn-pts { font-size: 11px; font-weight: 800; color: #F5812A; }
+/* O ícone de estrela (lucide) entrou no lugar do emoji ⭐ */
+.aluno-btn-pts {
+  font-size: 11px;
+  font-weight: 800;
+  color: #F5812A;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
 
 /* ---------- PIN ---------- */
 .pin-avatar {

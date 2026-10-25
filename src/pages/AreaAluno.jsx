@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Backpack, Search, X, SearchX, Hourglass, GraduationCap, Lock, CircleAlert, Delete } from 'lucide-react';
 import '../CSS/AreaAluno.css';
 import FundoAnimado from '../components/FundoAnimado';
 import { API, salvarAcessoSala } from '../api';
@@ -89,7 +90,7 @@ function AreaAluno() {
         <div className="area-aluno-brand" onClick={() => navigate('/')}>
           <span className="brand-saber">Saber</span><span className="brand-plus">+</span>
         </div>
-        <h1 className="area-aluno-titulo">🎒 Área do Aluno</h1>
+        <h1 className="area-aluno-titulo"><Backpack size={22} strokeWidth={1.75} /> Área do Aluno</h1>
         <div style={{width: 120}} />
       </header>
 
@@ -98,22 +99,26 @@ function AreaAluno() {
         <main className="area-aluno-main">
           <div className="busca-sala-wrap">
             <div className="busca-sala-input">
-              <span>🔍</span>
+              <span className="busca-icone"><Search size={20} strokeWidth={1.75} /></span>
               <input
                 type="text"
                 placeholder="Digite o código da sala..."
                 value={busca}
                 onChange={e => setBusca(e.target.value)}
               />
-              {busca && <button className="busca-limpar" onClick={() => setBusca('')}>✕</button>}
+              {busca && (
+                <button className="busca-limpar" onClick={() => setBusca('')} title="Limpar a busca">
+                  <X size={18} strokeWidth={2.2} />
+                </button>
+              )}
             </div>
           </div>
 
           {carregando ? (
-            <div className="salas-vazio"><span>⏳</span><p>Carregando salas...</p></div>
+            <div className="salas-vazio"><span><Hourglass size={48} strokeWidth={1.5} /></span><p>Carregando salas...</p></div>
           ) : salasFiltradas.length === 0 ? (
             <div className="salas-vazio">
-              <span>😕</span>
+              <span><SearchX size={48} strokeWidth={1.5} /></span>
               <p>Nenhuma sala encontrada!</p>
               <small>Verifique o código com seu professor</small>
             </div>
@@ -128,7 +133,7 @@ function AreaAluno() {
                   <div className="sala-card-body">
                     <h3>{sala.nome}</h3>
                     <p className="sala-materia">{sala.serie} · {sala.materia}</p>
-                    <p className="sala-escola">👨‍🏫 {sala.professor}</p>
+                    <p className="sala-escola"><GraduationCap size={14} strokeWidth={2} /> {sala.professor}</p>
                   </div>
                   <button className="sala-entrar-btn">Entrar →</button>
                 </div>
@@ -150,7 +155,7 @@ function AreaAluno() {
               <p>{salaSelecionada.professor}</p>
             </div>
 
-            <p className="senha-instrucao">🔒 Digite a senha da sala!</p>
+            <p className="senha-instrucao"><Lock size={17} strokeWidth={2} /> Digite a senha da sala!</p>
 
             <div className="senha-digitada">
               {[0,1,2,3].map(i => (
@@ -160,7 +165,7 @@ function AreaAluno() {
               ))}
             </div>
 
-            {erroSenha && <p className="senha-erro">❌ {typeof erroSenha === 'string' ? erroSenha : 'Senha errada! Tente de novo.'}</p>}
+            {erroSenha && <p className="senha-erro"><CircleAlert size={16} strokeWidth={2.2} /> {typeof erroSenha === 'string' ? erroSenha : 'Senha errada! Tente de novo.'}</p>}
 
             <div className="teclado-virtual">
               {TEMAS[salaSelecionada.tema_senha]?.map((emoji, i) => (
@@ -177,7 +182,7 @@ function AreaAluno() {
 
             {senhaDigitada.length > 0 && (
               <button className="senha-apagar" onClick={() => setSenhaDigitada(prev => prev.slice(0, -1))}>
-                ⌫ Apagar
+                <Delete size={16} strokeWidth={2} /> Apagar
               </button>
             )}
           </div>

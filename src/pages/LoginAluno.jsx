@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Plus, Check, Star } from 'lucide-react';
 import '../CSS/LoginAluno.css';
 import FundoAnimado from '../components/FundoAnimado';
 import { API, acessoSala, comToken, salvarTokenAluno } from '../api';
@@ -219,7 +220,7 @@ function LoginAluno() {
         {/* ---------- ESCOLHER QUEM É ---------- */}
         {etapa === 'lista' && (
           <div className="login-aluno-card">
-            <h2>👋 Quem é você?</h2>
+            <h2>Quem é você?</h2>
             <p>Toque no seu nome para entrar</p>
 
             {carregandoLista ? (
@@ -230,12 +231,14 @@ function LoginAluno() {
                   <button key={aluno.id} className="aluno-btn" onClick={() => handleSelecionarAluno(aluno)}>
                     <span className="aluno-btn-avatar">{aluno.nome_aluno.charAt(0).toUpperCase()}</span>
                     <span className="aluno-btn-nome">{aluno.nome_aluno}</span>
-                    {aluno.pontos > 0 && <span className="aluno-btn-pts">⭐ {aluno.pontos}</span>}
+                    {aluno.pontos > 0 && (
+                      <span className="aluno-btn-pts"><Star size={12} strokeWidth={2.4} /> {aluno.pontos}</span>
+                    )}
                   </button>
                 ))}
 
                 <button className="aluno-btn aluno-btn-novo" onClick={() => { setEtapa('novo'); setPasso('nome'); setErro(''); }}>
-                  <span className="aluno-btn-avatar novo">➕</span>
+                  <span className="aluno-btn-avatar novo"><Plus size={24} strokeWidth={2.4} /></span>
                   <span className="aluno-btn-nome">Sou novo!</span>
                 </button>
               </div>
@@ -264,14 +267,14 @@ function LoginAluno() {
         {etapa === 'novo' && (
           <div className="login-aluno-card">
             <button className="login-voltar" onClick={() => { setEtapa('lista'); setErro(''); }}>← Voltar</button>
-            <h2>✨ Primeiro acesso</h2>
+            <h2>Primeiro acesso</h2>
             <p>É rapidinho: nome, PIN e pronto</p>
 
             <div className="passos">
               {/* 1. Nome */}
               <section className={`passo ${passo === 'nome' ? 'aberto' : ''} ${novoNome.trim() && passo !== 'nome' ? 'pronto' : ''}`}>
                 <button type="button" className="passo-cab" onClick={() => irParaPasso('nome')} aria-expanded={passo === 'nome'}>
-                  <span className="passo-num">{novoNome.trim() && passo !== 'nome' ? '✓' : '1'}</span>
+                  <span className="passo-num">{novoNome.trim() && passo !== 'nome' ? <Check size={15} strokeWidth={3} /> : '1'}</span>
                   <span className="passo-titulo">Seu nome</span>
                   <span className="passo-valor">{passo !== 'nome' ? novoNome.trim() : ''}</span>
                 </button>
@@ -306,7 +309,7 @@ function LoginAluno() {
                   disabled={novoNome.trim().length < 2}
                   aria-expanded={passo === 'pin'}
                 >
-                  <span className="passo-num">{novoPin.length === 4 && passo !== 'pin' ? '✓' : '2'}</span>
+                  <span className="passo-num">{novoPin.length === 4 && passo !== 'pin' ? <Check size={15} strokeWidth={3} /> : '2'}</span>
                   <span className="passo-titulo">Crie um PIN de 4 números</span>
                   <span className="passo-valor">{novoPin.length === 4 && passo !== 'pin' ? '••••' : ''}</span>
                 </button>
@@ -354,7 +357,7 @@ function LoginAluno() {
         {etapa === 'temporaria' && (
           <div className="login-aluno-card card-largo">
             <button className="login-voltar" onClick={() => navigate('/aluno/area')}>← Sair da sala</button>
-            <h2>✨ Preparar para jogar!</h2>
+            <h2>Preparar para jogar!</h2>
             <p>Escolha seu nome e um avatar bem legal</p>
 
             <form onSubmit={handleEntrarTemporaria} className="form-temporaria">
@@ -395,7 +398,7 @@ function LoginAluno() {
                 className="btn-entrar-pin btn-verde"
                 disabled={!novoNome.trim() || !avatarSelecionado || carregando}
               >
-                {carregando ? 'Entrando…' : 'Entrar na sala! 🚀'}
+                {carregando ? 'Entrando…' : 'Entrar na sala!'}
               </button>
             </form>
           </div>

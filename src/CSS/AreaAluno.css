@@ -28,10 +28,16 @@
 .brand-saber { color: #F5812A; }
 .brand-plus  { color: #1A6FC4; }
 
+/* Os ícones de traço (lucide) entraram no lugar dos emojis. Como o ícone é um
+   <svg> dentro do texto, as linhas abaixo alinham ele com a letra e dão o
+   espacinho que o emoji tinha. */
 .area-aluno-titulo {
   font-size: 24px;
   font-weight: 900;
   color: #2A4A6A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* MAIN */
@@ -71,6 +77,7 @@
 .busca-sala-input:focus-within { border-color: #1A6FC4; }
 
 .busca-sala-input span { font-size: 20px; }
+.busca-icone { display: flex; align-items: center; color: #7AAAC8; }
 
 .busca-sala-input input {
   flex: 1;
@@ -93,6 +100,9 @@
   cursor: pointer;
   font-weight: 900;
   transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  padding: 0;
 }
 
 .busca-limpar:hover { color: #E23F3F; }
@@ -155,7 +165,7 @@
 }
 
 .sala-materia { font-size: 13px; font-weight: 700; color: #1A6FC4; }
-.sala-escola  { font-size: 12px; font-weight: 700; color: #5A7A9A; margin-top: 6px; }
+.sala-escola  { font-size: 12px; font-weight: 700; color: #5A7A9A; margin-top: 6px; display: flex; align-items: center; gap: 5px; }
 .sala-cidade  { font-size: 12px; font-weight: 400; color: #7AAAC8; }
 
 .sala-entrar-btn {
@@ -184,7 +194,7 @@
   color: #7AAAC8;
 }
 
-.salas-vazio span { font-size: 56px; }
+.salas-vazio span { font-size: 56px; display: flex; color: #A8C6DC; }
 .salas-vazio p { font-size: 18px; font-weight: 700; }
 .salas-vazio small { font-size: 14px; }
 
@@ -245,6 +255,10 @@
   font-size: 16px;
   font-weight: 700;
   color: #2A4A6A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .senha-digitada {
@@ -282,6 +296,10 @@
   font-size: 14px;
   font-weight: 700;
   color: #E23F3F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 /* TECLADO VIRTUAL */
@@ -324,6 +342,7 @@
 }
 
 .senha-apagar:hover { border-color: #E23F3F; color: #E23F3F; }
+.senha-apagar { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 
 /* NOME CARD */
 .nome-card {
