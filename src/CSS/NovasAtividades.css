@@ -502,9 +502,9 @@
   margin: 0 0 14px;
 }
 
-/* ---------- editor sem o menu lateral (ordenar, memória e grupos) ----------
-   Essas três telas abrem sem o menu do professor: o conteúdo fica centralizado
-   e a volta ao painel é pelos botões do cabeçalho. */
+/* ---------- editor sem o menu lateral (todos os editores, desde 26/10/2026) ----------
+   As telas de criar/editar atividade abrem sem o menu do professor: o conteúdo
+   fica centralizado e a volta ao painel é pelos botões do cabeçalho. */
 .editor-sem-menu .dashboard-main {
   margin-left: 0;
   width: 100%;
@@ -513,6 +513,9 @@
 }
 
 .editor-sem-menu .editor-nova { max-width: none; }
+
+/* O quiz usa três colunas, então pode ocupar bem mais da tela. */
+.editor-sem-menu.editor-sem-menu-largo .dashboard-main { max-width: 1500px; }
 
 /* ---------- celular ---------- */
 @media (max-width: 860px) {

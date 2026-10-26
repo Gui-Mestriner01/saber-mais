@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, LayoutList, Lock, Globe, Pencil, Copy } from 'lucide-react';
-import BarraLateralProfessor from './BarraLateralProfessor';
 import { SeletorTema, TemaEditorContext } from './TemaFundo';
 import '../CSS/Dashboard.css';
 import '../CSS/NovasAtividades.css';
@@ -10,7 +9,7 @@ import { API } from '../api';
 /* ==========================================================================
    MOLDURA DE TODOS OS EDITORES DE ATIVIDADE
 
-   O que é igual em todos mora aqui: menu lateral, cabeçalho com o nome do
+   O que é igual em todos mora aqui: cabeçalho (sem menu lateral) com o nome do
    tipo, campo de título, validação antes de salvar, escolha de quem vê a
    atividade, mensagens de erro/ok e o rodapé com o botão de salvar. Cada
    editor cuida só do conteúdo dele.
@@ -62,7 +61,6 @@ function EditorAtividade({
   montarConteudo,
   aoSalvar,
   rodapeExtra,
-  semMenu,
   temaNoPainel,
   largo,
   children,
@@ -161,8 +159,10 @@ function EditorAtividade({
     : explicacao;
 
   return (
-    <div className={`dashboard-container ${semMenu ? 'editor-sem-menu' : ''}`}>
-      {!semMenu && <BarraLateralProfessor ativo="aulas" />}
+    /* Desde 26/10/2026 NENHUM editor tem o menu lateral: a tela inteira fica
+       para montar a atividade. A volta ao painel é pelos botões do cabeçalho
+       ("Minhas aulas" e "Trocar o tipo"). */
+    <div className={`dashboard-container editor-sem-menu ${largo ? 'editor-sem-menu-largo' : ''}`}>
 
       <main className="dashboard-main">
         <header className="dashboard-header-painel">
@@ -175,11 +175,9 @@ function EditorAtividade({
             <p>{subtitulo}</p>
           </div>
           <div className="header-acoes">
-            {semMenu && (
-              <button className="btn-acao-rapida" onClick={() => navigate('/professor/minhas-aulas')}>
-                <LayoutList size={17} strokeWidth={1.75} /> Minhas aulas
-              </button>
-            )}
+            <button className="btn-acao-rapida" onClick={() => navigate('/professor/minhas-aulas')}>
+              <LayoutList size={17} strokeWidth={1.75} /> Minhas aulas
+            </button>
             <button
               className="btn-acao-rapida"
               onClick={() => navigate(copiando ? '/professor/biblioteca' : '/professor/criar-atividade')}

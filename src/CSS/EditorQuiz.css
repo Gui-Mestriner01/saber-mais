@@ -848,3 +848,65 @@
   .quiz-nova-btn { flex-direction: row; }
   .quiz-nova-menu { left: 0; right: 0; width: auto; }
 }
+
+/* ---------------------------------------------------------- 26/10/2026
+   - A lista fica por cima do palco: o menu "Que tipo de pergunta?" saía
+     de dentro dela e era cortado pelo palco.
+   - Quiz novo começa pela escolha do tipo da primeira pergunta. */
+.quiz-lista { z-index: 5; }
+
+.quiz-estudio.quiz-estudio-vazio { grid-template-columns: minmax(0, 1fr); }
+.quiz-estudio-vazio .quiz-palco { min-height: 440px; display: flex; align-items: center; justify-content: center; }
+
+.quiz-comecar { align-items: center; text-align: center; gap: 10px; padding: 36px 22px; }
+.quiz-comecar h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--tinta);
+  background: var(--superficie);
+  border-radius: var(--r);
+  padding: 10px 22px;
+  box-shadow: var(--sombra);
+}
+.quiz-comecar > p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta-media);
+  background: color-mix(in srgb, var(--superficie) 90%, transparent);
+  border-radius: 20px;
+  padding: 5px 14px;
+}
+.quiz-comecar-tipos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 220px));
+  gap: 14px;
+  justify-content: center;
+  width: 100%;
+}
+.quiz-comecar-tipos button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 22px 16px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r-lg);
+  background: var(--superficie);
+  font-family: inherit;
+  color: var(--tinta);
+  cursor: pointer;
+  box-shadow: var(--sombra);
+  transition: transform .12s, border-color .15s, box-shadow .15s;
+}
+.quiz-comecar-tipos button:hover,
+.quiz-comecar-tipos button:focus-visible { border-color: var(--azul); transform: translateY(-3px); box-shadow: var(--sombra-alta); outline: none; }
+.quiz-comecar-tipos .quiz-tipo-icone { width: 56px; height: 56px; border-radius: 16px; }
+.quiz-comecar-tipos strong { font-size: 17px; font-weight: 900; }
+.quiz-comecar-tipos em { font-style: normal; font-size: 13px; color: var(--tinta-media); line-height: 1.35; }
+
+@container estudio (max-width: 700px) {
+  .quiz-comecar-tipos { grid-template-columns: minmax(0, 1fr); }
+  .quiz-comecar h2 { font-size: 20px; }
+}

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Check, X, ImagePlus, RefreshCw, ArrowUp, ArrowDown, Copy,
-  ListChecks, ToggleLeft, ListOrdered, Timer, Award, LayoutGrid, Shapes,
+  ListChecks, ToggleLeft, ListOrdered, Timer, Award, LayoutGrid,
   SlidersHorizontal, Palette, ChevronDown, GripVertical, Info,
 } from 'lucide-react';
 import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
@@ -258,8 +258,10 @@ function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
   const adicionar = (tipo) => {
     // A pergunta nova herda o tempo da atual: quem usa 30s em todas não precisa trocar uma por uma.
     const nova = novaPergunta(tipo, p ? p.tempo : TEMPO_PADRAO);
-    setPerguntas(lista => [...lista.slice(0, atual + 1), nova, ...lista.slice(atual + 1)]);
-    setAtual(atual + 1);
+    // Lista vazia: a primeira entra na posição 0; senão, logo depois da atual.
+    const posicao = perguntas.length ? atual + 1 : 0;
+    setPerguntas(lista => [...lista.slice(0, posicao), nova, ...lista.slice(posicao)]);
+    setAtual(posicao);
     setMenuNova(false);
   };
 
@@ -325,7 +327,31 @@ function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
 
   const aplicarTempoEmTodas = () => setPerguntas(lista => lista.map(q => ({ ...q, tempo: p.tempo })));
 
-  if (!p) return null;
+  /* Quiz novo, ainda sem pergunta: o tipo é escolhido aqui, uma vez só.
+     (Antes o tipo aparecia em dois lugares — no "Adicionar pergunta" e no
+     painel da direita. Agora o tipo é escolhido só na hora de criar.) */
+  if (!p) {
+    return (
+      <section className="quiz-estudio quiz-estudio-vazio" aria-label="Montagem do quiz">
+        <div className={`quiz-palco ${tema ? 'com-cenario' : ''}`}>
+          <CenaTema tema={tema} modo="caixa" />
+          <div className="quiz-palco-conteudo quiz-comecar">
+            <h2>Qual vai ser a primeira pergunta?</h2>
+            <p>Escolha o tipo. Depois, use “Adicionar pergunta” para as próximas — dá para misturar os três.</p>
+            <div className="quiz-comecar-tipos">
+              {TIPOS.map(t => (
+                <button key={t.id} type="button" onClick={() => adicionar(t.id)}>
+                  <span className={`quiz-tipo-icone tipo-${t.id}`}><t.Icone size={26} strokeWidth={2} /></span>
+                  <strong>{t.nome}</strong>
+                  <em>{t.descricao}</em>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
   const { nome: nomeDoTipo } = tipoInfo(p.tipo);
 
   return (
@@ -382,7 +408,7 @@ function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
             className="quiz-enunciado"
             valor={p.texto}
             aoMudar={(texto) => mudar({ texto })}
-            placeholder={p.tipo === 'v_f' ? 'Escreva a afirmação (ex.: O Sol é uma estrela)' : 'Comece a digitar a pergunta'}
+            placeholder={p.tipo === 'v_f' ? 'Escreva a afirmação' : 'Comece a digitar a pergunta'}
             maxLength={240}
             aria-label={`Texto da pergunta ${atual + 1}`}
           />
@@ -566,14 +592,6 @@ function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
 
         {aba === 'pergunta' ? (
           <div className="quiz-painel-corpo" role="tabpanel">
-            <Escolha
-              rotulo="Tipo de pergunta"
-              Icone={Shapes}
-              opcoes={TIPOS}
-              valor={p.tipo}
-              aoMudar={(tipo) => mudar({ tipo })}
-            />
-
             <div className="quiz-prop">
               <label className="quiz-prop-rotulo" htmlFor="quiz-tempo"><Timer size={16} strokeWidth={2} /> Limite de tempo</label>
               <div className="quiz-select">
@@ -630,11 +648,12 @@ function CriarQuiz() {
   // copiando uma da biblioteca; vazio quando está criando do zero.
   const inicial = usarConteudoInicial();
 
-  const [perguntas, setPerguntas] = useState(() => deConteudo(inicial) || [novaPergunta()]);
+  const [perguntas, setPerguntas] = useState(() => deConteudo(inicial) || []);
   const [atual, setAtual] = useState(0);
 
   /* Achou problema? Já leva o professor até a pergunta. */
   const validar = () => {
+    if (perguntas.length === 0) return 'Escolha o tipo da primeira pergunta para começar o quiz.';
     for (let i = 0; i < perguntas.length; i++) {
       const p = perguntas[i];
       const n = i + 1;

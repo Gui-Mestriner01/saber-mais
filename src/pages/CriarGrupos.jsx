@@ -61,7 +61,6 @@ function CriarGrupos() {
 
   return (
     <EditorAtividade
-      semMenu
       tipo="grupos"
       nomeTipo="Separar em grupos"
       explicacao="Crie os grupos e os itens de cada um. O aluno recebe tudo misturado e separa."
