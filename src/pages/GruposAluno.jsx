@@ -104,7 +104,7 @@ function GruposAluno() {
   }
 
   return (
-    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema} emAndamento={!resultado && Object.keys(lugar).length > 0}>
       {erro && <p className="editor-erro">{erro}</p>}
       {!conteudo && !erro && <p className="jogo-carregando">Misturando os itens…</p>}
 

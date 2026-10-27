@@ -25,6 +25,7 @@ function LigarAluno() {
   const refsA = useRef({});
   const refsB = useRef({});
   const containerRef = useRef(null);
+  const inicio = useRef(Date.now()); // tempo gasto, para o relatório do professor
 
   useEffect(() => {
     if (!atividade) { navigate('/aluno'); return; }
@@ -115,7 +116,8 @@ function LigarAluno() {
         method: 'POST',
         headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          resposta: { conexoes: conexoes.map(c => ({ a: c.parIdA, b: c.parIdB })) }
+          resposta: { conexoes: conexoes.map(c => ({ a: c.parIdA, b: c.parIdB })) },
+          duracao_s: Math.round((Date.now() - inicio.current) / 1000)
         })
       });
       const dados = await res.json().catch(() => ({}));

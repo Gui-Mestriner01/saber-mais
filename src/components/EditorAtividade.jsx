@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, LayoutList, Lock, Globe, Pencil, Copy } from 'lucide-react';
 import { SeletorTema, TemaEditorContext } from './TemaFundo';
+import Aviso from './Aviso';
 import '../CSS/Dashboard.css';
 import '../CSS/NovasAtividades.css';
 import { API } from '../api';
@@ -94,13 +95,41 @@ function EditorAtividade({
       .catch(() => setSalas([]));
   }, [precisaEscolherTurma]);
 
+  /* O que impede de salvar agora (ou null). `silencioso` confere sem mexer
+     na tela — o editor do quiz, por exemplo, só pula para a pergunta com
+     problema quando o professor clica em salvar. */
+  const problemaAtual = (silencioso) => {
+    if (!editando && !salaId) return 'Escolha a turma que vai receber esta atividade.';
+    if (!titulo.trim()) return 'Dê um título para a atividade.';
+    return validar?.({ silencioso }) || null;
+  };
+
+  // Depois de um erro de validação, confere de novo a cada mudança: assim
+  // que o professor corrige, a mensagem some sozinha (antes ficava lá).
+  const [erroDeValidacao, setErroDeValidacao] = useState(false);
+  useEffect(() => {
+    if (!erroDeValidacao || !erro) return;
+    if (!problemaAtual(true)) { setErro(''); setErroDeValidacao(false); }
+  });
+
+  const rodapeRef = useRef(null);
+  const [aviso, setAviso] = useState(null);
+
   const salvar = async () => {
     setErro('');
-    if (!editando && !salaId) { setErro('Escolha a turma que vai receber esta atividade.'); return; }
-    if (!titulo.trim()) { setErro('Dê um título para a atividade.'); return; }
-
-    const problema = validar?.();
-    if (problema) { setErro(problema); return; }
+    const problema = problemaAtual(false);
+    if (problema) {
+      setErro(problema);
+      setErroDeValidacao(true);
+      // Leva até o problema: no quiz, a faixa vermelha na própria pergunta;
+      // nos outros, o aviso do rodapé (e o aviso flutuante no topo).
+      requestAnimationFrame(() => {
+        const alvo = document.querySelector('[data-erro-inline]') || rodapeRef.current;
+        alvo?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      if (!document.querySelector('.quiz-estudio')) setAviso({ texto: problema, tipo: 'erro' });
+      return;
+    }
 
     setSalvando(true);
     try {
@@ -143,7 +172,10 @@ function EditorAtividade({
       }
 
       setSalvo(true);
-      setTimeout(() => navigate('/professor/minhas-aulas'), 1400);
+      const texto = editando ? 'Alterações salvas!' : 'Atividade salva! A turma já pode fazer.';
+      setAviso({ texto, tipo: 'ok' });
+      // O Minhas aulas mostra o mesmo aviso quando a tela troca.
+      setTimeout(() => navigate('/professor/minhas-aulas', { state: { aviso: texto } }), 1400);
     } catch (e) {
       setErro(e.message || 'Não consegui salvar.');
     } finally {
@@ -261,7 +293,7 @@ function EditorAtividade({
             </div>
           </section>
 
-          <section className="editor-cartao editor-rodape">
+          <section className="editor-cartao editor-rodape" ref={rodapeRef}>
             {erro ? <p className="editor-erro">{erro}</p>
               : salvo ? <p className="editor-ok">
                   {editando ? 'Alterações salvas!' : 'Atividade salva!'} Levando você para Minhas aulas…
@@ -278,6 +310,7 @@ function EditorAtividade({
         </div>
         </TemaEditorContext.Provider>
       </main>
+      <Aviso texto={aviso?.texto} tipo={aviso?.tipo} aoFechar={() => setAviso(null)} />
     </div>
   );
 }

@@ -1,13 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, ChevronDown, Maximize2, Minimize2, ArrowDownUp, LayoutGrid, Shapes, Pencil, Globe, Lock } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, ChevronDown, Maximize2, Minimize2, ArrowDownUp, LayoutGrid, Shapes, Pencil, Globe, Lock, BarChart3 } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import '../CSS/NovasAtividades.css';
 import { API } from '../api';
+import Aviso from '../components/Aviso';
 
 function MinhasAulas() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Aviso "Atividade salva!" vindo do editor. Some sozinho e não volta no F5.
+  const [aviso, setAviso] = useState(location.state?.aviso || null);
+  useEffect(() => {
+    if (location.state?.aviso) window.history.replaceState({ ...window.history.state, usr: {} }, '');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [salas, setSalas] = useState([]);
   const [atividades, setAtividades] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -261,6 +269,17 @@ function MinhasAulas() {
                               </span>
                             </div>
                             <div className="atividade-acoes">
+                              {/* Atalho para o relatório da atividade (por aluno e por questão) */}
+                              {Number(ativ.total_respostas) > 0 && (
+                                <button
+                                  className="btn-clonar"
+                                  onClick={() => navigate('/professor/relatorios', { state: { abrirAtividade: ativ.id } })}
+                                  title={ativ.media_acerto !== null && ativ.media_acerto !== undefined ? `${ativ.media_acerto}% de acerto na turma` : undefined}
+                                >
+                                  <BarChart3 size={15} strokeWidth={1.75} /> Relatório
+                                  {ativ.media_acerto !== null && ativ.media_acerto !== undefined && <em className="btn-media">{ativ.media_acerto}%</em>}
+                                </button>
+                              )}
                               <button className="btn-clonar" onClick={() => editarAtividade(ativ)}>
                                 <Pencil size={15} strokeWidth={1.75} /> Editar
                               </button>
@@ -288,6 +307,7 @@ function MinhasAulas() {
           </div>
         )}
       </main>
+      <Aviso texto={aviso} tipo="ok" aoFechar={() => setAviso(null)} />
 
       {/* MODAL DE CÓPIA */}
       {modalAberto && (

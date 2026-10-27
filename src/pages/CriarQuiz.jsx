@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, Check, X, ImagePlus, RefreshCw, ArrowUp, ArrowDown, Copy,
   ListChecks, ToggleLeft, ListOrdered, Timer, Award, LayoutGrid,
-  SlidersHorizontal, Palette, ChevronDown, GripVertical, Info,
+  SlidersHorizontal, Palette, ChevronDown, GripVertical, Info, CircleAlert,
 } from 'lucide-react';
 import EditorAtividade, { usarConteudoInicial } from '../components/EditorAtividade';
 import { CenaTema, SeletorTema, usarTemaEditor } from '../components/TemaFundo';
@@ -196,12 +196,12 @@ function TextoQueCresce({ valor, aoMudar, ...resto }) {
 /* --------------------------------------------------------------------------
    Miniatura da pergunta na lista da esquerda
    -------------------------------------------------------------------------- */
-function Miniatura({ p, i, ativa, total, aoEscolher, aoMover }) {
+function Miniatura({ p, i, ativa, total, aoEscolher, aoMover, comProblema = false }) {
   const { Icone, nome } = tipoInfo(p.tipo);
   const barras = p.tipo === 'v_f' ? 2 : p.tipo === 'puzzle' ? p.itens.length : p.alternativas.length;
 
   return (
-    <li className={`quiz-mini ${ativa ? 'ativa' : ''}`}>
+    <li className={`quiz-mini ${ativa ? 'ativa' : ''} ${comProblema ? 'com-problema' : ''}`}>
       <span className="quiz-mini-num">{i + 1}</span>
       <button type="button" className="quiz-mini-cartao" onClick={aoEscolher} aria-current={ativa ? 'true' : undefined}
         aria-label={`Pergunta ${i + 1}, ${nome}${p.texto ? `: ${p.texto}` : ''}`}>
@@ -235,7 +235,7 @@ function Miniatura({ p, i, ativa, total, aoEscolher, aoMover }) {
    A parte do quiz que mora dentro do EditorAtividade. Fica num componente
    separado porque precisa do tema, que o EditorAtividade guarda.
    -------------------------------------------------------------------------- */
-function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
+function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual, mostrarProblemas = false }) {
   const { tema, setTema } = usarTemaEditor();
   const [aba, setAba] = useState('pergunta');
   const [menuNova, setMenuNova] = useState(false);
@@ -371,6 +371,7 @@ function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
               i={i}
               total={perguntas.length}
               ativa={i === atual}
+              comProblema={mostrarProblemas && !!problemaDaPergunta(q)}
               aoEscolher={() => setAtual(i)}
               aoMover={(d) => mover(i, d)}
             />
@@ -400,6 +401,15 @@ function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
         <CenaTema tema={tema} modo="caixa" />
 
         <div className="quiz-palco-conteudo">
+          {/* Depois de tentar salvar: o que falta NESTA pergunta, ao vivo
+              (some sozinho quando corrigir). */}
+          {mostrarProblemas && problemaDaPergunta(p) && (
+            <div className="quiz-problema" role="alert" data-erro-inline>
+              <CircleAlert size={18} strokeWidth={2.4} />
+              <span><strong>Falta arrumar:</strong> {problemaDaPergunta(p)}</span>
+            </div>
+          )}
+
           <div className="quiz-palco-selo">
             Pergunta {atual + 1} de {perguntas.length} · {nomeDoTipo}
           </div>
@@ -643,6 +653,33 @@ function EstudioQuiz({ perguntas, setPerguntas, atual, setAtual }) {
   );
 }
 
+/* O que falta em UMA pergunta (ou null se está tudo certo). */
+function problemaDaPergunta(p) {
+  if (!p.texto.trim()) return p.tipo === 'v_f' ? 'escreva a afirmação.' : 'escreva o enunciado.';
+
+  if (p.tipo === 'quiz') {
+    const usadas = p.alternativas.filter(a => a.texto.trim());
+    if (usadas.length < MIN_ALTERNATIVAS) return `escreva pelo menos ${MIN_ALTERNATIVAS} respostas.`;
+    const certas = usadas.filter(a => a.correta);
+    if (p.alternativas.some(a => a.correta && !a.texto.trim())) return 'uma resposta marcada como certa está em branco.';
+    if (certas.length === 0) return 'marque a resposta certa no círculo.';
+    if (!p.multiplaEscolha && certas.length > 1) return 'é de seleção única, mas tem mais de uma marcada.';
+    if (p.multiplaEscolha && certas.length === usadas.length) return 'todas as respostas estão certas — assim não há o que escolher.';
+    const textos = usadas.map(a => a.texto.trim().toLowerCase());
+    if (new Set(textos).size !== textos.length) return 'tem duas respostas iguais.';
+  }
+
+  if (p.tipo === 'v_f' && !p.vf) return 'diga se a afirmação é verdadeira ou falsa.';
+
+  if (p.tipo === 'puzzle') {
+    const usados = p.itens.filter(it => it.texto.trim());
+    if (usados.length < MIN_ITENS) return `escreva pelo menos ${MIN_ITENS} itens para pôr em ordem.`;
+    const textos = usados.map(it => it.texto.trim().toLowerCase());
+    if (new Set(textos).size !== textos.length) return 'tem dois itens iguais — o aluno não saberia a ordem.';
+  }
+  return null;
+}
+
 function CriarQuiz() {
   // Vem preenchido quando o professor está editando a própria atividade ou
   // copiando uma da biblioteca; vazio quando está criando do zero.
@@ -652,34 +689,19 @@ function CriarQuiz() {
   const [atual, setAtual] = useState(0);
 
   /* Achou problema? Já leva o professor até a pergunta. */
-  const validar = () => {
+  /* Validação (27/10/2026): o problema aparece NA pergunta (faixa vermelha
+     no palco) e some sozinho quando o professor corrige. O EditorAtividade
+     chama validar({ silencioso: true }) para conferir de novo sem pular de
+     pergunta; só no clique de salvar ele leva até a pergunta com problema. */
+  const [tentouSalvar, setTentouSalvar] = useState(false);
+
+  const validar = ({ silencioso = false } = {}) => {
     if (perguntas.length === 0) return 'Escolha o tipo da primeira pergunta para começar o quiz.';
     for (let i = 0; i < perguntas.length; i++) {
-      const p = perguntas[i];
-      const n = i + 1;
-      const erro = (msg) => { setAtual(i); return `Pergunta ${n}: ${msg}`; };
-
-      if (!p.texto.trim()) return erro(p.tipo === 'v_f' ? 'escreva a afirmação.' : 'escreva o enunciado.');
-
-      if (p.tipo === 'quiz') {
-        const usadas = p.alternativas.filter(a => a.texto.trim());
-        if (usadas.length < MIN_ALTERNATIVAS) return erro(`escreva pelo menos ${MIN_ALTERNATIVAS} respostas.`);
-        const certas = usadas.filter(a => a.correta);
-        if (p.alternativas.some(a => a.correta && !a.texto.trim())) return erro('uma resposta marcada como certa está em branco.');
-        if (certas.length === 0) return erro('marque a resposta certa no círculo.');
-        if (!p.multiplaEscolha && certas.length > 1) return erro('é de seleção única, mas tem mais de uma marcada.');
-        if (p.multiplaEscolha && certas.length === usadas.length) return erro('todas as respostas estão certas — assim não há o que escolher.');
-        const textos = usadas.map(a => a.texto.trim().toLowerCase());
-        if (new Set(textos).size !== textos.length) return erro('tem duas respostas iguais.');
-      }
-
-      if (p.tipo === 'v_f' && !p.vf) return erro('diga se a afirmação é verdadeira ou falsa.');
-
-      if (p.tipo === 'puzzle') {
-        const usados = p.itens.filter(it => it.texto.trim());
-        if (usados.length < MIN_ITENS) return erro(`escreva pelo menos ${MIN_ITENS} itens para pôr em ordem.`);
-        const textos = usados.map(it => it.texto.trim().toLowerCase());
-        if (new Set(textos).size !== textos.length) return erro('tem dois itens iguais — o aluno não saberia a ordem.');
+      const problema = problemaDaPergunta(perguntas[i]);
+      if (problema) {
+        if (!silencioso) { setAtual(i); setTentouSalvar(true); }
+        return `Pergunta ${i + 1}: ${problema}`;
       }
     }
     return null;
@@ -758,7 +780,7 @@ function CriarQuiz() {
       temaNoPainel
       largo
     >
-      <EstudioQuiz perguntas={perguntas} setPerguntas={setPerguntas} atual={atual} setAtual={setAtual} />
+      <EstudioQuiz perguntas={perguntas} setPerguntas={setPerguntas} atual={atual} setAtual={setAtual} mostrarProblemas={tentouSalvar} />
     </EditorAtividade>
   );
 }

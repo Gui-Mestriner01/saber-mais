@@ -1216,3 +1216,17 @@
 }
 
 .rel-datas svg { color: var(--azul); }
+
+/* Média de acerto da turma em cada atividade (27/10/2026) */
+.rel-media {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.rel-media.boa   { background: var(--verde-lavado);    color: var(--verde); }
+.rel-media.media { background: var(--amarelo-lavado);  color: #9A6B00; }
+.rel-media.baixa { background: var(--vermelho-lavado); color: var(--vermelho); }
+body.modo-escuro-prof .rel-media.media { color: var(--amarelo); }

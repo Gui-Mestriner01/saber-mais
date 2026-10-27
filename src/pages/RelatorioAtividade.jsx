@@ -6,6 +6,10 @@ import {
   ArrowDownUp, LayoutGrid, Shapes
 } from 'lucide-react';
 import { API } from '../api';
+import { formatarDuracao } from '../tempo';
+
+// Texto de um lado do "ligar" ({ tipo: 'texto' | 'imagem', conteudo })
+const textoDoLado = (lado) => (lado?.tipo === 'imagem' ? '(imagem)' : String(lado?.conteudo ?? lado?.texto ?? ''));
 
 /* ==========================================================================
    RELATÓRIO DE UMA ATIVIDADE
@@ -80,7 +84,20 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
     ? (atividade.conteudo?.perguntas || [])
     : Array.isArray(atividade.conteudo) ? atividade.conteudo : [];
 
-  const temVisaoPorPergunta = (tipo === 'quiz' || tipo === 'v_f') && perguntas.length > 0;
+  /* Colocar em ordem, separar em grupos e ligar (27/10/2026): não têm
+     "perguntas", mas têm itens. A visão geral mostra, item por item, quantos
+     alunos acertaram — assim o professor vê o que a turma não entendeu. */
+  const conteudo = atividade.conteudo || {};
+  const itensDaAtividade =
+    tipo === 'ordenar' ? (conteudo.itens || []).map((texto, k) => ({ texto, detalhe: `Lugar certo: ${k + 1}º`, chave: texto }))
+    : tipo === 'grupos' ? (conteudo.grupos || []).flatMap(g => (g.itens || []).map(texto => ({ texto, detalhe: `Grupo certo: ${g.nome}`, chave: texto })))
+    : tipo === 'ligar' ? (conteudo.pares || []).map((par, k) => ({
+        texto: textoDoLado(par.ladoA), detalhe: `Liga com: ${textoDoLado(par.ladoB)}`, chave: k,
+      }))
+    : [];
+  const porItem = itensDaAtividade.length > 0;
+
+  const temVisaoPorPergunta = ((tipo === 'quiz' || tipo === 'v_f') && perguntas.length > 0) || porItem;
 
   /* ------------------------------------------------------------------------
      QUIZ: quantos alunos marcaram cada alternativa
@@ -182,7 +199,38 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
     };
   });
 
-  const analise = !temVisaoPorPergunta ? [] : tipo === 'quiz' ? analisarQuiz() : analisarVF();
+  const analisarItens = () => itensDaAtividade.map(item => {
+    let acertaram = 0, erraram = 0, semResposta = 0;
+    respostas.forEach(r => {
+      const dado = r.resposta || {};
+      let certo = null;
+      if (tipo === 'ligar') {
+        const conexoes = Array.isArray(dado.conexoes) ? dado.conexoes : [];
+        const ligou = conexoes.find(x => Number(x.parIdA) === item.chave);
+        certo = ligou ? Number(ligou.parIdB) === item.chave : null;
+      } else {
+        const it = (dado.itens || []).find(x => x.texto === item.chave);
+        if (!it) certo = null;
+        else if (tipo === 'ordenar') certo = it.posicaoAluno === it.posicaoCerta;
+        else certo = it.grupoAluno === null || it.grupoAluno === undefined ? null : it.grupoAluno === it.grupoCerto;
+      }
+      if (certo === null) semResposta++;
+      else if (certo) acertaram++;
+      else erraram++;
+    });
+    return {
+      texto: item.texto,
+      detalhe: item.detalhe,
+      opcoes: [
+        { rotulo: 'Acertou', quantidade: acertaram, correta: true },
+        { rotulo: 'Errou', quantidade: erraram, correta: false },
+      ],
+      semResposta,
+      acertaram,
+    };
+  });
+
+  const analise = !temVisaoPorPergunta ? [] : porItem ? analisarItens() : tipo === 'quiz' ? analisarQuiz() : analisarVF();
 
   // Média de acerto da turma, considerando todas as perguntas
   const mediaAcerto = analise.length > 0 && totalAlunos > 0
@@ -299,16 +347,16 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
               <div className="resumo-card alunos">
                 <div className="resumo-icone"><ClipboardList size={20} strokeWidth={1.75} /></div>
                 <div className="resumo-texto">
-                  <strong>{perguntas.length}</strong>
-                  <p>{perguntas.length === 1 ? 'Pergunta' : 'Perguntas'}</p>
+                  <strong>{porItem ? analise.length : perguntas.length}</strong>
+                  <p>{porItem ? (analise.length === 1 ? 'Item' : 'Itens') : (perguntas.length === 1 ? 'Pergunta' : 'Perguntas')}</p>
                 </div>
               </div>
             </div>
 
             <div className="perguntas-barra">
               <span className="perguntas-barra-titulo">
-                Pergunta por pergunta
-                <em>{analise.length} {analise.length === 1 ? 'pergunta' : 'perguntas'}</em>
+                {porItem ? 'Item por item' : 'Pergunta por pergunta'}
+                <em>{analise.length} {porItem ? (analise.length === 1 ? 'item' : 'itens') : (analise.length === 1 ? 'pergunta' : 'perguntas')}</em>
               </span>
 
               <button
@@ -553,6 +601,21 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
       });
     }
 
+    // Ligar: cada par com o que o aluno ligou e o certo
+    if (tipo === 'ligar') {
+      const pares = atividade.conteudo?.pares || [];
+      const conexoes = Array.isArray(resposta.resposta?.conexoes) ? resposta.resposta.conexoes : [];
+      return pares.map((par, k) => {
+        const ligou = conexoes.find(x => Number(x.parIdA) === k);
+        return {
+          pergunta: textoDoLado(par.ladoA),
+          escolha: ligou ? textoDoLado(pares[ligou.parIdB]?.ladoB) : null,
+          correto: textoDoLado(par.ladoB),
+          estado: !ligou ? 'branco' : Number(ligou.parIdB) === k ? 'certo' : 'errado',
+        };
+      });
+    }
+
     // Colocar em ordem: cada item com a posição que o aluno deu e a certa
     if (tipo === 'ordenar' && Array.isArray(resposta.resposta?.itens)) {
       return resposta.resposta.itens.map(it => ({
@@ -605,6 +668,10 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
   };
 
   const acertos = detalhes.filter(d => d.estado === 'certo').length;
+  // Atividade corrigida sozinha: a nota sai dos acertos (o professor ainda
+  // pode mudar à mão). Antes aparecia "Sem nota" mesmo no quiz.
+  const notaAutomatica = detalhes.length > 0 ? Math.round((acertos / detalhes.length) * 100) / 10 : null;
+  const duracao = formatarDuracao(resposta.duracao_s);
 
   return (
     <article className={`aluno-card ${aberto ? 'aberto' : ''}`}>
@@ -613,15 +680,23 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
 
         <div className="aluno-card-nome">
           <strong>{resposta.nome_aluno}</strong>
-          <span>Enviado em {formatarData(resposta.criado_em, true) || 'data não registrada'}</span>
+          <span>
+            Enviado em {formatarData(resposta.criado_em, true) || 'data não registrada'}
+            {duracao && <> · levou {duracao}</>}
+          </span>
         </div>
 
         {detalhes.length > 0 && (
           <span className="aluno-card-acertos">{acertos} de {detalhes.length}</span>
         )}
 
-        <span className={`aluno-card-situacao ${resposta.corrigido ? 'ok' : ''}`}>
-          {resposta.corrigido ? `Nota ${resposta.nota}` : 'Sem nota'}
+        <span
+          className={`aluno-card-situacao ${resposta.corrigido || notaAutomatica !== null ? 'ok' : ''}`}
+          title={resposta.corrigido ? 'Nota dada por você' : notaAutomatica !== null ? 'Nota automática, pelos acertos' : ''}
+        >
+          {resposta.corrigido ? `Nota ${String(resposta.nota).replace('.', ',')}`
+            : notaAutomatica !== null ? `Nota ${String(notaAutomatica).replace('.', ',')}`
+            : 'Sem nota'}
         </span>
 
         <ChevronRight className="aluno-card-seta" size={18} strokeWidth={2} />
@@ -658,7 +733,7 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
 
           <div className="correcao-barra">
             <label className="correcao-campo">
-              <span>Nota (0 a 10)</span>
+              <span>{notaAutomatica !== null ? `Mudar a nota (automática: ${String(notaAutomatica).replace('.', ',')})` : 'Nota (0 a 10)'}</span>
               <input
                 type="number"
                 min="0"

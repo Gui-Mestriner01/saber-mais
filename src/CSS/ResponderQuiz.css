@@ -358,3 +358,93 @@ body.a11y-sem-animacao .qa-esgotou { animation: none !important; }
   .qa-nav .jogo-btn { padding: 12px 16px; }
   .qa-pontinhos { display: none; }
 }
+
+/* ==========================================================================
+   27/10/2026 — preparo, pontinhos que navegam e perguntas pendentes
+   ========================================================================== */
+.qa-preparo {
+  max-width: 520px;
+  margin: 10px auto 0;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-alta);
+  padding: 30px 28px 28px;
+  text-align: center;
+}
+.qa-preparo h2 { margin: 0; font-size: 2rem; font-weight: 900; color: var(--tinta); }
+.qa-preparo-sub { margin: 4px 0 18px; font-weight: 800; color: var(--tinta-media); }
+.qa-preparo-lista {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+.qa-preparo-lista li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: var(--superficie-2);
+  font-weight: 800;
+  color: var(--tinta);
+}
+.qa-preparo-lista svg { flex: none; color: var(--azul); }
+.qa-preparo-dica { margin: 0 0 18px; font-size: .92rem; font-weight: 700; color: var(--tinta-media); }
+.jogo-btn.qa-comecar { font-size: 1.25rem; padding: 16px 44px; }
+
+/* pontinhos viraram botões */
+.qa-pontinhos button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--borda-forte);
+  background: var(--superficie);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .15s, background .15s, border-color .15s;
+}
+.qa-pontinhos button:hover:not(:disabled) { transform: scale(1.12); }
+.qa-pontinhos button.feita  { background: var(--verde); border-color: var(--verde); }
+.qa-pontinhos button.pulada { background: var(--amarelo-lavado); border-color: var(--amarelo); }
+.qa-pontinhos button.atual  { box-shadow: 0 0 0 3px var(--azul-lavado), 0 0 0 5px var(--azul); }
+.qa-pontinhos button.fechada { opacity: .45; cursor: not-allowed; }
+.qa-pontinhos button:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+
+/* aviso de envio com as pendentes */
+.qa-pendentes {
+  margin: 4px 0 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--amarelo-lavado);
+  text-align: left;
+}
+.qa-pendentes p { margin: 0 0 8px; font-weight: 800; color: var(--tinta); }
+.qa-ir-pendente {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--amarelo);
+  background: var(--superficie);
+  color: var(--tinta);
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+.qa-ir-pendente:hover { background: var(--amarelo); color: #fff; }
+
+@media (max-width: 640px) {
+  .qa-pontinhos { display: flex; }
+  .qa-pontinhos button { width: 18px; height: 18px; }
+  .qa-preparo { padding: 22px 18px; }
+}

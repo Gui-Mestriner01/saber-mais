@@ -910,3 +910,24 @@
   .quiz-comecar-tipos { grid-template-columns: minmax(0, 1fr); }
   .quiz-comecar h2 { font-size: 20px; }
 }
+
+/* ---------------------------------------------------------- 27/10/2026
+   Problema da pergunta mostrado nela mesma (some quando corrigir) e a
+   miniatura da pergunta com problema fica marcada em vermelho. */
+.quiz-problema {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: var(--vermelho-lavado);
+  border: 2px solid var(--vermelho);
+  color: var(--vermelho);
+  font-size: 14px;
+  font-weight: 800;
+  animation: quiz-problema-entra .25s ease-out;
+}
+.quiz-problema strong { font-weight: 900; }
+@keyframes quiz-problema-entra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.quiz-mini.com-problema .quiz-mini-cartao { border-color: var(--vermelho); }
+.quiz-mini.com-problema .quiz-mini-num { color: var(--vermelho); }

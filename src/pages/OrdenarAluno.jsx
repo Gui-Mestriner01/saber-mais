@@ -86,7 +86,7 @@ function OrdenarAluno() {
   }
 
   return (
-    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema} emAndamento={!resultado && mexido !== null}>
       {erro && <p className="editor-erro">{erro}</p>}
       {!conteudo && !erro && <p className="jogo-carregando">Preparando a atividade…</p>}
 

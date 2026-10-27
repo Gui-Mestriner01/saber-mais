@@ -4,7 +4,7 @@ import {
   Home, School, Target, Users, Trophy, Sun, Moon, UserRound, Star, Shield,
   CheckCircle2, Clock, Lock, Search, ListChecks, Link2, Palette, PenLine,
   ClipboardList, Inbox, LogOut, X, ChevronLeft, ChevronRight, Radio, Award,
-  ArrowDownUp, LayoutGrid, Shapes
+  ArrowDownUp, LayoutGrid, Shapes, Timer, Eye
 } from 'lucide-react';
 import Insignia from '../components/Insignia';
 import FestaInsignias from '../components/FestaInsignias';
@@ -389,9 +389,24 @@ function AlunoHome() {
             {(atv.created_at || atv.criado_em) && ` · lançada em ${formatarData(atv.created_at || atv.criado_em)}`}
           </p>
           <p className={`atv-prazo prazo-${status.chave}`}>{status.msgTempo}</p>
+          {/* Quiz com cronômetro: avisa antes de entrar (antes dizia só
+              "Sem limite de tempo", mesmo com 20s por pergunta). */}
+          {status.chave !== 'concluida' && atv.tempo_pergunta && (
+            <p className="atv-cronometro">
+              <Timer size={13} strokeWidth={2.4} /> {textoTempoPergunta(atv.tempo_pergunta)}
+            </p>
+          )}
         </div>
 
-        {status.bloqueado ? (
+        {status.chave === 'concluida' ? (
+          // Já fez: abre a revisão com a nota, o que respondeu e o certo.
+          <button
+            className="atv-btn ver-resultado"
+            onClick={() => navigate(`/aluno/revisao/${atv.id}`, { state: { atividade: atv, nomeAluno, sala, alunoId } })}
+          >
+            <Eye size={16} strokeWidth={2.4} /> Ver resultado
+          </button>
+        ) : status.bloqueado ? (
           <button className="atv-btn desativado" disabled>
             {status.textoBotao}
           </button>
@@ -915,6 +930,25 @@ function formatarData(dataStr) {
   return data.toLocaleDateString('pt-BR');
 }
 
+// "Feita · acertou 3 de 4 · +30 pontos", "Feita · nota 8,5" ou "aguardando correção"
+function textoDoResultado(r) {
+  if (!r) return 'Feita · toque para ver o resultado';
+  if (r.nota !== null && r.nota !== undefined) return `Feita · nota ${String(r.nota).replace('.', ',')}`;
+  if (r.aguardando) return 'Feita · aguardando a correção do professor';
+  if (r.de > 0 && r.acertos !== null) {
+    const pontos = r.pontos ? ` · +${r.pontos} pontos` : '';
+    return `Feita · acertou ${r.acertos} de ${r.de}${pontos}`;
+  }
+  return 'Feita';
+}
+
+// "20s por pergunta", "10 a 30s por pergunta", "algumas perguntas têm tempo"
+function textoTempoPergunta(t) {
+  const fmt = (s) => (s < 60 ? `${s}s` : `${Math.floor(s / 60)}min${s % 60 ? ` ${s % 60}s` : ''}`);
+  if (!t.todas) return `Algumas perguntas têm tempo (até ${fmt(t.max)})`;
+  return t.min === t.max ? `${fmt(t.min)} por pergunta` : `${fmt(t.min)} a ${fmt(t.max)} por pergunta`;
+}
+
 // Mostra dias, horas, minutos e segundos ao vivo
 function obterStatusAtividade(atv, horaAtual) {
   const concluida = atv.concluida || atv.respondida || false;
@@ -926,16 +960,18 @@ function obterStatusAtividade(atv, horaAtual) {
       chave: 'concluida',
       bloqueado: true,
       textoBotao: 'Concluída',
-      msgTempo: 'Enviada para o professor'
+      msgTempo: textoDoResultado(atv.resultado)
     };
   }
 
+  // "Prazo" é até quando dá para fazer; o tempo por pergunta do quiz aparece
+  // numa linha à parte (textoTempoPergunta).
   if (!dataStr || isNaN(tempoLimite) || tempoLimite === 0) {
     return {
       chave: 'aberta',
       bloqueado: false,
       textoBotao: 'Fazer',
-      msgTempo: 'Sem limite de tempo'
+      msgTempo: 'Sem prazo para entregar'
     };
   }
 

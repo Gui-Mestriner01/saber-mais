@@ -1813,3 +1813,28 @@ body.modo-escuro .aluno-sair { background: #1E2E3E; border-color: #35506A; color
 
 .dash-cards { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---------- 27/10/2026: tempo por pergunta e "Ver resultado" ---------- */
+.atv-cronometro {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  color: var(--azul) !important;
+  background: var(--azul-lavado);
+  border-radius: 999px;
+  padding: 2px 9px;
+  width: fit-content;
+}
+.atv-btn.ver-resultado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--superficie);
+  color: var(--verde);
+  border: 2px solid var(--verde);
+  box-shadow: none;
+}
+.atv-btn.ver-resultado:hover { background: var(--verde-lavado); color: var(--verde); }

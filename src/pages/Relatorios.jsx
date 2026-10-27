@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   AreaChart, Area
@@ -55,6 +55,7 @@ function formatarData(bruto) {
 
 function Relatorios() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [atividades, setAtividades] = useState([]);
   const [atvSelecionada, setAtvSelecionada] = useState(null);
@@ -86,6 +87,13 @@ function Relatorios() {
       });
 
       setAtividades(ordenadas);
+
+      // Veio do "Relatório" do Minhas aulas: já abre a atividade escolhida.
+      const abrir = location.state?.abrirAtividade;
+      const alvo = abrir && ordenadas.find(a => Number(a.id) === Number(abrir));
+      if (alvo) verRespostas(alvo);
+      // Usa uma vez só: no F5 a página volta para a lista.
+      if (abrir) window.history.replaceState({ ...window.history.state, usr: {} }, '');
     } catch (error) {
       console.error('Erro ao buscar atividades', error);
     } finally {
@@ -281,6 +289,111 @@ function Relatorios() {
                   </div>
                 </div>
 
+                {/* LISTA DE ATIVIDADES — vem antes dos gráficos (27/10/2026): é por aqui que
+                    o professor abre o relatório de cada atividade (por aluno e por questão). */}
+                <section className="painel-secao">
+                  <div className="rel-filtros">
+                    <label className="rel-busca">
+                      <Search size={16} strokeWidth={1.75} />
+                      <input
+                        type="text"
+                        placeholder="Buscar pelo título da atividade..."
+                        value={busca}
+                        onChange={e => setBusca(e.target.value)}
+                      />
+                    </label>
+
+                    <select value={filtroTurma} onChange={e => setFiltroTurma(e.target.value)}>
+                      <option value="todas">Todas as turmas</option>
+                      {turmasDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+
+                    <select value={filtroMateria} onChange={e => setFiltroMateria(e.target.value)}>
+                      <option value="todas">Todas as matérias</option>
+                      {materiasDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+
+                    <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
+                      <option value="todos">Todos os tipos</option>
+                      {tiposDisponiveis.map(t => (
+                        <option key={t} value={t}>{NOMES_TIPO[t] || t}</option>
+                      ))}
+                    </select>
+
+                    {filtroLigado && (
+                      <button className="rel-limpar" onClick={limparFiltros}>
+                        <X size={15} strokeWidth={2} /> Limpar
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="secao-header">
+                    <h2>Relatório de cada atividade</h2>
+                    <span className="badge-contagem">{comRespostas.length}</span>
+                    <button className="link-ver-todas" onClick={() => navigate('/professor/minhas-aulas')}>
+                      Ver todas as atividades
+                    </button>
+                  </div>
+
+                  {comRespostas.length === 0 ? (
+                    <div className="rel-vazio">
+                      <Inbox size={28} strokeWidth={1.5} />
+                      <p>
+                        {filtroLigado
+                          ? 'Nenhuma atividade com resposta bate com esse filtro.'
+                          : 'Nenhum aluno respondeu suas atividades ainda.'}
+                      </p>
+                    </div>
+                  ) : (
+                  <div className="rel-lista">
+                    {comRespostas.map(atv => (
+                      <div key={atv.id} className="rel-card">
+                        <div className="rel-card-info">
+                          <span
+                            className="rel-tipo-icon"
+                            style={{
+                              background: (CORES_TIPO[atv.tipo] || '#7AAAC8') + '1F',
+                              color: CORES_TIPO[atv.tipo] || '#7AAAC8'
+                            }}
+                          >
+                            <IconeDoTipo tipo={atv.tipo} />
+                          </span>
+                          <div>
+                            <h3>{atv.titulo}</h3>
+                            <p>{atv.nome_sala} · {atv.serie} · {atv.materia}</p>
+                            <div className="rel-selos">
+                              <span className="rel-badge">
+                                {atv.total_respostas} {atv.total_respostas === 1 ? 'resposta' : 'respostas'}
+                              </span>
+                              {atv.media_acerto !== null && atv.media_acerto !== undefined && (
+                                <span className={`rel-media ${atv.media_acerto >= 70 ? 'boa' : atv.media_acerto >= 50 ? 'media' : 'baixa'}`}
+                                  title="Média de acerto da turma nesta atividade">
+                                  {atv.media_acerto}% de acerto
+                                </span>
+                              )}
+                              <span className="rel-data">
+                                <Calendar size={13} strokeWidth={1.75} />
+                                Lançada em {formatarData(atv.criado_em)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button className="rel-btn-ver" onClick={() => verRespostas(atv)}>
+                          Ver relatório <ArrowRight size={15} strokeWidth={1.75} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  )}
+
+                  {aguardandoAlunos > 0 && (
+                    <p className="rel-nota">
+                      Mais {aguardandoAlunos} {aguardandoAlunos === 1 ? 'atividade ainda não recebeu' : 'atividades ainda não receberam'} nenhuma resposta.
+                    </p>
+                  )}
+                </section>
+
                 {/* GRÁFICOS */}
                 <div className="gr-grade">
 
@@ -402,103 +515,6 @@ function Relatorios() {
 
                 </div>
 
-                {/* LISTA DETALHADA */}
-                <section className="painel-secao">
-                  <div className="rel-filtros">
-                    <label className="rel-busca">
-                      <Search size={16} strokeWidth={1.75} />
-                      <input
-                        type="text"
-                        placeholder="Buscar pelo título da atividade..."
-                        value={busca}
-                        onChange={e => setBusca(e.target.value)}
-                      />
-                    </label>
-
-                    <select value={filtroTurma} onChange={e => setFiltroTurma(e.target.value)}>
-                      <option value="todas">Todas as turmas</option>
-                      {turmasDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-
-                    <select value={filtroMateria} onChange={e => setFiltroMateria(e.target.value)}>
-                      <option value="todas">Todas as matérias</option>
-                      {materiasDisponiveis.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-
-                    <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
-                      <option value="todos">Todos os tipos</option>
-                      {tiposDisponiveis.map(t => (
-                        <option key={t} value={t}>{NOMES_TIPO[t] || t}</option>
-                      ))}
-                    </select>
-
-                    {filtroLigado && (
-                      <button className="rel-limpar" onClick={limparFiltros}>
-                        <X size={15} strokeWidth={2} /> Limpar
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="secao-header">
-                    <h2>Respostas para corrigir</h2>
-                    <span className="badge-contagem">{comRespostas.length}</span>
-                    <button className="link-ver-todas" onClick={() => navigate('/professor/minhas-aulas')}>
-                      Ver todas as atividades
-                    </button>
-                  </div>
-
-                  {comRespostas.length === 0 ? (
-                    <div className="rel-vazio">
-                      <Inbox size={28} strokeWidth={1.5} />
-                      <p>
-                        {filtroLigado
-                          ? 'Nenhuma atividade com resposta bate com esse filtro.'
-                          : 'Nenhum aluno respondeu suas atividades ainda.'}
-                      </p>
-                    </div>
-                  ) : (
-                  <div className="rel-lista">
-                    {comRespostas.map(atv => (
-                      <div key={atv.id} className="rel-card">
-                        <div className="rel-card-info">
-                          <span
-                            className="rel-tipo-icon"
-                            style={{
-                              background: (CORES_TIPO[atv.tipo] || '#7AAAC8') + '1F',
-                              color: CORES_TIPO[atv.tipo] || '#7AAAC8'
-                            }}
-                          >
-                            <IconeDoTipo tipo={atv.tipo} />
-                          </span>
-                          <div>
-                            <h3>{atv.titulo}</h3>
-                            <p>{atv.nome_sala} · {atv.serie} · {atv.materia}</p>
-                            <div className="rel-selos">
-                              <span className="rel-badge">
-                                {atv.total_respostas} {atv.total_respostas === 1 ? 'resposta' : 'respostas'}
-                              </span>
-                              <span className="rel-data">
-                                <Calendar size={13} strokeWidth={1.75} />
-                                Lançada em {formatarData(atv.criado_em)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <button className="rel-btn-ver" onClick={() => verRespostas(atv)}>
-                          Ver correções <ArrowRight size={15} strokeWidth={1.75} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  )}
-
-                  {aguardandoAlunos > 0 && (
-                    <p className="rel-nota">
-                      Mais {aguardandoAlunos} {aguardandoAlunos === 1 ? 'atividade ainda não recebeu' : 'atividades ainda não receberam'} nenhuma resposta.
-                    </p>
-                  )}
-                </section>
               </>
             )}
           </>

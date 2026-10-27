@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Check, X, Send, Timer, Award, ListChecks,
-  ToggleLeft, ListOrdered, CircleAlert,
+  ToggleLeft, ListOrdered, CircleAlert, Play, CornerDownRight,
 } from 'lucide-react';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
 import {
   useAtividadeAluno, JogoAluno, JanelaConfirmar, ResultadoAtividade, estrelasPorAproveitamento,
 } from '../components/JogoAluno';
 import { FormaMarca, marca, COR_VERDADEIRO, COR_FALSO } from '../components/MarcasQuiz';
+import CorrecaoLista from '../components/CorrecaoLista';
+import { API, cabecalhoAluno } from '../api';
 import '../CSS/ResponderQuiz.css';
 
 /* ==========================================================================
@@ -26,6 +28,14 @@ import '../CSS/ResponderQuiz.css';
 
    O gabarito não vem para o navegador: o servidor corrige e devolve os
    pontos, quais acertou e as respostas certas para a tela de correção.
+
+   27/10/2026 (relatório de usabilidade):
+   - Tela de preparo: nada corre antes do aluno tocar em "Começar".
+   - Os pontinhos mostram quais perguntas já foram respondidas e quais
+     ficaram puladas, e dão para tocar (ir direto para a pergunta).
+   - O "Enviar" lista as perguntas em branco e leva até a primeira.
+   - Sair no meio pede confirmação (JogoAluno, emAndamento).
+   - A correção final mostra o que o aluno respondeu ao lado do certo.
    ========================================================================== */
 
 const NOME_DO_TIPO = {
@@ -61,8 +71,23 @@ function Cronometro({ restanteMs, totalMs }) {
   );
 }
 
+function textoDoTempo(perguntas) {
+  const tempos = perguntas.map(q => Number(q.tempo) || 0);
+  const com = tempos.filter(t => t > 0);
+  if (com.length === 0) return 'Sem tempo: responda no seu ritmo.';
+  const fmt = (s) => (s < 60 ? `${s} segundos` : `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60}s` : ''}`);
+  const min = Math.min(...com), max = Math.max(...com);
+  const quanto = min === max ? fmt(min) : `de ${fmt(min)} a ${fmt(max)}`;
+  return com.length === tempos.length
+    ? `Cada pergunta tem ${quanto} para responder.`
+    : `Algumas perguntas têm tempo (${quanto}). As outras são no seu ritmo.`;
+}
+
 function ResponderQuiz() {
-  const { atividade, conteudo, erro, enviar, voltar, tema } = useAtividadeAluno();
+  const { atividade, conteudo, erro, enviar, voltar, tema, marcarInicio } = useAtividadeAluno();
+  const [comecou, setComecou]     = useState(false);   // passou da tela de preparo
+  const [visitadas, setVisitadas] = useState({});      // perguntas que já apareceram na tela
+  const [revisao, setRevisao]     = useState(null);    // correção completa, vinda do servidor
 
   const [perguntas, setPerguntas] = useState([]);
   const [idx, setIdx]             = useState(0);
@@ -95,18 +120,21 @@ function ResponderQuiz() {
   const travada = !!travadas[idx];
   const ultima = idx === perguntas.length - 1;
 
-  /* Liga o relógio da pergunta na primeira vez que ela aparece. */
+  /* Liga o relógio da pergunta na primeira vez que ela aparece — só depois
+     do "Começar". Também marca a pergunta como vista (para os pontinhos). */
   useEffect(() => {
-    if (!p || tempoMs <= 0 || travadas[idx] || inicio[idx]) return;
+    if (!p || !comecou) return;
+    setVisitadas(atual => (atual[idx] ? atual : { ...atual, [idx]: true }));
+    if (tempoMs <= 0 || travadas[idx] || inicio[idx]) return;
     setInicio(atual => ({ ...atual, [idx]: Date.now() }));
-  }, [idx, p, tempoMs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idx, p, tempoMs, comecou]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Faz o relógio andar só enquanto tem uma pergunta com tempo na tela. */
   useEffect(() => {
-    if (tempoMs <= 0 || travada || resultado || confirmar) return;
+    if (!comecou || tempoMs <= 0 || travada || resultado || confirmar) return;
     const t = setInterval(() => setAgora(Date.now()), 250);
     return () => clearInterval(t);
-  }, [idx, tempoMs, travada, resultado, confirmar]);
+  }, [idx, tempoMs, travada, resultado, confirmar, comecou]);
 
   const restanteMs = tempoMs > 0 && inicio[idx] ? Math.max(0, tempoMs - (agora - inicio[idx])) : tempoMs;
 
@@ -159,7 +187,19 @@ function ResponderQuiz() {
 
   const anterior = () => { if (idx > 0 && !travadas[idx - 1]) setIdx(idx - 1); };
 
-  const semResposta = perguntas.filter((q, i) => tipoDe(q) !== 'puzzle' && !(respostas[i] || []).length).length;
+  /* Ir direto para uma pergunta (pontinhos e "ir para a pergunta X").
+     Sair de uma pergunta com tempo encerra ela, igual ao "Próxima". */
+  const irPara = (i) => {
+    if (i === idx || travadas[i] || esgotou) return;
+    if (tempoMs > 0) setTravadas(atual => ({ ...atual, [idx]: true }));
+    setIdx(i);
+  };
+
+  const respondida = (i) => (tipoDe(perguntas[i]) === 'puzzle' ? !!visitadas[i] : (respostas[i] || []).length > 0);
+  const pendentes = perguntas.map((_, i) => i).filter(i => !respondida(i));
+  const semResposta = pendentes.length;
+  // A primeira em branco que ainda dá para responder (as com tempo encerrado, não).
+  const primeiraAberta = pendentes.find(i => !travadas[i]);
 
   const enviarTudo = async () => {
     setEnviando(true);
@@ -168,6 +208,11 @@ function ResponderQuiz() {
       const corrigido = await enviar({ respostas });
       setResultado(corrigido);
       setConfirmar(false);
+      // A correção completa (sua resposta × certa) vem da mesma rota da revisão.
+      fetch(`${API}/aluno/atividade/${atividade.id}/revisao`, { headers: cabecalhoAluno() })
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => { if (d?.itens) setRevisao(d.itens); })
+        .catch(() => {});
     } catch (e) {
       setErroEnvio(e.message || 'Não consegui enviar. Confira a internet e tente de novo.');
       setConfirmar(false);
@@ -205,6 +250,7 @@ function ResponderQuiz() {
           subtitulo={`Você acertou ${resultado.acertos} de ${total} ${total === 1 ? 'pergunta' : 'perguntas'}.`}
           voltar={voltar}
         >
+          {revisao ? <CorrecaoLista itens={revisao} /> : (
           <ol className="qa-correcao">
             {perguntas.map((q, i) => {
               const certo = resultado.acertou?.[i];
@@ -227,7 +273,33 @@ function ResponderQuiz() {
               );
             })}
           </ol>
+          )}
         </ResultadoAtividade>
+      </JogoAluno>
+    );
+  }
+
+  /* ---------------------------------------------------------- preparo */
+  if (!comecou) {
+    const tipos = [...new Set(perguntas.map(tipoDe))];
+    const valeTotal = perguntas.reduce((soma, q) => soma + ({ padrao: 10, dobro: 20, nenhum: 0 }[q.pontos] ?? 10), 0);
+    return (
+      <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+        <div className="qa-preparo">
+          <h2>Prepare-se!</h2>
+          <p className="qa-preparo-sub">{atividade?.titulo}</p>
+          <ul className="qa-preparo-lista">
+            <li><ListChecks size={20} strokeWidth={2.2} /> {perguntas.length} {perguntas.length === 1 ? 'pergunta' : 'perguntas'}
+              {tipos.length > 1 && ` (${tipos.map(t => NOME_DO_TIPO[t].nome.toLowerCase()).join(', ')})`}</li>
+            <li><Timer size={20} strokeWidth={2.2} /> {textoDoTempo(perguntas)}</li>
+            <li><Award size={20} strokeWidth={2.2} /> Vale até {valeTotal} pontos</li>
+          </ul>
+          <p className="qa-preparo-dica">O tempo só começa a contar quando você tocar em “Começar”.</p>
+          <button type="button" className="jogo-btn qa-comecar" autoFocus
+            onClick={() => { marcarInicio(); setComecou(true); }}>
+            <Play size={20} strokeWidth={2.6} fill="currentColor" /> Começar
+          </button>
+        </div>
       </JogoAluno>
     );
   }
@@ -244,7 +316,7 @@ function ResponderQuiz() {
   const itensPorId = Object.fromEntries((p.itens || []).map(it => [it.id, it]));
 
   return (
-    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema}>
+    <JogoAluno titulo={atividade?.titulo} voltar={voltar} tema={tema} emAndamento={!resultado}>
       <div className="qa">
         {/* barra: progresso, valor e relógio */}
         <div className="qa-barra">
@@ -361,10 +433,27 @@ function ResponderQuiz() {
             <ArrowLeft size={18} strokeWidth={2.4} /> Anterior
           </button>
 
-          <div className="qa-pontinhos" aria-hidden="true">
-            {perguntas.map((q, i) => (
-              <span key={i} className={`${i === idx ? 'atual' : ''} ${(tipoDe(q) === 'puzzle' || (respostas[i] || []).length) ? 'feita' : ''}`} />
-            ))}
+          {/* Verde = respondida · laranja = pulada (já apareceu e ficou em
+              branco) · cinza = ainda não vista. Tocar leva até a pergunta. */}
+          <div className="qa-pontinhos" role="group" aria-label="Perguntas">
+            {perguntas.map((q, i) => {
+              const estado = respondida(i) ? 'feita' : visitadas[i] ? 'pulada' : '';
+              const fechada = !!travadas[i] && i !== idx;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  className={`${estado} ${i === idx ? 'atual' : ''} ${fechada ? 'fechada' : ''}`}
+                  onClick={() => irPara(i)}
+                  disabled={fechada || esgotou}
+                  aria-current={i === idx ? 'step' : undefined}
+                  aria-label={`Pergunta ${i + 1}: ${estado === 'feita' ? 'respondida' : estado === 'pulada' ? 'sem resposta' : 'ainda não vista'}${fechada ? ', tempo encerrado' : ''}`}
+                  title={`Pergunta ${i + 1}`}
+                >
+                  {estado === 'feita' && <Check size={10} strokeWidth={4} />}
+                </button>
+              );
+            })}
           </div>
 
           <button type="button" className={`jogo-btn ${ultima ? '' : 'azul'}`} onClick={proxima} disabled={esgotou}>
@@ -377,12 +466,27 @@ function ResponderQuiz() {
         <JanelaConfirmar
           titulo="Enviar suas respostas?"
           texto={semResposta > 0
-            ? `Ainda ${semResposta === 1 ? 'tem 1 pergunta' : `tem ${semResposta} perguntas`} sem resposta. Depois de enviar não dá para mudar.`
+            ? `${semResposta === 1 ? 'Uma pergunta ficou' : `${semResposta} perguntas ficaram`} sem resposta. Depois de enviar não dá para mudar.`
             : 'Depois de enviar não dá para mudar. Valendo!'}
+          textoConfirmar={semResposta > 0 ? 'Enviar assim mesmo' : 'Enviar'}
           aoConfirmar={enviarTudo}
           aoCancelar={() => setConfirmar(false)}
           enviando={enviando}
-        />
+        >
+          {semResposta > 0 && (
+            <div className="qa-pendentes">
+              <p>
+                Sem resposta: {pendentes.map(i => `pergunta ${i + 1}${travadas[i] ? ' (tempo encerrado)' : ''}`).join(', ')}.
+              </p>
+              {primeiraAberta !== undefined && (
+                <button type="button" className="qa-ir-pendente"
+                  onClick={() => { setConfirmar(false); irPara(primeiraAberta); }}>
+                  <CornerDownRight size={16} strokeWidth={2.6} /> Ir para a pergunta {primeiraAberta + 1}
+                </button>
+              )}
+            </div>
+          )}
+        </JanelaConfirmar>
       )}
     </JogoAluno>
   );

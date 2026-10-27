@@ -14,6 +14,7 @@ function PinturaAluno() {
   const { state }   = useLocation();
   const navigate    = useNavigate();
   const canvasRef   = useRef(null);
+  const inicio      = useRef(Date.now()); // tempo gasto, para o relatório do professor
   const imgRef      = useRef(null);
   const pintando    = useRef(false);
   const ultimoPonto = useRef(null);
@@ -119,6 +120,7 @@ function PinturaAluno() {
       formData.append('pintura', blob, `pintura_${nomeAluno}_${Date.now()}.png`);
       formData.append('nome_aluno', nomeAluno);
       formData.append('sala_id', sala.id);
+      formData.append('duracao_s', String(Math.round((Date.now() - inicio.current) / 1000)));
 
       const res = await fetch(`${API}/atividade/${atividade.id}/resposta/pintura`, {
         method: 'POST',

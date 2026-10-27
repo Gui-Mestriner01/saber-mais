@@ -741,6 +741,145 @@ function corrigirResposta(atividade, resposta = {}) {
   }
 }
 
+/* ==========================================================================
+   REVISÃO E RESUMO DE UMA RESPOSTA JÁ ENVIADA (27/10/2026)
+
+   O aluno pode reabrir a atividade que já fez e ver a nota, o que respondeu
+   e o gabarito. O gabarito só sai daqui DEPOIS que a resposta foi enviada —
+   e não dá para responder de novo, então não vira cola.
+
+   resumoDaResposta → { acertos, de, pontos, totalPontos, nota, aguardando }
+   revisaoDaResposta → lista de itens { pergunta, sua, certa, acertou, ... }
+   ========================================================================== */
+function lerJson(valor, padrao = null) {
+  if (valor === null || valor === undefined) return padrao;
+  if (typeof valor !== 'string') return valor;
+  try { return JSON.parse(valor); } catch { return padrao; }
+}
+
+function resumoDaResposta(tipo, armazenado, nota, corrigido) {
+  const r = lerJson(armazenado, {});
+  const notaNum = nota === null || nota === undefined ? null : Number(nota);
+  const base = { acertos: null, de: null, pontos: null, totalPontos: null, nota: corrigido ? notaNum : null, aguardando: false };
+
+  if (['pintura', 'resposta_aberta'].includes(tipo)) {
+    return { ...base, aguardando: !corrigido };
+  }
+  if (Array.isArray(r)) { // V/F antigo
+    const acertos = r.filter(x => x && x.acertou).length;
+    return { ...base, acertos, de: r.length, pontos: acertos * 10, totalPontos: r.length * 10 };
+  }
+  if (tipo === 'quiz' && r && r.respostas && !Array.isArray(r.respostas)) {
+    const de = r.modo === 'ao_vivo'
+      ? Math.round((Number(r.total) || 0) / 10)
+      : Number(r.perguntas) || Object.keys(r.respostas).length;
+    return { ...base, acertos: Number(r.acertos) || 0, de, pontos: Number(r.pontos) || 0, totalPontos: Number(r.total) || de * 10 };
+  }
+  if (r && typeof r.acertos === 'number') {
+    return { ...base, acertos: r.acertos, de: Number(r.total) || 0, pontos: Number(r.pontos) || 0, totalPontos: (Number(r.total) || 0) * 10 };
+  }
+  return base;
+}
+
+const textoDoLado = (lado) => (lado && lado.tipo === 'imagem' ? '(imagem)' : String(lado?.conteudo ?? lado?.texto ?? ''));
+
+function revisaoDaResposta(atividade, armazenado) {
+  const c = lerConteudo(atividade);
+  const r = lerJson(armazenado, {});
+
+  switch (atividade.tipo) {
+    case 'quiz': {
+      const respostas = (r && r.respostas) || {};
+      return listaDePerguntas(c).map((p, i) => {
+        const tipo = tipoDaPergunta(p);
+        const dada = respostas[i] ?? respostas[String(i)];
+        const marcadas = Array.isArray(dada) ? dada : [];
+        const base = { pergunta: p.texto || `Pergunta ${i + 1}`, tipo, imagem: p.imagem || null, valor: valorDaPergunta(p) };
+
+        if (tipo === 'puzzle') {
+          // No ao vivo o puzzle não entrou na partida: não conta como errado.
+          if (r && r.modo === 'ao_vivo') return { ...base, foraDoAoVivo: true };
+          const itens = (p.itens || []).map(String);
+          const acertou = marcadas.length === itens.length && marcadas.every((v, k) => Number(v) === k);
+          return {
+            ...base,
+            sua: marcadas.length ? marcadas.map(k => itens[k]).filter(Boolean).join(' → ') : null,
+            certa: itens.join(' → '),
+            acertou,
+            emBranco: marcadas.length === 0,
+          };
+        }
+
+        const alternativas = (p.alternativas || []).map(a => (typeof a === 'object' ? String(a?.texto ?? '') : String(a ?? '')));
+        const certas = corretasDoQuiz(p);
+        const escolhidas = [...new Set(marcadas.map(Number))].filter(n => n >= 0 && n < alternativas.length);
+        const acertou = escolhidas.length > 0 && escolhidas.length === certas.length && certas.every(x => escolhidas.includes(x));
+        return {
+          ...base,
+          sua: escolhidas.length ? escolhidas.map(k => alternativas[k]).join(', ') : null,
+          certa: certas.map(k => alternativas[k]).join(', '),
+          acertou,
+          emBranco: escolhidas.length === 0,
+        };
+      });
+    }
+
+    case 'v_f': {
+      const nomes = { V: 'Verdadeiro', F: 'Falso' };
+      const lista = Array.isArray(r) ? r : [];
+      return listaDePerguntas(c).map((p, i) => {
+        const dada = lista[i]?.resposta_aluno || null;
+        return {
+          pergunta: p.texto || `Afirmação ${i + 1}`,
+          imagem: p.imagem_url || null,
+          sua: nomes[dada] || null,
+          certa: nomes[letraVF(p.resposta_correta)] || '',
+          acertou: !!lista[i]?.acertou,
+          emBranco: !dada,
+        };
+      });
+    }
+
+    case 'ligar': {
+      const pares = c.pares || [];
+      const conexoes = Array.isArray(r?.conexoes) ? r.conexoes : [];
+      return pares.map((par, i) => {
+        const ligou = conexoes.find(x => Number(x.parIdA) === i);
+        return {
+          pergunta: textoDoLado(par.ladoA),
+          imagem: par.ladoA?.tipo === 'imagem' ? par.ladoA.conteudo : null,
+          sua: ligou ? textoDoLado(pares[ligou.parIdB]?.ladoB) : null,
+          certa: textoDoLado(par.ladoB),
+          acertou: !!ligou && Number(ligou.parIdB) === i,
+          emBranco: !ligou,
+        };
+      });
+    }
+
+    case 'ordenar':
+      return (r?.itens || []).map(it => ({
+        pergunta: it.texto,
+        sua: `${it.posicaoAluno}º lugar`,
+        certa: `${it.posicaoCerta}º lugar`,
+        acertou: it.posicaoAluno === it.posicaoCerta,
+      }));
+
+    case 'grupos': {
+      const nomes = r?.grupos || (c.grupos || []).map(g => g.nome);
+      return (r?.itens || []).map(it => ({
+        pergunta: it.texto,
+        sua: it.grupoAluno === null || it.grupoAluno === undefined ? null : (nomes[it.grupoAluno] ?? `Grupo ${Number(it.grupoAluno) + 1}`),
+        certa: nomes[it.grupoCerto] ?? `Grupo ${Number(it.grupoCerto) + 1}`,
+        acertou: it.grupoAluno === it.grupoCerto,
+        emBranco: it.grupoAluno === null || it.grupoAluno === undefined,
+      }));
+    }
+
+    default:
+      return [];
+  }
+}
+
 const TEMAS = {
   frutas:   ['🍎','🍌','🍇','🍓','🍊','🍋','🍉','🍑','🍒','🥭'],
   animais:  ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯'],
@@ -1369,20 +1508,37 @@ app.get('/sala/:salaId/atividades', acessoASala(req => req.params.salaId), (req,
   const aluno = req.acesso?.tipo === 'aluno' ? req.acesso.nome : '';
 
   const sql = `
-    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.tempo_limite, a.tema,
-           (SELECT COUNT(*) FROM resposta_aluno r WHERE r.atividade_id = a.id AND r.nome_aluno = ?) AS respondida
+    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.tempo_limite, a.tema, a.conteudo,
+           (SELECT COUNT(*) FROM resposta_aluno r WHERE r.atividade_id = a.id AND r.nome_aluno = ?) AS respondida,
+           (SELECT JSON_OBJECT('resposta', r.resposta, 'nota', r.nota, 'corrigido', r.corrigido)
+              FROM resposta_aluno r WHERE r.atividade_id = a.id AND r.nome_aluno = ? ORDER BY r.id DESC LIMIT 1) AS minha
     FROM atividade a
     WHERE a.sala_id = ?
     ORDER BY a.criado_em DESC
   `;
 
-  db.query(sql, [aluno, salaId], (err, results) => {
+  db.query(sql, [aluno, aluno, salaId], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar atividades.' });
-    
-    const atividadesFormatadas = results.map(atv => ({
-      ...atv,
-      respondida: atv.respondida > 0
-    }));
+
+    const atividadesFormatadas = results.map(({ conteudo, minha, ...atv }) => {
+      const saida = { ...atv, respondida: atv.respondida > 0 };
+
+      // Quiz com cronômetro: o card avisa o tempo por pergunta (o conteúdo
+      // em si — com o gabarito — nunca sai daqui).
+      if (atv.tipo === 'quiz') {
+        const tempos = listaDePerguntas(lerConteudo({ conteudo })).map(p => Number(p?.tempo) || 0);
+        const comTempo = tempos.filter(t => t > 0);
+        saida.perguntas = tempos.length;
+        saida.tempo_pergunta = comTempo.length
+          ? { min: Math.min(...comTempo), max: Math.max(...comTempo), todas: comTempo.length === tempos.length }
+          : null;
+      }
+
+      // Já fez: vai o resumo (acertos, pontos, nota) para o card.
+      const m = lerJson(minha);
+      if (saida.respondida && m) saida.resultado = resumoDaResposta(atv.tipo, m.resposta, m.nota, Number(m.corrigido) === 1);
+      return saida;
+    });
 
     res.json(atividadesFormatadas);
   });
@@ -1431,7 +1587,34 @@ app.get('/professor/atividades', autenticar, (req, res) => {
   `;
   db.query(sql, [req.usuario.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar atividades.' });
-    res.json(results);
+
+    /* Média de acerto de cada atividade (27/10/2026): aparece na lista de
+       relatórios e no Minhas aulas, sem o professor precisar abrir uma por
+       uma. Pintura e resposta aberta usam a nota que o professor deu. */
+    db.query(
+      `SELECT r.atividade_id, r.resposta, r.nota, r.corrigido, a.tipo
+         FROM resposta_aluno r JOIN atividade a ON a.id = r.atividade_id
+        WHERE a.professor_id = ?`,
+      [req.usuario.id],
+      (errR, respostas) => {
+        if (errR) return res.json(results); // sem média, mas a lista continua
+        const soma = {};
+        for (const r of respostas) {
+          const resumo = resumoDaResposta(r.tipo, r.resposta, r.nota, Number(r.corrigido) === 1);
+          let fracao = null;
+          if (resumo.de > 0 && resumo.acertos !== null) fracao = resumo.acertos / resumo.de;
+          else if (resumo.nota !== null) fracao = Math.max(0, Math.min(1, resumo.nota / 10));
+          if (fracao === null) continue;
+          (soma[r.atividade_id] ||= { total: 0, n: 0 });
+          soma[r.atividade_id].total += fracao;
+          soma[r.atividade_id].n += 1;
+        }
+        res.json(results.map(a => ({
+          ...a,
+          media_acerto: soma[a.id] ? Math.round((soma[a.id].total / soma[a.id].n) * 100) : null,
+        })));
+      }
+    );
   });
 });
 
@@ -1691,9 +1874,12 @@ app.post('/atividade/:id/resposta', autenticarAluno, (req, res) => {
         if (ja.length > 0) return res.status(409).json({ erro: 'Você já respondeu esta atividade.' });
 
         const { armazenar, pontos, resultado } = corrigirResposta(atv, resposta);
+        // Quanto tempo o aluno levou (a tela mede do "Começar" até o envio).
+        const duracao = Math.round(Number(req.body.duracao_s));
+        const duracaoSegura = Number.isFinite(duracao) && duracao > 0 && duracao <= 6 * 3600 ? duracao : null;
 
-        const sqlInsert = `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta) VALUES (?, ?, ?, ?)`;
-        db.query(sqlInsert, [atv.id, nome, sala_id, JSON.stringify(armazenar)], (errIns, result) => {
+        const sqlInsert = `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta, duracao_s) VALUES (?, ?, ?, ?, ?)`;
+        db.query(sqlInsert, [atv.id, nome, sala_id, JSON.stringify(armazenar), duracaoSegura], (errIns, result) => {
           if (errIns) return res.status(500).json({ erro: 'Erro ao salvar resposta.' });
 
           db.query(`UPDATE aluno_sala SET pontos = pontos + ? WHERE id = ?`, [pontos, aluno_id], (errPontos) => {
@@ -1707,9 +1893,52 @@ app.post('/atividade/:id/resposta', autenticarAluno, (req, res) => {
   });
 });
 
+/* --------------------------------------------------------------------------
+   ALUNO — rever uma atividade que já fez (nota, o que respondeu e o certo).
+   Só a resposta do próprio aluno do crachá, e só depois de enviada.
+   -------------------------------------------------------------------------- */
+app.get('/aluno/atividade/:id/revisao', autenticarAluno, (req, res) => {
+  const { nome, sala_id } = req.aluno;
+  db.query(`SELECT * FROM atividade WHERE id = ?`, [req.params.id], (err, atividades) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao buscar a atividade.' });
+    const atv = atividades[0];
+    if (!atv) return res.status(404).json({ erro: 'Atividade não encontrada.' });
+    if (Number(atv.sala_id) !== Number(sala_id)) return res.status(403).json({ erro: 'Essa atividade não é da sua sala.' });
+
+    db.query(
+      `SELECT resposta, nota, corrigido, comentario, criado_em, duracao_s
+         FROM resposta_aluno WHERE atividade_id = ? AND sala_id = ? AND nome_aluno = ?
+        ORDER BY id DESC LIMIT 1`,
+      [atv.id, sala_id, nome],
+      (errR, linhas) => {
+        if (errR) return res.status(500).json({ erro: 'Erro ao buscar sua resposta.' });
+        const r = linhas[0];
+        if (!r) return res.status(404).json({ erro: 'Você ainda não fez esta atividade.' });
+
+        const corrigido = Number(r.corrigido) === 1;
+        const armazenado = lerJson(r.resposta, {});
+        res.json({
+          atividade: { id: atv.id, titulo: atv.titulo, tipo: atv.tipo, tema: temaValido(atv.tema) },
+          enviada_em: r.criado_em,
+          duracao_s: r.duracao_s ?? null,
+          resumo: resumoDaResposta(atv.tipo, armazenado, r.nota, corrigido),
+          itens: revisaoDaResposta(atv, armazenado),
+          nota: corrigido ? Number(r.nota) : null,
+          comentario: corrigido ? (r.comentario || null) : null,
+          corrigido,
+          ao_vivo: armazenado && armazenado.modo === 'ao_vivo',
+          // Pintura: o desenho que o aluno mandou
+          imagem: atv.tipo === 'pintura' ? (armazenado.url_pintura || null) : null,
+          memoria: atv.tipo === 'memoria' ? { tentativas: armazenado.tentativas, estrelas: armazenado.estrelas } : null,
+        });
+      }
+    );
+  });
+});
+
 app.get('/professor/atividade/:id/respostas', autenticar, (req, res) => {
   const sql = `
-    SELECT r.id, r.nome_aluno, r.resposta, r.nota, r.corrigido, r.criado_em, s.nome AS nome_sala, s.serie, s.materia
+    SELECT r.id, r.nome_aluno, r.resposta, r.nota, r.corrigido, r.criado_em, r.duracao_s, s.nome AS nome_sala, s.serie, s.materia
     FROM resposta_aluno r
     JOIN sala s ON r.sala_id = s.id
     JOIN atividade a ON a.id = r.atividade_id
@@ -1813,8 +2042,8 @@ app.post('/atividade/:id/resposta/pintura', autenticarAluno, upload.single('pint
 
     const resposta = JSON.stringify({ url_pintura: result.secure_url, filename: result.public_id });
     const [ins] = await banco.query(
-      `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta) VALUES (?, ?, ?, ?)`,
-      [req.params.id, nome, sala_id, resposta]
+      `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta, duracao_s) VALUES (?, ?, ?, ?, ?)`,
+      [req.params.id, nome, sala_id, resposta, (() => { const d = Math.round(Number(req.body.duracao_s)); return Number.isFinite(d) && d > 0 && d <= 6 * 3600 ? d : null; })()]
     );
     await banco.query(`UPDATE aluno_sala SET pontos = pontos + ? WHERE id = ?`, [PONTOS_PINTURA, aluno_id]);
 
@@ -2595,6 +2824,18 @@ db.query(`SHOW COLUMNS FROM atividade LIKE 'publica'`, (err, colunas) => {
     db.query(`ALTER TABLE atividade ADD COLUMN publica TINYINT(1) NOT NULL DEFAULT 0`, (e) => {
       if (e) console.error('Não consegui criar a coluna atividade.publica:', e.message);
       else console.log('✅ Coluna atividade.publica criada (tudo que já existia ficou privado).');
+    });
+  }
+});
+
+/* Quanto tempo o aluno levou para fazer a atividade (em segundos). Respostas
+   antigas ficam sem (null) e o relatório mostra "—". */
+db.query(`SHOW COLUMNS FROM resposta_aluno LIKE 'duracao_s'`, (err, colunas) => {
+  if (err) return console.error('Não consegui conferir a coluna resposta_aluno.duracao_s:', err.message);
+  if (colunas.length === 0) {
+    db.query(`ALTER TABLE resposta_aluno ADD COLUMN duracao_s INT NULL`, (e) => {
+      if (e) console.error('Não consegui criar a coluna resposta_aluno.duracao_s:', e.message);
+      else console.log('✅ Coluna resposta_aluno.duracao_s criada.');
     });
   }
 });

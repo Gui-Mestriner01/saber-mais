@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star } from 'lucide-react';
 import '../CSS/NovasAtividades.css';
@@ -30,9 +30,11 @@ export function embaralhar(lista) {
   return copia;
 }
 
-// 3 estrelas acertando tudo, 2 acertando mais da metade, 1 no resto
+// 3 estrelas acertando tudo, 2 acertando mais da metade, 1 no resto.
+// Nenhum acerto não ganha estrela (antes ganhava uma dourada).
 export function estrelasPorAproveitamento(acertos, total) {
   if (total <= 0) return 1;
+  if (!acertos || acertos <= 0) return 0;
   const taxa = acertos / total;
   if (taxa >= 1) return 3;
   if (taxa >= 0.6) return 2;
@@ -51,6 +53,10 @@ export function useAtividadeAluno() {
   const [erro, setErro] = useState('');
   // Cenário de fundo escolhido pelo professor (vem na lista e na atividade).
   const [tema, setTema] = useState(atividade?.tema || null);
+  // Quando o aluno começou: vai junto no envio para o professor ver quanto
+  // tempo ele levou. O quiz reinicia no "Começar" (marcarInicio).
+  const inicio = useRef(Date.now());
+  const marcarInicio = () => { inicio.current = Date.now(); };
 
   const voltar = () => navigate('/aluno/home', { state: { sala, nomeAluno, alunoId } });
 
@@ -72,42 +78,70 @@ export function useAtividadeAluno() {
     const res = await fetch(`${API}/atividade/${atividade.id}/resposta`, {
       method: 'POST',
       headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ resposta })
+      body: JSON.stringify({ resposta, duracao_s: Math.round((Date.now() - inicio.current) / 1000) })
     });
     const dados = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(dados.erro || 'Não consegui enviar.');
     return dados.resultado;
   };
 
-  return { atividade, conteudo, erro, enviar, voltar, tema };
+  return { atividade, conteudo, erro, enviar, voltar, tema, marcarInicio };
 }
 
-export function JogoAluno({ titulo, voltar, tema, children }) {
+/* `emAndamento`: o aluno já começou e ainda não enviou. Aí o "Voltar"
+   pergunta antes de sair (e o navegador também avisa se fechar a aba),
+   porque o que ele fez até ali se perde. */
+export function JogoAluno({ titulo, voltar, tema, emAndamento = false, children }) {
+  const [perguntarSaida, setPerguntarSaida] = useState(false);
+
+  useEffect(() => {
+    if (!emAndamento) return;
+    const avisar = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', avisar);
+    return () => window.removeEventListener('beforeunload', avisar);
+  }, [emAndamento]);
+
   return (
     <div className={`jogo-aluno ${classeTema(tema)}`}>
       <FundoTema tema={tema} />
       <header className="jogo-topo">
         <span><span className="marca-saber">Saber</span><span className="marca-mais">+</span></span>
         <h1>{titulo}</h1>
-        <button className="jogo-voltar" onClick={voltar}>
+        <button className="jogo-voltar" onClick={() => (emAndamento ? setPerguntarSaida(true) : voltar())}>
           <ArrowLeft size={14} strokeWidth={2.4} /> Voltar
         </button>
       </header>
       <main className="jogo-palco">{children}</main>
+
+      {perguntarSaida && (
+        <JanelaConfirmar
+          titulo="Sair sem enviar?"
+          texto="Você ainda não enviou esta atividade. Se sair agora, o que você fez até aqui não fica salvo."
+          textoConfirmar="Sair mesmo assim"
+          textoCancelar="Continuar fazendo"
+          perigo
+          aoConfirmar={voltar}
+          aoCancelar={() => setPerguntarSaida(false)}
+        />
+      )}
     </div>
   );
 }
 
-export function JanelaConfirmar({ titulo, texto, aoConfirmar, aoCancelar, enviando }) {
+export function JanelaConfirmar({
+  titulo, texto, aoConfirmar, aoCancelar, enviando,
+  textoConfirmar = 'Enviar', textoCancelar = 'Voltar e mexer', perigo = false, children,
+}) {
   return (
     <div className="jogo-confirmar-fundo">
-      <div className="jogo-confirmar" role="dialog" aria-labelledby="confirmar-titulo">
+      <div className="jogo-confirmar" role="dialog" aria-modal="true" aria-labelledby="confirmar-titulo">
         <h2 id="confirmar-titulo">{titulo}</h2>
         <p>{texto}</p>
+        {children}
         <div className="jogo-acoes">
-          <button className="jogo-btn secundario" onClick={aoCancelar} disabled={enviando}>Voltar e mexer</button>
-          <button className="jogo-btn" onClick={aoConfirmar} disabled={enviando} autoFocus>
-            {enviando ? 'Enviando…' : 'Enviar'}
+          <button className="jogo-btn secundario" onClick={aoCancelar} disabled={enviando}>{textoCancelar}</button>
+          <button className={`jogo-btn ${perigo ? 'perigo' : ''}`} onClick={aoConfirmar} disabled={enviando} autoFocus>
+            {enviando ? 'Enviando…' : textoConfirmar}
           </button>
         </div>
       </div>

@@ -22,6 +22,7 @@ const AreaAluno = lazy(() => import('./pages/AreaAluno'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AlunoHome = lazy(() => import('./pages/AlunoHome'));
 const ResponderQuiz = lazy(() => import('./pages/ResponderQuiz'));
+const RevisaoAtividade = lazy(() => import('./pages/RevisaoAtividade'));
 const Relatorios = lazy(() => import('./pages/Relatorios'));
 const LigarAluno = lazy(() => import('./pages/LigarAluno'));
 const Salas = lazy(() => import('./pages/Salas'));
@@ -123,6 +124,7 @@ function RotasAnimadas() {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/aluno/home" element={<AlunoHome />} />
           <Route path="/aluno/atividade/:id" element={<ResponderQuiz />} />
+          <Route path="/aluno/revisao/:id" element={<RevisaoAtividade />} />
           <Route path="/professor/relatorios" element={<Relatorios />} />
           <Route path="/professor/minhas-aulas" element={<MinhasAulas />} />
           <Route path="/professor/biblioteca" element={<Biblioteca />} />

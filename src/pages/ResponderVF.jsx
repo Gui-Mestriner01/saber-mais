@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import BotaoLeitura from '../acessibilidade/BotaoLeitura';
 import '../CSS/ResponderVF.css'; 
@@ -13,6 +13,8 @@ function ResponderVF() {
   const sala = location.state?.sala;
   const nomeAluno = location.state?.nomeAluno;
 
+  // Quando abriu a tela: vai junto no envio (tempo gasto, para o relatório do professor)
+  const inicio = useRef(Date.now());
   const [atividade, setAtividade] = useState(null);
   const [perguntaAtual, setPerguntaAtual] = useState(0);
   
@@ -72,7 +74,7 @@ function ResponderVF() {
       const res = await fetch(`${API}/atividade/${id}/resposta`, {
         method: 'POST',
         headers: cabecalhoAluno({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ resposta: { respostas } })
+        body: JSON.stringify({ resposta: { respostas }, duracao_s: Math.round((Date.now() - inicio.current) / 1000) })
       });
       const dados = await res.json().catch(() => ({}));
 

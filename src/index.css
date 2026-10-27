@@ -75,3 +75,45 @@ svg.lucide {
   min-height: 100vh;
   min-height: 100dvh;
 }
+
+/* ==========================================================================
+   AVISO FLUTUANTE (components/Aviso.jsx) — 27/10/2026
+   ========================================================================== */
+.aviso-flutuante {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 3000;
+  max-width: min(420px, calc(100vw - 32px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 12px 16px;
+  border-radius: var(--r);
+  background: var(--superficie);
+  color: var(--tinta);
+  font-weight: 800;
+  box-shadow: var(--sombra-alta);
+  border-left: 6px solid var(--verde);
+  animation: aviso-entra .3s cubic-bezier(.2, .8, .2, 1);
+}
+.aviso-flutuante > svg { flex: none; color: var(--verde); }
+.aviso-flutuante.erro { border-left-color: var(--vermelho); }
+.aviso-flutuante.erro > svg { color: var(--vermelho); }
+.aviso-flutuante span { flex: 1; line-height: 1.35; }
+.aviso-flutuante button {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--tinta-media);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+}
+.aviso-flutuante button:hover { background: var(--superficie-2); }
+@keyframes aviso-entra { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@media (max-width: 640px) {
+  .aviso-flutuante { top: auto; bottom: 86px; right: 16px; left: 16px; max-width: none; }
+}
+body.a11y-sem-animacao .aviso-flutuante { animation: none; }
