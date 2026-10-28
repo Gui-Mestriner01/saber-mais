@@ -29,13 +29,22 @@ function RevisaoAtividade() {
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState('');
 
-  const voltar = () => navigate('/aluno/home', { state: { sala, nomeAluno, alunoId } });
+  const [semSessao, setSemSessao] = useState(false);
+
+  // Sem os dados da sala (aba recarregada, link aberto direto...) volta para
+  // a escolha de sala em vez de abrir uma lista vazia.
+  const voltar = () => (sala && nomeAluno
+    ? navigate('/aluno/home', { state: { sala, nomeAluno, alunoId } })
+    : navigate('/aluno/area'));
 
   useEffect(() => {
-    if (!nomeAluno || !sala) { navigate('/aluno/area'); return; }
-    fetch(`${API}/aluno/atividade/${id}/revisao`, { headers: cabecalhoAluno() })
+    /* Quem diz de quem é a resposta é o crachá do aluno (token), não os dados
+       da tela anterior. Antes, se faltasse o nome ou a sala no histórico, a
+       tela mandava de volta sem falar nada — parecia que o botão não fazia
+       nada. Agora, se a sessão acabou, isso aparece escrito. */
+    fetch(`${API}/aluno/atividade/${id}/revisao`, { headers: cabecalhoAluno(), cache: 'no-store' })
       .then(async r => {
-        if (r.status === 401) { navigate('/aluno/area'); return null; }
+        if (r.status === 401) { setSemSessao(true); throw new Error('Sua sessão acabou. Entre na sala de novo para ver o resultado.'); }
         const corpo = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(corpo.erro || 'Não consegui abrir o resultado.');
         return corpo;
@@ -50,7 +59,16 @@ function RevisaoAtividade() {
   if (erro || !dados) {
     return (
       <JogoAluno titulo={titulo} voltar={voltar} tema={tema}>
-        <p className="jogo-carregando">{erro || 'Abrindo o seu resultado…'}</p>
+        <div className="jogo-carregando">
+          <p>{erro || 'Abrindo o seu resultado…'}</p>
+          {erro && (
+            <div className="jogo-acoes">
+              {semSessao
+                ? <button className="jogo-btn" onClick={() => navigate('/aluno/area')}>Entrar de novo</button>
+                : <button className="jogo-btn" onClick={voltar}>Voltar para as atividades</button>}
+            </div>
+          )}
+        </div>
       </JogoAluno>
     );
   }

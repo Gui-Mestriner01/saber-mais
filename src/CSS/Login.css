@@ -147,3 +147,22 @@ h2 {
   text-align: center;
   border: 1.5px solid #A7F3C0;
 }
+
+/* ---------- Esqueci minha senha (27/10/2026) ---------- */
+.link-esqueci {
+  display: block;
+  width: fit-content;
+  margin: -4px 2px 4px auto;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--azul, #1A6FC4);
+  cursor: pointer;
+}
+.link-esqueci:hover { text-decoration: underline; }
+.recuperar-dica { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: var(--tinta-media, #5A7A9A); line-height: 1.5; text-align: center; }
+.recuperar-pronto { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; color: var(--verde, #2E9A50); }
+.recuperar-pronto .btn-entrar { width: 100%; }

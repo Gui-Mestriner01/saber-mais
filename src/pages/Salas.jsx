@@ -27,7 +27,8 @@ function Salas() {
 
   const nomeProfessor = localStorage.getItem('nomeUsuario') || 'Professor(a)';
   const idProfessor   = localStorage.getItem('idUsuario');
-  const fotoProfessor = idProfessor ? localStorage.getItem(`fotoUsuario_${idProfessor}`) : null;
+  const fotoGuardada = idProfessor ? localStorage.getItem(`fotoUsuario_${idProfessor}`) : null;
+  const fotoProfessor = fotoGuardada && !fotoGuardada.startsWith('blob:') ? fotoGuardada : null; // blob: era da versão antiga e morre no F5
 
   const iniciais = nomeProfessor
     .split(' ')

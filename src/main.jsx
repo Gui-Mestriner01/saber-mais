@@ -3,6 +3,13 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { ligarTravaInspecionar } from './travaInspecionar.js'
+import { recarregarParaVersaoNova } from './recarregarVersao.js'
+
+/* Site atualizado com a aba aberta: o pedaço da tela antiga não existe mais.
+   Recarrega uma vez para pegar a versão nova em vez de ficar em branco. */
+window.addEventListener('vite:preloadError', (evento) => {
+  if (recarregarParaVersaoNova()) evento.preventDefault();
+});
 
 /* O provedor do "Entrar com Google" saiu daqui: ele baixava o script do
    Google em TODA visita, inclusive nas telas do aluno, que nem usam isso.

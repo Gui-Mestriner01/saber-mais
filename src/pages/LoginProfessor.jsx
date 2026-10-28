@@ -99,6 +99,10 @@ function LoginProfessor() {
               />
             </div>
 
+            <button type="button" className="link-esqueci" onClick={() => navigate('/esqueci-senha')}>
+              Esqueci minha senha
+            </button>
+
             {erro && <div className="msg-erro">{erro}</div>}
 
             <button className="btn-entrar" type="submit" disabled={carregando}>

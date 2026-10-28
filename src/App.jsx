@@ -7,8 +7,11 @@ import MenuAcessibilidade from './acessibilidade/MenuAcessibilidade';
 /* Cada tela vira um pedacinho separado, baixado só quando o usuário entra
    nela. Antes o celular baixava o site inteiro (todas as telas do professor,
    todos os jogos) só para mostrar a tela de escolher o acesso. */
+import ErroDeTela from './components/ErroDeTela';
+
 const LoginProfessor = lazy(() => import('./pages/LoginProfessor'));
 const CadastroProfessor = lazy(() => import('./pages/CadastroProfessor'));
+const RecuperarSenha = lazy(() => import('./pages/RecuperarSenha'));
 const DashboardProfessor = lazy(() => import('./pages/DashboardProfessor'));
 const CriarSala = lazy(() => import('./pages/CriarSala'));
 const CriarAtividade = lazy(() => import('./pages/CriarAtividade'));
@@ -106,11 +109,14 @@ function RotasAnimadas() {
 
   return (
     <div key={mostrada.pathname} className={TEM_VIEW_TRANSITION ? 'pagina-animada com-vt' : 'pagina-animada'}>
+      <ErroDeTela>
       <Suspense fallback={<div className="carregando-tela" />}>
         <Routes location={mostrada}>
           <Route path="/" element={<Home />} />
           <Route path="/login/professor" element={<LoginProfessor />} />
           <Route path="/cadastro/professor" element={<CadastroProfessor />} />
+          <Route path="/esqueci-senha" element={<RecuperarSenha />} />
+          <Route path="/redefinir-senha" element={<RecuperarSenha />} />
           <Route path="/professor/dashboard" element={<DashboardProfessor />} />
           <Route path="/professor/criar-sala" element={<CriarSala />} />
           <Route path="/professor/criar-atividade" element={<CriarAtividade />} />
@@ -149,6 +155,7 @@ function RotasAnimadas() {
         
         </Routes>
       </Suspense>
+      </ErroDeTela>
     </div>
   );
 }

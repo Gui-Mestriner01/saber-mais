@@ -12,7 +12,8 @@ function DashboardProfessor() {
 
   // A foto fica guardada por usuário, então a conta do Google de um professor
   // nunca aparece no painel de outro
-  const fotoProfessor = idProfessor ? localStorage.getItem(`fotoUsuario_${idProfessor}`) : null;
+  const fotoGuardada = idProfessor ? localStorage.getItem(`fotoUsuario_${idProfessor}`) : null;
+  const fotoProfessor = fotoGuardada && !fotoGuardada.startsWith('blob:') ? fotoGuardada : null; // blob: era da versão antiga e morre no F5
 
   const [salas, setSalas]           = useState([]);
   const [atividades, setAtividades] = useState([]);

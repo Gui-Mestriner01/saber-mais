@@ -712,28 +712,59 @@
 }
 .aula-selo.publica { background: var(--verde-lavado); border-color: var(--verde); color: var(--verde); }
 
-/* Três botões por linha pediam espaço: ficam compactos e sem quebrar o
-   texto, e a linha inteira passa a alinhar pelo topo. */
-.atividade-item-row { align-items: center; gap: 14px; }
+/* Minhas aulas: o cartão da turma usa a largura toda (o .form-card geral
+   para em 600px, o que espremia título, data e os quatro botões). Cada
+   atividade vira duas faixas: em cima o título com a data e o selo, embaixo
+   os botões. Se couber tudo numa linha, os botões sobem para o lado. */
+.turma-card { max-width: 1100px !important; width: 100%; }
+.turma-header { gap: 14px; flex-wrap: wrap; }
+.turma-header-botao { min-width: 0; flex: 1 1 320px; }
+.turma-header h2 { flex-wrap: wrap; row-gap: 2px; min-width: 0; }
+
+.atividade-item-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.atividade-item-row .atividade-info-left { flex: 1 1 280px; min-width: 0; }
+.atividade-item-row h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.atividade-item-row h3 svg { flex-shrink: 0; }
+.atividade-item-row .badge-data {
+  display: block;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  line-height: 1.4;
+}
+.atividade-item-row .badge-data svg { vertical-align: -2px; margin-right: 5px; }
+.atividade-item-row .badge-data .aula-selo { margin: 4px 0 0 8px; }
 .atividade-item-row .atividade-acoes {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  flex: 0 1 auto;
   justify-content: flex-end;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 .atividade-item-row .atividade-acoes .btn-clonar {
   padding: 7px 12px;
   font-size: .82rem;
   white-space: nowrap;
+  margin-left: 0;
 }
-.atividade-item-row .badge-data { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.atividade-item-row h3 { min-width: 0; }
 
 @media (max-width: 860px) {
   .editor-visibilidade { grid-template-columns: 1fr; }
   .bib-lista { grid-template-columns: 1fr; }
-  .atividade-item-row .atividade-acoes { width: 100%; }
+  .atividade-item-row .atividade-acoes { width: 100%; justify-content: flex-start; }
 }
 
 /* ==========================================================================

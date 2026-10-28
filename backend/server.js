@@ -9,6 +9,7 @@ const { ipKeyGenerator } = rateLimit;
 const crypto = require('crypto');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
+const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const db = require('./db');
@@ -962,7 +963,7 @@ app.post('/login/professor', authLimiter, async (req, res) => {
     res.json({
       mensagem: 'Login realizado com sucesso!',
       token,
-      usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo_usuario }
+      usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo_usuario, fotoUrl: usuario.foto_url || null }
     });
   });
 });
@@ -1020,7 +1021,8 @@ app.post('/login/google', authLimiter, async (req, res) => {
           nome: usuario.nome, 
           email: usuario.email, 
           tipo: usuario.tipo_usuario,
-          fotoUrl: fotoUrl 
+          // A foto que o professor escolheu no perfil ganha da foto do Google
+          fotoUrl: usuario.foto_url || fotoUrl
         }
       });
     } else {
@@ -1051,6 +1053,165 @@ app.post('/login/google', authLimiter, async (req, res) => {
       }
     }
   });
+});
+
+/* ==========================================================================
+   ESQUECI MINHA SENHA (27/10/2026) — só para professor (o aluno entra com o
+   PIN, que o professor troca na tela da sala).
+
+   1. O professor digita o e-mail. A resposta é SEMPRE a mesma ("se o e-mail
+      estiver cadastrado, enviamos um link"), para ninguém descobrir quais
+      e-mails têm conta.
+   2. Se a conta existe, sai um e-mail com um link que vale 1 hora e só pode
+      ser usado uma vez. No banco fica só o "resumo" (SHA-256) do código do
+      link, nunca o código em si — quem olhar o banco não consegue usar.
+   3. No link, ele escolhe a senha nova (mínimo de 8 caracteres).
+
+   O e-mail sai pela caixa da Hostinger (SMTP). Usuário e senha ficam SÓ nas
+   variáveis de ambiente da hospedagem, nunca no código:
+     SMTP_HOST (padrão smtp.hostinger.com), SMTP_PORT (padrão 465),
+     SMTP_USER (ex.: contato@sabermaisedu.com), SMTP_PASS,
+     SMTP_FROM (opcional; padrão "Saber+ <SMTP_USER>"),
+     SITE_URL (opcional; padrão https://sabermaisedu.com)
+   ========================================================================== */
+const SMTP_PRONTO = Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+const carteiro = SMTP_PRONTO
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+      port: Number(process.env.SMTP_PORT) || 465,
+      secure: (Number(process.env.SMTP_PORT) || 465) === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+  : null;
+if (!SMTP_PRONTO) console.warn('⚠️  SMTP_USER/SMTP_PASS não configurados — o "Esqueci minha senha" não vai enviar e-mail.');
+
+const VALIDADE_LINK_MIN = 60;
+const resumoDoCodigo = (codigo) => crypto.createHash('sha256').update(String(codigo)).digest('hex');
+
+/* O endereço do link vem da configuração, não do pedido: assim ninguém
+   consegue forjar o cabeçalho Host e fazer o e-mail apontar para outro site. */
+function enderecoDoSite(req) {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/+$/, '');
+  if (process.env.NODE_ENV === 'production') return 'https://sabermaisedu.com';
+  return (req.headers.origin || `http://localhost:${process.env.PORT || 3001}`).replace(/\/+$/, '');
+}
+
+const escaparHtml = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function emailDeRecuperacao(nome, link) {
+  const primeiroNome = escaparHtml(String(nome || 'professor(a)').split(' ')[0]);
+  const texto =
+    `Olá, ${String(nome || 'professor(a)').split(' ')[0]}!\n\n` +
+    `Recebemos um pedido para trocar a senha da sua conta no Saber+.\n` +
+    `Para escolher uma senha nova, abra o link abaixo (ele vale por ${VALIDADE_LINK_MIN} minutos e só funciona uma vez):\n\n` +
+    `${link}\n\n` +
+    `Se não foi você, é só ignorar este e-mail: sua senha continua a mesma.\n\nEquipe Saber+`;
+  const html = `
+  <div style="background:#EEF5FC;padding:28px 12px;font-family:Arial,Helvetica,sans-serif;color:#2A4A6A">
+    <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border-top:5px solid #F5812A;padding:28px 26px">
+      <p style="margin:0 0 18px;font-size:26px;font-weight:900"><span style="color:#F5812A">Saber</span><span style="color:#1A6FC4">+</span></p>
+      <p style="margin:0 0 12px;font-size:16px;font-weight:bold">Olá, ${primeiroNome}!</p>
+      <p style="margin:0 0 18px;font-size:15px;line-height:1.5">Recebemos um pedido para trocar a senha da sua conta no Saber+. Clique no botão para escolher uma senha nova.</p>
+      <p style="margin:0 0 20px;text-align:center">
+        <a href="${escaparHtml(link)}" style="display:inline-block;background:#1A6FC4;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:13px 26px;border-radius:12px">Criar senha nova</a>
+      </p>
+      <p style="margin:0 0 10px;font-size:13px;color:#5A7A9A;line-height:1.5">O link vale por ${VALIDADE_LINK_MIN} minutos e só funciona uma vez. Se o botão não abrir, copie este endereço no navegador:<br><span style="word-break:break-all;color:#1A6FC4">${escaparHtml(link)}</span></p>
+      <p style="margin:16px 0 0;font-size:13px;color:#5A7A9A">Se não foi você, é só ignorar este e-mail: sua senha continua a mesma.</p>
+    </div>
+  </div>`;
+  return { texto, html };
+}
+
+app.post('/senha/esqueci', authLimiter, async (req, res) => {
+  const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const resposta = { mensagem: 'Se este e-mail estiver cadastrado, enviamos um link para criar uma senha nova. Confira também a caixa de spam.' };
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ erro: 'Digite um e-mail válido.' });
+  }
+  if (!carteiro && process.env.NODE_ENV === 'production') {
+    return res.status(503).json({ erro: 'O envio de e-mails ainda não foi configurado. Fale com o suporte do Saber+.' });
+  }
+
+  try {
+    const banco = db.promise();
+    const [usuarios] = await banco.query(
+      `SELECT id, nome, email FROM usuario WHERE email = ? AND tipo_usuario IN ('professor', 'admin') AND (status IS NULL OR status <> 'rejeitado')`,
+      [email]
+    );
+    const usuario = usuarios[0];
+    if (!usuario) return res.json(resposta); // mesma resposta: não entrega quem tem conta
+
+    // Um pedido novo cancela os links anteriores que ainda não foram usados.
+    await banco.query(`UPDATE recuperacao_senha SET usado = 1 WHERE usuario_id = ? AND usado = 0`, [usuario.id]);
+    const codigo = crypto.randomBytes(32).toString('hex');
+    await banco.query(
+      `INSERT INTO recuperacao_senha (usuario_id, codigo_hash, expira_em) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+      [usuario.id, resumoDoCodigo(codigo), VALIDADE_LINK_MIN]
+    );
+
+    const link = `${enderecoDoSite(req)}/redefinir-senha?codigo=${codigo}`;
+    if (!carteiro) {
+      // Só no computador de desenvolvimento: sem SMTP, o link aparece no terminal.
+      console.log(`🔑 [dev] Link para trocar a senha de ${usuario.email}: ${link}`);
+      return res.json(resposta);
+    }
+
+    const { texto, html } = emailDeRecuperacao(usuario.nome, link);
+    await carteiro.sendMail({
+      from: process.env.SMTP_FROM || `Saber+ <${process.env.SMTP_USER}>`,
+      to: usuario.email,
+      subject: 'Saber+ — criar uma senha nova',
+      text: texto,
+      html,
+    });
+    res.json(resposta);
+  } catch (erro) {
+    console.error('Erro no "esqueci minha senha":', erro.message);
+    res.status(500).json({ erro: 'Não consegui enviar o e-mail agora. Tente de novo em alguns minutos.' });
+  }
+});
+
+/* A tela do link pergunta antes se o código ainda vale, para não deixar o
+   professor digitar a senha nova à toa. */
+app.get('/senha/codigo/:codigo', authLimiter, async (req, res) => {
+  try {
+    const [linhas] = await db.promise().query(
+      `SELECT id FROM recuperacao_senha WHERE codigo_hash = ? AND usado = 0 AND expira_em > NOW()`,
+      [resumoDoCodigo(req.params.codigo)]
+    );
+    res.json({ valido: linhas.length > 0 });
+  } catch {
+    res.status(500).json({ erro: 'Não consegui conferir o link.' });
+  }
+});
+
+app.post('/senha/redefinir', authLimiter, async (req, res) => {
+  const codigo = typeof req.body?.codigo === 'string' ? req.body.codigo : '';
+  const senha = typeof req.body?.senha === 'string' ? req.body.senha : '';
+  if (!codigo) return res.status(400).json({ erro: 'Link inválido.' });
+  if (senha.length < 8) return res.status(400).json({ erro: 'A senha precisa ter pelo menos 8 caracteres.' });
+  if (senha.length > 72) return res.status(400).json({ erro: 'A senha pode ter no máximo 72 caracteres.' });
+
+  try {
+    const banco = db.promise();
+    const [linhas] = await banco.query(
+      `SELECT id, usuario_id FROM recuperacao_senha WHERE codigo_hash = ? AND usado = 0 AND expira_em > NOW()`,
+      [resumoDoCodigo(codigo)]
+    );
+    const pedido = linhas[0];
+    if (!pedido) return res.status(400).json({ erro: 'Este link expirou ou já foi usado. Peça um novo na tela de login.' });
+
+    // Marca como usado ANTES de trocar: dois cliques ao mesmo tempo não usam o mesmo link.
+    const [marcado] = await banco.query(`UPDATE recuperacao_senha SET usado = 1 WHERE id = ? AND usado = 0`, [pedido.id]);
+    if (marcado.affectedRows === 0) return res.status(400).json({ erro: 'Este link já foi usado. Peça um novo na tela de login.' });
+
+    const hash = await bcrypt.hash(senha, 12);
+    await banco.query(`UPDATE usuario SET senha = ? WHERE id = ?`, [hash, pedido.usuario_id]);
+    res.json({ mensagem: 'Senha trocada! Agora é só entrar com a senha nova.' });
+  } catch (erro) {
+    console.error('Erro ao redefinir a senha:', erro.message);
+    res.status(500).json({ erro: 'Não consegui trocar a senha agora. Tente de novo.' });
+  }
 });
 
 /* --------------------------------------------------------------------------
@@ -1187,7 +1348,7 @@ app.put('/admin/professor/:id/rejeitar', autenticar, apenasAdmin, (req, res) => 
 });
 
 app.get('/professor/perfil', autenticar, (req, res) => {
-  const sql = `SELECT id, nome, email, status, telefone, instituicao, materia FROM usuario WHERE id = ?`;
+  const sql = `SELECT id, nome, email, status, telefone, instituicao, materia, foto_url FROM usuario WHERE id = ?`;
   db.query(sql, [req.usuario.id], (err, results) => {
     if (err) return res.status(500).json({ erro: 'Erro ao buscar perfil.' });
     if (results.length === 0) return res.status(404).json({ erro: 'Usuário não encontrado.' });
@@ -1201,6 +1362,36 @@ app.put('/professor/perfil', autenticar, async (req, res) => {
   db.query(sql, [nome, telefone, instituicao, materia, req.usuario.id], (err) => {
     if (err) return res.status(500).json({ erro: 'Erro ao atualizar perfil.' });
     res.json({ mensagem: 'Perfil atualizado com sucesso!' });
+  });
+});
+
+/* Foto do professor (27/10/2026). Antes a foto ficava só no navegador, como
+   um endereço temporário (blob:...) que morre quando a página recarrega — por
+   isso ela sumia no F5. Agora sobe para o Cloudinary (já cortada quadrada,
+   400x400, centrada no rosto) e o endereço fica guardado no banco. */
+app.post('/professor/perfil/foto', autenticar, upload.single('foto'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ erro: 'Escolha uma imagem (PNG, JPG ou WEBP).' });
+  const apagar = () => { if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); };
+  try {
+    const enviada = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'saber_plus/perfil',
+      transformation: [{ width: 400, height: 400, crop: 'fill', gravity: 'face' }],
+    });
+    apagar();
+    db.query(`UPDATE usuario SET foto_url = ? WHERE id = ?`, [enviada.secure_url, req.usuario.id], (err) => {
+      if (err) return res.status(500).json({ erro: 'A foto subiu, mas não consegui salvar no seu perfil.' });
+      res.json({ url: enviada.secure_url });
+    });
+  } catch {
+    apagar();
+    res.status(500).json({ erro: 'Não consegui enviar a foto. Tente de novo.' });
+  }
+});
+
+app.delete('/professor/perfil/foto', autenticar, (req, res) => {
+  db.query(`UPDATE usuario SET foto_url = NULL WHERE id = ?`, [req.usuario.id], (err) => {
+    if (err) return res.status(500).json({ erro: 'Não consegui tirar a foto.' });
+    res.json({ mensagem: 'Foto removida.' });
   });
 });
 
@@ -2836,6 +3027,29 @@ db.query(`SHOW COLUMNS FROM resposta_aluno LIKE 'duracao_s'`, (err, colunas) => 
     db.query(`ALTER TABLE resposta_aluno ADD COLUMN duracao_s INT NULL`, (e) => {
       if (e) console.error('Não consegui criar a coluna resposta_aluno.duracao_s:', e.message);
       else console.log('✅ Coluna resposta_aluno.duracao_s criada.');
+    });
+  }
+});
+
+/* Pedidos de "esqueci minha senha": guarda só o resumo do código do link. */
+db.query(`CREATE TABLE IF NOT EXISTS recuperacao_senha (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT NOT NULL,
+  codigo_hash CHAR(64) NOT NULL,
+  expira_em DATETIME NOT NULL,
+  usado TINYINT(1) NOT NULL DEFAULT 0,
+  criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_codigo (codigo_hash),
+  INDEX idx_usuario (usuario_id)
+)`, (e) => { if (e) console.error('Não consegui criar a tabela recuperacao_senha:', e.message); });
+
+/* Foto de perfil do professor (endereço no Cloudinary). Vazio = iniciais. */
+db.query(`SHOW COLUMNS FROM usuario LIKE 'foto_url'`, (err, colunas) => {
+  if (err) return console.error('Não consegui conferir a coluna usuario.foto_url:', err.message);
+  if (colunas.length === 0) {
+    db.query(`ALTER TABLE usuario ADD COLUMN foto_url VARCHAR(500) NULL`, (e) => {
+      if (e) console.error('Não consegui criar a coluna usuario.foto_url:', e.message);
+      else console.log('✅ Coluna usuario.foto_url criada.');
     });
   }
 });

@@ -117,3 +117,50 @@ svg.lucide {
   .aviso-flutuante { top: auto; bottom: 86px; right: 16px; left: 16px; max-width: none; }
 }
 body.a11y-sem-animacao .aviso-flutuante { animation: none; }
+
+/* ==========================================================================
+   ERRO DE TELA (components/ErroDeTela.jsx) — 27/10/2026
+   No lugar da página em branco, um aviso com o motivo e o que fazer.
+   ========================================================================== */
+.erro-tela {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: linear-gradient(180deg, #C9E4F7 0%, #EAF4E4 100%);
+}
+.erro-tela-cartao {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: var(--r, 16px);
+  box-shadow: var(--sombra);
+  border-top: 5px solid var(--laranja, #F07D1E);
+  padding: 28px 26px;
+  text-align: center;
+}
+.erro-tela-cartao h2 { margin: 0 0 10px; color: var(--tinta); font-size: 1.3rem; font-weight: 900; }
+.erro-tela-cartao p { margin: 0 0 16px; color: var(--tinta-media); font-weight: 700; line-height: 1.5; }
+.erro-tela-motivo {
+  display: block;
+  margin: 0 0 18px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--superficie-2, #F2F7FC);
+  color: var(--tinta-media);
+  font-size: .78rem;
+  word-break: break-word;
+}
+.erro-tela-botoes { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.erro-tela-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 18px;
+  border-radius: 12px;
+  border: 2px solid var(--azul);
+  background: #fff;
+  color: var(--azul);
+  font: inherit; font-weight: 900;
+  cursor: pointer;
+}
+.erro-tela-btn.principal { background: var(--azul); color: #fff; }

@@ -20,9 +20,19 @@ function PerfilProfessor() {
   const [msgSucesso, setMsgSucesso] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
-  const [foto, setFoto] = useState(
-    idProfessor ? localStorage.getItem(`fotoUsuario_${idProfessor}`) : null
-  );
+  // Endereços "blob:" eram da versão antiga (só valiam até o F5): são ignorados.
+  const fotoGuardada = idProfessor ? localStorage.getItem(`fotoUsuario_${idProfessor}`) : null;
+  const [foto, setFoto] = useState(fotoGuardada && !fotoGuardada.startsWith('blob:') ? fotoGuardada : null);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+  const [erroFoto, setErroFoto] = useState('');
+
+  // A mesma foto aparece na barra do painel, nas salas e no ao vivo: todas
+  // leem daqui, então é só manter este endereço em dia.
+  const guardarFoto = (url) => {
+    if (!idProfessor) return;
+    if (url) localStorage.setItem(`fotoUsuario_${idProfessor}`, url);
+    else localStorage.removeItem(`fotoUsuario_${idProfessor}`);
+  };
 
   const [salasDoProf, setSalasDoProf] = useState([]);
 
@@ -46,6 +56,11 @@ function PerfilProfessor() {
       setTelefone(data.telefone || '');
       setInstituicao(data.instituicao || '');
       setMateria(data.materia || '');
+      // A foto que vale é a do banco (vale em qualquer computador).
+      if (res.ok) {
+        setFoto(data.foto_url || null);
+        guardarFoto(data.foto_url || null);
+      }
     } catch {
       console.error('Erro ao buscar perfil');
     }
@@ -101,12 +116,60 @@ function PerfilProfessor() {
     }
   };
 
-  const handleFoto = (e) => {
+  /* Mostra a foto na hora e manda para o servidor. Se der erro, volta a que
+     estava e avisa — antes ela "funcionava" e sumia no F5. */
+  const handleFoto = async (e) => {
     const file = e.target.files[0];
+    e.target.value = '';
     if (!file) return;
-    const imageUrl = URL.createObjectURL(file);
-    setFoto(imageUrl);
-    if (idProfessor) localStorage.setItem(`fotoUsuario_${idProfessor}`, imageUrl);
+    if (!['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)) {
+      setErroFoto('Use uma imagem PNG, JPG ou WEBP.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setErroFoto('A imagem passa de 10 MB. Escolha uma menor.');
+      return;
+    }
+
+    const anterior = foto;
+    const previa = URL.createObjectURL(file);
+    setFoto(previa);
+    setErroFoto('');
+    setEnviandoFoto(true);
+    try {
+      const pacote = new FormData();
+      pacote.append('foto', file);
+      const res = await fetch(`${API}/professor/perfil/foto`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: pacote,
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok || !dados.url) throw new Error(dados.erro || 'Não consegui salvar a foto.');
+      setFoto(dados.url);
+      guardarFoto(dados.url);
+    } catch (erro) {
+      setFoto(anterior);
+      setErroFoto(erro.message || 'Não consegui salvar a foto.');
+    } finally {
+      URL.revokeObjectURL(previa);
+      setEnviandoFoto(false);
+    }
+  };
+
+  const tirarFoto = async () => {
+    setErroFoto('');
+    try {
+      const res = await fetch(`${API}/professor/perfil/foto`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (!res.ok) throw new Error();
+      setFoto(null);
+      guardarFoto(null);
+    } catch {
+      setErroFoto('Não consegui tirar a foto. Tente de novo.');
+    }
   };
 
   const iniciais = (nome || 'P')
@@ -140,12 +203,26 @@ function PerfilProfessor() {
 
         {/* FAIXA DE APRESENTAÇÃO */}
         <section className="perfil-capa">
-          <div className="perfil-capa-foto" onClick={() => inputFoto.current.click()} title="Trocar foto">
-            {foto
-              ? <img src={foto} alt={nome} />
-              : <span>{iniciais}</span>
-            }
-            <span className="perfil-capa-camera"><Camera size={15} strokeWidth={2} /></span>
+          <div className="perfil-capa-foto-area">
+            <button
+              type="button"
+              className={`perfil-capa-foto ${enviandoFoto ? 'enviando' : ''}`}
+              onClick={() => inputFoto.current.click()}
+              title="Trocar foto"
+              aria-label="Trocar foto de perfil"
+              disabled={enviandoFoto}
+            >
+              {foto
+                ? <img src={foto} alt="" onError={() => { setFoto(null); guardarFoto(null); }} />
+                : <span>{iniciais}</span>
+              }
+              <span className="perfil-capa-camera"><Camera size={15} strokeWidth={2} /></span>
+            </button>
+            {enviandoFoto && <small className="perfil-foto-status">Salvando…</small>}
+            {!enviandoFoto && foto && (
+              <button type="button" className="perfil-foto-tirar" onClick={tirarFoto}>Tirar foto</button>
+            )}
+            {erroFoto && <small className="perfil-foto-erro" role="alert">{erroFoto}</small>}
           </div>
 
           <div className="perfil-capa-texto">
@@ -171,7 +248,7 @@ function PerfilProfessor() {
             </div>
           </div>
 
-          <input ref={inputFoto} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFoto} />
+          <input ref={inputFoto} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={handleFoto} />
         </section>
 
         <div className="perfil-grid">

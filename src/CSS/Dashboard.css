@@ -1229,6 +1229,20 @@
 
 .perfil-capa-foto:hover { transform: translateY(-2px); }
 
+/* Agora é um botão (dá para chegar pelo teclado) e tem os avisos embaixo */
+.perfil-capa-foto-area { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 86px; }
+button.perfil-capa-foto { padding: 0; font-family: inherit; }
+.perfil-capa-foto.enviando { opacity: .6; cursor: progress; }
+.perfil-capa-foto.enviando:hover { transform: none; }
+.perfil-foto-status { font-size: .72rem; font-weight: 800; color: var(--tinta-clara); }
+.perfil-foto-tirar {
+  background: none; border: none; padding: 0;
+  font: inherit; font-size: .72rem; font-weight: 800;
+  color: var(--tinta-clara); text-decoration: underline; cursor: pointer;
+}
+.perfil-foto-tirar:hover { color: var(--vermelho, #D9435C); }
+.perfil-foto-erro { max-width: 160px; text-align: center; font-size: .72rem; font-weight: 800; color: var(--vermelho, #D9435C); line-height: 1.3; }
+
 .perfil-capa-foto img {
   width: 100%;
   height: 100%;
