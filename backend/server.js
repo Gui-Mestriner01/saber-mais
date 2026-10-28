@@ -933,6 +933,7 @@ app.post('/cadastro/professor', authLimiter, async (req, res) => {
         if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ erro: 'E-mail já cadastrado.' });
         return res.status(500).json({ erro: 'Erro ao cadastrar professor.' });
       }
+      enviarBoasVindas(req, nome, email.toLowerCase());
       res.status(201).json({ mensagem: 'Conta criada! Você já pode entrar.', id: result.insertId });
     });
   } catch {
@@ -1043,6 +1044,7 @@ app.post('/login/google', authLimiter, async (req, res) => {
           }
 
           const novoId = resultInsert.insertId;
+          enviarBoasVindas(req, nome, emailLower);
 
           const token = tokenDeSessao({ id: novoId, nome, email: emailLower, tipo_usuario: 'professor' });
 
@@ -1112,18 +1114,101 @@ function emailDeRecuperacao(nome, link) {
     `Se não foi você, é só ignorar este e-mail: sua senha continua a mesma.\n\nEquipe Saber+`;
   const html = `
   <div style="background:#EEF5FC;padding:28px 12px;font-family:Arial,Helvetica,sans-serif;color:#2A4A6A">
-    <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;border-top:5px solid #F5812A;padding:28px 26px">
-      <p style="margin:0 0 18px;font-size:26px;font-weight:900"><span style="color:#F5812A">Saber</span><span style="color:#1A6FC4">+</span></p>
-      <p style="margin:0 0 12px;font-size:16px;font-weight:bold">Olá, ${primeiroNome}!</p>
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(26,111,196,0.08)">
+      <div style="background:#1A6FC4;padding:22px 26px;text-align:center">
+        <p style="margin:0;font-size:28px;font-weight:900;letter-spacing:-0.5px"><span style="color:#FFB46B">Saber</span><span style="color:#ffffff">+</span></p>
+      </div>
+      <div style="height:5px;background:#F5812A"></div>
+      <div style="padding:26px 26px 24px">
+      <p style="margin:0 0 12px;font-size:18px;font-weight:bold">Olá, ${primeiroNome}!</p>
       <p style="margin:0 0 18px;font-size:15px;line-height:1.5">Recebemos um pedido para trocar a senha da sua conta no Saber+. Clique no botão para escolher uma senha nova.</p>
       <p style="margin:0 0 20px;text-align:center">
         <a href="${escaparHtml(link)}" style="display:inline-block;background:#1A6FC4;color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:13px 26px;border-radius:12px">Criar senha nova</a>
       </p>
       <p style="margin:0 0 10px;font-size:13px;color:#5A7A9A;line-height:1.5">O link vale por ${VALIDADE_LINK_MIN} minutos e só funciona uma vez. Se o botão não abrir, copie este endereço no navegador:<br><span style="word-break:break-all;color:#1A6FC4">${escaparHtml(link)}</span></p>
       <p style="margin:16px 0 0;font-size:13px;color:#5A7A9A">Se não foi você, é só ignorar este e-mail: sua senha continua a mesma.</p>
+      </div>
+      <div style="border-top:1px solid #E6EEF6;padding:14px 26px;text-align:center">
+        <p style="margin:0;font-size:12px;color:#A0B8CC">Este é um e-mail automático do Saber+, não precisa responder.</p>
+      </div>
     </div>
   </div>`;
   return { texto, html };
+}
+
+/* --------------------------------------------------------------------------
+   E-MAIL DE BOAS-VINDAS (28/10/2026)
+   Sai uma vez só, quando a conta do professor é criada (cadastro normal ou
+   primeiro "Entrar com Google"). É enviado "por fora": se o e-mail falhar, o
+   cadastro continua funcionando normalmente — só fica um aviso no log.
+   -------------------------------------------------------------------------- */
+function emailDeBoasVindas(nome, linkEntrar) {
+  const primeiro = String(nome || 'professor(a)').trim().split(' ')[0];
+  const p = escaparHtml(primeiro);
+  const passos = [
+    ['1', 'Crie sua primeira sala', 'Dê um nome para a turma. O Saber+ gera o código e a senha de figurinhas que os alunos usam para entrar.'],
+    ['2', 'Monte uma atividade', 'Quiz, Ligar, Pintura, Memória, Ordenar, Grupos e mais — com tema de fundo e tempo por pergunta.'],
+    ['3', 'Chame os alunos', 'Eles entram pelo código da sala, sem e-mail nem senha difícil: só o nome e um PIN.'],
+    ['4', 'Acompanhe tudo', 'Relatórios por aluno e por questão, modo ao vivo para jogar todo mundo junto, e insígnias para motivar a turma.'],
+  ];
+  const texto =
+    `Olá, ${primeiro}!\n\n` +
+    `Seja muito bem-vindo(a) ao Saber+! Obrigado por escolher a gente para deixar suas aulas mais divertidas e acessíveis.\n\n` +
+    `Para começar:\n` + passos.map(([n, t, d]) => `${n}. ${t} — ${d}`).join('\n') +
+    `\n\nEntrar no Saber+: ${linkEntrar}\n\n` +
+    `Qualquer dúvida, estamos por aqui.\nUm abraço,\nEquipe Saber+\n\n(Este é um e-mail automático, não precisa responder.)`;
+  const linhas = passos.map(([n, t, d]) => `
+        <tr>
+          <td style="vertical-align:top;padding:0 12px 14px 0;width:34px">
+            <div style="width:30px;height:30px;line-height:30px;border-radius:50%;background:#EBF4FF;color:#1A6FC4;font-weight:900;font-size:14px;text-align:center">${n}</div>
+          </td>
+          <td style="vertical-align:top;padding:0 0 14px 0">
+            <p style="margin:0 0 2px;font-size:15px;font-weight:bold;color:#2A4A6A">${escaparHtml(t)}</p>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#5A7A9A">${escaparHtml(d)}</p>
+          </td>
+        </tr>`).join('');
+  const html = `
+  <div style="background:#EEF5FC;padding:28px 12px;font-family:Arial,Helvetica,sans-serif;color:#2A4A6A">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(26,111,196,0.08)">
+      <div style="background:#1A6FC4;padding:28px 26px 24px;text-align:center">
+        <p style="margin:0 0 6px;font-size:30px;font-weight:900;letter-spacing:-0.5px"><span style="color:#FFB46B">Saber</span><span style="color:#ffffff">+</span></p>
+        <p style="margin:0;font-size:14px;color:#D6E8FA;font-weight:bold">Aprender brincando, ensinar com gosto</p>
+      </div>
+      <div style="height:5px;background:#F5812A"></div>
+      <div style="padding:28px 26px 8px">
+        <p style="margin:0 0 10px;font-size:22px;font-weight:900;color:#2A4A6A">Bem-vindo(a), ${p}!</p>
+        <p style="margin:0 0 14px;font-size:15px;line-height:1.6">Que alegria ter você com a gente. <strong>Obrigado por escolher o Saber+</strong> para deixar suas aulas mais divertidas, inclusivas e cheias de descobertas.</p>
+        <p style="margin:0 0 20px;font-size:15px;line-height:1.6">Preparamos um caminho rápido para você começar:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">${linhas}
+        </table>
+        <p style="margin:10px 0 24px;text-align:center">
+          <a href="${escaparHtml(linkEntrar)}" style="display:inline-block;background:#F5812A;color:#ffffff;text-decoration:none;font-weight:bold;font-size:16px;padding:14px 30px;border-radius:12px">Entrar no Saber+</a>
+        </p>
+        <div style="background:#F4F9FE;border-radius:12px;padding:14px 16px;margin:0 0 22px">
+          <p style="margin:0;font-size:13px;line-height:1.5;color:#5A7A9A">Dica: no canto da tela tem o menu de <strong>acessibilidade</strong> — leitura em voz alta, fonte para dislexia, VLibras e alto contraste. Vale mostrar para a turma!</p>
+        </div>
+        <p style="margin:0 0 4px;font-size:15px">Um abraço,</p>
+        <p style="margin:0 0 24px;font-size:15px;font-weight:bold;color:#1A6FC4">Equipe Saber+</p>
+      </div>
+      <div style="border-top:1px solid #E6EEF6;padding:14px 26px;text-align:center">
+        <p style="margin:0;font-size:12px;color:#A0B8CC">Você recebeu este e-mail porque criou uma conta no Saber+. Este é um e-mail automático, não precisa responder.</p>
+      </div>
+    </div>
+  </div>`;
+  return { texto, html };
+}
+
+function enviarBoasVindas(req, nome, email) {
+  if (!carteiro || !email) return;
+  const { texto, html } = emailDeBoasVindas(nome, `${enderecoDoSite(req)}/login/professor`);
+  carteiro.sendMail({
+    from: process.env.SMTP_FROM || `Saber+ <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: 'Bem-vindo(a) ao Saber+',
+    text: texto,
+    html,
+  }).then(() => console.log('✉️  E-mail de boas-vindas enviado.'))
+    .catch(erro => console.error('Não consegui mandar o e-mail de boas-vindas:', erro.message));
 }
 
 app.post('/senha/esqueci', authLimiter, async (req, res) => {
