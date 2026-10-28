@@ -9,7 +9,11 @@ const { ipKeyGenerator } = rateLimit;
 const crypto = require('crypto');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const nodemailer = require('nodemailer');
+/* O nodemailer só é usado no "Esqueci minha senha". Se um dia ele faltar na
+   hospedagem, o site continua no ar (só o envio de e-mail fica desligado),
+   em vez de o servidor inteiro cair com erro 503 como aconteceu em 27/10/2026. */
+let nodemailer = null;
+try { nodemailer = require('nodemailer'); } catch { console.error('⚠️  Pacote nodemailer não encontrado — rode npm install. O envio de e-mail fica desligado.'); }
 const path = require('path');
 const fs = require('fs');
 const db = require('./db');
@@ -1074,7 +1078,7 @@ app.post('/login/google', authLimiter, async (req, res) => {
      SMTP_FROM (opcional; padrão "Saber+ <SMTP_USER>"),
      SITE_URL (opcional; padrão https://sabermaisedu.com)
    ========================================================================== */
-const SMTP_PRONTO = Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+const SMTP_PRONTO = Boolean(nodemailer && process.env.SMTP_USER && process.env.SMTP_PASS);
 const carteiro = SMTP_PRONTO
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.hostinger.com',

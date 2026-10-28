@@ -28,6 +28,7 @@
     "lucide-react": "^1.47.0",
     "multer": "^2.5.0",
     "mysql2": "^3.22.3",
+    "nodemailer": "^10.2.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2",
