@@ -13,14 +13,22 @@
 
    Mudou este arquivo? Troque a VERSAO para os celulares limparem o cache.
    ========================================================================== */
-// v3 (29/10/2026): a logo do app mudou. Os ícones ficam guardados no celular
-// pelo nome, que não mudou, então sem trocar a VERSAO o aparelho continuaria
-// mostrando a logo antiga para sempre.
+// v3 (29/10/2026): a logo do app mudou.
+//
+// Trocar o ARQUIVO do ícone não basta: ele é servido com cache de um ano e o
+// nome continuou o mesmo, então o celular, o navegador e o CDN seguiriam
+// entregando a logo antiga. Pior: no Android o ícone da tela inicial é uma
+// cópia feita na hora de instalar, e o Chrome só refaz essa cópia quando vê
+// o MANIFESTO mudar — como os nomes não mudaram, ele não via mudança nenhuma.
+//
+// Por isso todo endereço de ícone leva "?v=2" (aqui, no index.html, no
+// manifest.webmanifest e no BotaoInstalar). Mudou de endereço = arquivo novo
+// para todo mundo. Trocou a logo de novo? Suba o número do ?v= e a VERSAO.
 const VERSAO = 'saber-v3';
 // '/' ficou de fora de propósito: era ele que pedia a raiz com 'Accept: */*'
 // e trazia o 404 do Express para dentro do cache. A tela offline usa o
 // /index.html, que o próprio evento de navegação guarda.
-const ESSENCIAIS = ['/index.html', '/manifest.webmanifest', '/icones/icone-192.png', '/icones/icone-512.png'];
+const ESSENCIAIS = ['/index.html', '/manifest.webmanifest', '/icones/icone-192.png?v=2', '/icones/icone-512.png?v=2'];
 
 self.addEventListener('install', (evento) => {
   evento.waitUntil(caches.open(VERSAO).then((cache) => cache.addAll(ESSENCIAIS)));

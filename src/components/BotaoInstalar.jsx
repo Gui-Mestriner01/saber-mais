@@ -59,7 +59,7 @@ function BotaoInstalar() {
     };
     return (
       <div className="instalar-app" role="region" aria-label="Instalar o aplicativo">
-        <img src="/icones/icone-192.png" alt="" />
+        <img src="/icones/icone-192.png?v=2" alt="" />
         <p><strong>Saber+ no celular</strong>Instale e abra direto da tela inicial.</p>
         <button className="instalar-app-btn" onClick={instalar}>
           <Download size={16} strokeWidth={2.2} /> Instalar
@@ -74,7 +74,7 @@ function BotaoInstalar() {
   if (ehIOS()) {
     return (
       <div className="instalar-app" role="region" aria-label="Como instalar no iPhone">
-        <img src="/icones/icone-192.png" alt="" />
+        <img src="/icones/icone-192.png?v=2" alt="" />
         <p>
           <strong>Saber+ na tela inicial</strong>
           Toque em <Share size={14} strokeWidth={2.2} aria-label="Compartilhar" /> e depois em
