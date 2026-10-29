@@ -13,7 +13,10 @@
 
    Mudou este arquivo? Troque a VERSAO para os celulares limparem o cache.
    ========================================================================== */
-const VERSAO = 'saber-v2';
+// v3 (29/10/2026): a logo do app mudou. Os ícones ficam guardados no celular
+// pelo nome, que não mudou, então sem trocar a VERSAO o aparelho continuaria
+// mostrando a logo antiga para sempre.
+const VERSAO = 'saber-v3';
 // '/' ficou de fora de propósito: era ele que pedia a raiz com 'Accept: */*'
 // e trazia o 404 do Express para dentro do cache. A tela offline usa o
 // /index.html, que o próprio evento de navegação guarda.
