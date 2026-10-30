@@ -237,10 +237,30 @@ app.use(cors((req, callback) => {
   }
 }));
 
+/* Limites pensados para uma SALA DE AULA (30/10/2026)
+
+   Numa escola a turma inteira sai pelo mesmo IP do wifi. Se o limite contar
+   por IP e for baixo, os erros honestos de 20 crianças somam e a cota estoura
+   — aí ninguém mais entra, mesmo digitando certo. Por isso:
+
+   - tentativa que DEU CERTO não conta (skipSuccessfulRequests), só erro conta;
+   - as cotas cabem uma turma errando várias vezes, mas continuam baixas demais
+     para um robô (que precisaria de milhares de tentativas).
+
+   O envio de e-mail tem cota à parte: ali a resposta é sempre 200 (de
+   propósito, para não dizer quais e-mails têm conta), então "deu certo" não
+   serve de filtro e o limite precisa valer para todas as tentativas. */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 40,
+  skipSuccessfulRequests: true,
   message: { erro: 'Muitas tentativas. Tente novamente em 15 minutos.' }
+});
+
+const emailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  message: { erro: 'Muitos pedidos de troca de senha. Espere 15 minutos e tente de novo.' }
 });
 
 /* --------------------------------------------------------------------------
@@ -425,18 +445,22 @@ function donoDaSala(pegarSalaId) {
 // limite é por IP + sala / IP + aluno — uma turma não trava a outra.
 const senhaSalaLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 30,
+  // 20 crianças errando a senha de figurinhas umas 3 vezes dá ~60. Um robô
+  // precisaria de milhares (a senha tem 4 figurinhas de uma cartela grande).
+  max: 200,
   skipSuccessfulRequests: true,
   keyGenerator: (req) => `${ipKeyGenerator(req.ip)}:sala:${req.body?.sala_id}`,
   message: { erro: 'Muitas tentativas de senha. Espere uns minutinhos e tente de novo.' }
 });
 
 const pinLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 8,
+  windowMs: 10 * 60 * 1000,
+  // Por aluno, não por turma. Criança erra o PIN mesmo; se travar, agora o
+  // professor consegue trocar o PIN dela na tela da sala.
+  max: 12,
   skipSuccessfulRequests: true,
   keyGenerator: (req) => `${ipKeyGenerator(req.ip)}:aluno:${req.body?.aluno_id}`,
-  message: { erro: 'Muitas tentativas de PIN. Chame o professor ou espere 15 minutos.' }
+  message: { erro: 'Muitas tentativas de PIN. Peça para o professor trocar o seu PIN na tela da sala.' }
 });
 
 const PIN_VALIDO = /^\d{4}$/;
@@ -1211,7 +1235,7 @@ function enviarBoasVindas(req, nome, email) {
     .catch(erro => console.error('Não consegui mandar o e-mail de boas-vindas:', erro.message));
 }
 
-app.post('/senha/esqueci', authLimiter, async (req, res) => {
+app.post('/senha/esqueci', emailLimiter, async (req, res) => {
   const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const resposta = { mensagem: 'Se este e-mail estiver cadastrado, enviamos um link para criar uma senha nova. Confira também a caixa de spam.' };
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -1694,6 +1718,30 @@ app.get('/professor/sala/:id/alunos', autenticar, donoDaSala(req => req.params.i
     if (err) return res.status(500).json({ erro: 'Erro ao buscar alunos.' });
     res.json(results);
   });
+});
+
+/* Trocar o PIN de um aluno (30/10/2026). Criança esquece o PIN, e antes a
+   única saída era apagar o aluno e cadastrar de novo — perdendo pontos,
+   respostas e insígnias dela. Agora o professor dá um PIN novo na hora.
+   O PIN é guardado com hash, igual ao do cadastro: nem o professor vê o
+   antigo, ele só define um novo. */
+app.put('/professor/sala/:idSala/aluno/:idAluno/pin', autenticar, donoDaSala(req => req.params.idSala), async (req, res) => {
+  const pin = String(req.body?.pin || '');
+  if (!PIN_VALIDO.test(pin)) return res.status(400).json({ erro: 'O PIN precisa ter 4 números.' });
+  try {
+    const hash = await bcrypt.hash(pin, 10);
+    db.query(
+      `UPDATE aluno_sala SET pin = ? WHERE id = ? AND sala_id = ?`,
+      [hash, req.params.idAluno, req.params.idSala],
+      (err, r) => {
+        if (err) return res.status(500).json({ erro: 'Não consegui trocar o PIN.' });
+        if (r.affectedRows === 0) return res.status(404).json({ erro: 'Aluno não encontrado nesta sala.' });
+        res.json({ mensagem: 'PIN trocado! Avise o aluno.' });
+      }
+    );
+  } catch {
+    res.status(500).json({ erro: 'Não consegui trocar o PIN.' });
+  }
 });
 
 app.delete('/professor/sala/:idSala/aluno/:idAluno', autenticar, (req, res) => {

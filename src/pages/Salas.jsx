@@ -42,6 +42,9 @@ function Salas() {
   const [carregando, setCarregando] = useState(true);
   const [salaSelecionada, setSalaSelecionada] = useState(null);
   const [alunos, setAlunos]         = useState([]);
+  const [pinAberto, setPinAberto]   = useState(null);   // id do aluno com o campo aberto
+  const [pinNovo, setPinNovo]       = useState('');
+  const [pinRecado, setPinRecado]   = useState(null);   // { id, texto, erro }
   const [senhasVisiveis, setSenhasVisiveis] = useState({});
   const [codigoCopiado, setCodigoCopiado]   = useState(null);
   const [mudandoStatus, setMudandoStatus]   = useState(null);
@@ -62,7 +65,7 @@ function Salas() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setSalas(data);
+      setSalas(Array.isArray(data) ? data : []);
     } catch {
       console.error('Erro ao buscar salas');
     } finally {
@@ -77,7 +80,9 @@ function Salas() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setAlunos(data);
+      // Se vier um erro em vez da lista, guarda lista vazia: um objeto aqui
+      // quebrava a tela inteira no .map lá embaixo.
+      setAlunos(Array.isArray(data) ? data : []);
     } catch {
       console.error('Erro ao buscar alunos');
     }
@@ -100,6 +105,36 @@ function Salas() {
     } catch {
       console.error('Erro de conexão ao tentar remover aluno');
     }
+  };
+
+  /* Trocar o PIN de um aluno que esqueceu (30/10/2026). Antes só dava para
+     apagar o aluno e cadastrar de novo, o que levava junto os pontos e as
+     insígnias dele. */
+  const trocarPin = async (idAluno) => {
+    if (!/^\d{4}$/.test(pinNovo)) {
+      setPinRecado({ id: idAluno, texto: 'O PIN precisa ter 4 números.', erro: true });
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/professor/sala/${salaSelecionada.id}/aluno/${idAluno}/pin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ pin: pinNovo }),
+      });
+      const dados = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(dados.erro || 'Não consegui trocar o PIN.');
+      setPinRecado({ id: idAluno, texto: `PIN novo: ${pinNovo}. Avise o aluno.`, erro: false });
+      setPinAberto(null);
+      setPinNovo('');
+    } catch (e) {
+      setPinRecado({ id: idAluno, texto: e.message, erro: true });
+    }
+  };
+
+  const abrirPin = (idAluno) => {
+    setPinAberto(pinAberto === idAluno ? null : idAluno);
+    setPinNovo('');
+    setPinRecado(null);
   };
 
   // Mostra ou esconde a senha de uma sala específica
@@ -277,16 +312,48 @@ function Salas() {
                   <div className="salas-alunos-lista">
                     {alunos.map((aluno, i) => (
                       <div key={i} className="salas-aluno-card">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div className="salas-aluno-topo">
                           <div className="salas-aluno-avatar">{aluno.nome_aluno?.charAt(0).toUpperCase()}</div>
                           <div>
                             <strong>{aluno.nome_aluno}</strong>
                             <p>Entrou em {new Date(aluno.entrou_em).toLocaleDateString('pt-BR')}</p>
                           </div>
+                          <div className="salas-aluno-acoes">
+                            <button
+                              className={`btn-pin-aluno ${pinAberto === aluno.id ? 'ativo' : ''}`}
+                              onClick={() => abrirPin(aluno.id)}
+                              title="Trocar o PIN deste aluno"
+                            >
+                              <KeyRound size={15} strokeWidth={1.9} /> PIN
+                            </button>
+                            <button className="btn-remover-aluno" onClick={() => removerAluno(aluno.id)} title="Remover da sala">
+                              <Trash2 size={16} strokeWidth={1.75} />
+                            </button>
+                          </div>
                         </div>
-                        <button className="btn-remover-aluno" onClick={() => removerAluno(aluno.id)} title="Remover da sala">
-                          <Trash2 size={16} strokeWidth={1.75} />
-                        </button>
+
+                        {pinAberto === aluno.id && (
+                          <form
+                            className="salas-pin-form"
+                            onSubmit={(e) => { e.preventDefault(); trocarPin(aluno.id); }}
+                          >
+                            <input
+                              className="salas-pin-campo"
+                              value={pinNovo}
+                              onChange={(e) => setPinNovo(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                              placeholder="4 números"
+                              inputMode="numeric"
+                              autoFocus
+                              aria-label={`PIN novo de ${aluno.nome_aluno}`}
+                            />
+                            <button className="salas-pin-salvar" type="submit">Trocar</button>
+                            <button className="salas-pin-cancelar" type="button" onClick={() => abrirPin(aluno.id)}>Cancelar</button>
+                          </form>
+                        )}
+
+                        {pinRecado?.id === aluno.id && (
+                          <p className={`salas-pin-recado ${pinRecado.erro ? 'erro' : ''}`}>{pinRecado.texto}</p>
+                        )}
                       </div>
                     ))}
                   </div>
