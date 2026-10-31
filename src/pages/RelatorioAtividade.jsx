@@ -3,13 +3,99 @@ import {
   ArrowLeft, Check, X, Minus, Users, Percent, ChevronRight, ChevronDown, Save,
   Maximize2, Minimize2, Calendar, Clock,
   ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList,
-  ArrowDownUp, LayoutGrid, Shapes
+  ArrowDownUp, LayoutGrid, Shapes, Download, ZoomIn, ImageOff
 } from 'lucide-react';
 import { API } from '../api';
 import { formatarDuracao } from '../tempo';
 
 // Texto de um lado do "ligar" ({ tipo: 'texto' | 'imagem', conteudo })
 const textoDoLado = (lado) => (lado?.tipo === 'imagem' ? '(imagem)' : String(lado?.conteudo ?? lado?.texto ?? ''));
+
+/* --------------------------------------------------------------------------
+   A PINTURA QUE O ALUNO ENTREGOU (31/10/2026)
+
+   Antes o professor via o JSON cru ({"url_pintura": "https://..."}), porque a
+   tela só sabia ler os campos "url" e "imagem" — e a pintura é guardada em
+   "url_pintura". Agora aparece a prévia, dá para ampliar e para baixar.
+
+   O download passa pelo servidor (/professor/resposta/:id/pintura): a imagem
+   fica no Cloudinary, em outro domínio, e aí o atributo "download" do HTML é
+   ignorado pelo navegador — o arquivo abriria numa aba com nome de código.
+   -------------------------------------------------------------------------- */
+function PinturaEntregue({ url, respostaId, nomeAluno, tituloAtividade }) {
+  const [ampliada, setAmpliada] = useState(false);
+  const [quebrou, setQuebrou] = useState(false);
+  const [baixando, setBaixando] = useState(false);
+  const [erroBaixar, setErroBaixar] = useState('');
+
+  const baixar = async () => {
+    setErroBaixar('');
+    setBaixando(true);
+    try {
+      const res = await fetch(`${API}/professor/resposta/${respostaId}/pintura`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.erro || 'Não consegui baixar agora.');
+      }
+      const blob = await res.blob();
+      const nome = (res.headers.get('content-disposition') || '').match(/filename="([^"]+)"/)?.[1]
+        || `pintura-${nomeAluno}.png`;
+      const endereco = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = endereco;
+      link.download = nome;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(endereco), 1000);
+    } catch (e) {
+      setErroBaixar(e.message);
+    } finally {
+      setBaixando(false);
+    }
+  };
+
+  if (!url) {
+    return (
+      <div className="pintura-sem-imagem">
+        <ImageOff size={22} strokeWidth={1.8} />
+        <p>Esta entrega chegou sem imagem. Peça para o aluno enviar de novo.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pintura-entrega">
+      {quebrou ? (
+        <div className="pintura-sem-imagem">
+          <ImageOff size={22} strokeWidth={1.8} />
+          <p>Não consegui carregar a imagem desta entrega. Tente baixar ou recarregue a página.</p>
+        </div>
+      ) : (
+        <button className="pintura-previa" onClick={() => setAmpliada(true)} title="Clique para ampliar">
+          <img src={url} alt={`Pintura de ${nomeAluno}`} onError={() => setQuebrou(true)} />
+          <span className="pintura-lupa"><ZoomIn size={16} strokeWidth={2.2} /> Ampliar</span>
+        </button>
+      )}
+
+      <div className="pintura-acoes">
+        <button className="pintura-btn" onClick={baixar} disabled={baixando}>
+          <Download size={15} strokeWidth={2} /> {baixando ? 'Baixando...' : 'Baixar a pintura'}
+        </button>
+        {erroBaixar && <span className="pintura-erro">{erroBaixar}</span>}
+      </div>
+
+      {ampliada && (
+        <div className="pintura-lightbox" onClick={() => setAmpliada(false)} role="dialog" aria-label="Pintura ampliada">
+          <img src={url} alt={`Pintura de ${nomeAluno} — ${tituloAtividade || ''}`} onClick={(e) => e.stopPropagation()} />
+          <button className="pintura-fechar" onClick={() => setAmpliada(false)}>Fechar</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ==========================================================================
    RELATÓRIO DE UMA ATIVIDADE
@@ -645,6 +731,20 @@ function CartaoAluno({ resposta, atividade, perguntas, aberto, onAbrir, onSalvo 
   // Pintura e resposta aberta não têm gabarito: mostra o que o aluno mandou
   const conteudoLivre = () => {
     const r = resposta.resposta;
+
+    // Pintura: a imagem fica em "url_pintura". Sem este caso, a tela caía no
+    // JSON cru lá embaixo — era o que o professor via até 31/10/2026.
+    if (atividade?.tipo === 'pintura' || (r && typeof r === 'object' && r.url_pintura)) {
+      return (
+        <PinturaEntregue
+          url={(r && (r.url_pintura || r.url || r.imagem)) || null}
+          respostaId={resposta.id}
+          nomeAluno={resposta.nome_aluno}
+          tituloAtividade={atividade?.titulo}
+        />
+      );
+    }
+
     if (!r) return null;
     if (typeof r === 'string' && r.startsWith('http')) {
       return <img className="resposta-imagem" src={r} alt="Resposta do aluno" />;

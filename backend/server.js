@@ -2291,6 +2291,57 @@ app.get('/professor/atividade/:id/respostas', autenticar, (req, res) => {
   });
 });
 
+/* --------------------------------------------------------------------------
+   BAIXAR A PINTURA DE UM ALUNO (31/10/2026)
+
+   A imagem mora no Cloudinary, em outro domínio. Um link com "download" no
+   HTML não funciona entre domínios: o navegador só abre a imagem numa aba
+   nova e com um nome sem sentido. Então o download passa por aqui: o servidor
+   busca a imagem e devolve com o nome certo ("pintura-Ana-Clara-Paisagem.png"),
+   depois de conferir que a resposta é mesmo de uma atividade deste professor.
+   -------------------------------------------------------------------------- */
+const nomeDeArquivo = (texto, padrao) => {
+  const limpo = String(texto || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')   // tira acento
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return limpo || padrao;
+};
+
+app.get('/professor/resposta/:id/pintura', autenticar, (req, res) => {
+  const sql = `
+    SELECT r.resposta, r.nome_aluno, a.titulo, a.tipo
+      FROM resposta_aluno r
+      JOIN atividade a ON a.id = r.atividade_id
+     WHERE r.id = ? AND a.professor_id = ?`;
+  db.query(sql, [req.params.id, req.usuario.id], async (err, linhas) => {
+    if (err) return res.status(500).json({ erro: 'Erro ao procurar a pintura.' });
+    if (linhas.length === 0) return res.status(404).json({ erro: 'Resposta não encontrada.' });
+
+    const r = linhas[0];
+    const guardado = lerJson(r.resposta, {});
+    const url = guardado?.url_pintura || guardado?.url || guardado?.imagem;
+    if (!url || !/^https?:\/\//.test(url)) {
+      return res.status(404).json({ erro: 'Esta entrega não tem imagem.' });
+    }
+
+    try {
+      const vinda = await fetch(url);
+      if (!vinda.ok) return res.status(502).json({ erro: 'Não consegui baixar a imagem agora.' });
+      const tipo = vinda.headers.get('content-type') || 'image/png';
+      const extensao = tipo.includes('jpeg') ? 'jpg' : tipo.includes('webp') ? 'webp' : 'png';
+      const nome = `pintura-${nomeDeArquivo(r.nome_aluno, 'aluno')}-${nomeDeArquivo(r.titulo, 'atividade')}.${extensao}`;
+      res.setHeader('Content-Type', tipo);
+      res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
+      res.setHeader('Cache-Control', 'private, max-age=300');
+      res.send(Buffer.from(await vinda.arrayBuffer()));
+    } catch {
+      res.status(502).json({ erro: 'Não consegui baixar a imagem agora.' });
+    }
+  });
+});
+
 /* ==========================================================================
    9. UPLOADS DIRETOS DE IMAGENS (PINTURA)
    ========================================================================== */
