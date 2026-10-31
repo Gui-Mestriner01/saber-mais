@@ -2233,12 +2233,19 @@ app.get('/aluno/atividade/:id/revisao', autenticarAluno, (req, res) => {
     if (!atv) return res.status(404).json({ erro: 'Atividade não encontrada.' });
     if (Number(atv.sala_id) !== Number(sala_id)) return res.status(403).json({ erro: 'Essa atividade não é da sua sala.' });
 
-    db.query(
-      `SELECT resposta, nota, corrigido, comentario, criado_em, duracao_s
+    /* A coluna 'comentario' (o recado do professor) nasceu depois do banco de
+       produção. Se ela ainda não existir, a consulta roda sem ela em vez de
+       derrubar a tela do aluno com "Erro ao buscar sua resposta" — era isso
+       que acontecia em 30/10/2026. A subida do servidor também cria a coluna. */
+    const campos = (com) => `SELECT resposta, nota, corrigido, ${com ? 'comentario, ' : ''}criado_em, duracao_s
          FROM resposta_aluno WHERE atividade_id = ? AND sala_id = ? AND nome_aluno = ?
-        ORDER BY id DESC LIMIT 1`,
+        ORDER BY id DESC LIMIT 1`;
+
+    const buscar = (com) => db.query(
+      campos(com),
       [atv.id, sala_id, nome],
       (errR, linhas) => {
+        if (errR && com && errR.code === 'ER_BAD_FIELD_ERROR') return buscar(false);
         if (errR) return res.status(500).json({ erro: 'Erro ao buscar sua resposta.' });
         const r = linhas[0];
         if (!r) return res.status(404).json({ erro: 'Você ainda não fez esta atividade.' });
@@ -2261,6 +2268,8 @@ app.get('/aluno/atividade/:id/revisao', autenticarAluno, (req, res) => {
         });
       }
     );
+
+    buscar(true);
   });
 });
 
@@ -3164,6 +3173,57 @@ db.query(`SHOW COLUMNS FROM resposta_aluno LIKE 'duracao_s'`, (err, colunas) => 
     db.query(`ALTER TABLE resposta_aluno ADD COLUMN duracao_s INT NULL`, (e) => {
       if (e) console.error('Não consegui criar a coluna resposta_aluno.duracao_s:', e.message);
       else console.log('✅ Coluna resposta_aluno.duracao_s criada.');
+    });
+  }
+});
+
+/* ==========================================================================
+   CONFERÊNCIA DO BANCO NA SUBIDA (30/10/2026)
+
+   O banco de produção é mais velho que o código e já ficou para trás duas
+   vezes: uma coluna criada depois só existia no computador de quem programou,
+   e a tela do aluno quebrava em produção com um erro seco.
+
+   Aqui o servidor confere, ao subir, se cada coluna que o código usa existe
+   mesmo. Não conserta nada sozinho (as migrações acima fazem isso); só grita
+   no log, bem visível, para o problema aparecer no deploy e não na aula.
+   ========================================================================== */
+const COLUNAS_ESPERADAS = {
+  usuario: ['id', 'nome', 'email', 'senha', 'tipo_usuario', 'status', 'telefone', 'instituicao', 'materia', 'foto_url'],
+  sala: ['id', 'nome', 'serie', 'materia', 'codigo', 'senha_emojis', 'tema_senha', 'professor_id', 'tipo_sala', 'expires_at', 'status'],
+  aluno_sala: ['id', 'nome_aluno', 'sala_id', 'entrou_em', 'pin', 'pontos'],
+  atividade: ['id', 'titulo', 'tipo', 'sala_id', 'professor_id', 'conteudo', 'tempo_limite', 'criado_em', 'publica', 'origem_id', 'tema'],
+  resposta_aluno: ['id', 'atividade_id', 'nome_aluno', 'sala_id', 'resposta', 'nota', 'corrigido', 'comentario', 'criado_em', 'duracao_s'],
+};
+
+setTimeout(() => {
+  const tabelas = Object.keys(COLUNAS_ESPERADAS);
+  let faltando = [];
+  let aConferir = tabelas.length;
+  tabelas.forEach((tabela) => {
+    db.query(`SHOW COLUMNS FROM ??`, [tabela], (err, linhas) => {
+      if (err) faltando.push(`${tabela} (não consegui ler: ${err.message})`);
+      else {
+        const tem = new Set(linhas.map(l => l.Field));
+        const sumidas = COLUNAS_ESPERADAS[tabela].filter(c => !tem.has(c));
+        if (sumidas.length) faltando.push(`${tabela}.${sumidas.join(', ' + tabela + '.')}`);
+      }
+      if (--aConferir === 0) {
+        if (faltando.length === 0) console.log('✅ Banco conferido: todas as colunas que o sistema usa existem.');
+        else console.error('🚨 FALTAM COLUNAS NO BANCO — alguma tela vai dar erro:\n   ' + faltando.join('\n   '));
+      }
+    });
+  });
+}, 8000); // depois das migrações acima terminarem
+
+/* Recado do professor na correção. A coluna é mais nova que o banco de
+   produção: sem ela, a tela de resultado do aluno quebrava. */
+db.query(`SHOW COLUMNS FROM resposta_aluno LIKE 'comentario'`, (err, colunas) => {
+  if (err) return console.error('Não consegui conferir a coluna resposta_aluno.comentario:', err.message);
+  if (colunas.length === 0) {
+    db.query(`ALTER TABLE resposta_aluno ADD COLUMN comentario TEXT NULL`, (e) => {
+      if (e) console.error('Não consegui criar a coluna resposta_aluno.comentario:', e.message);
+      else console.log('✅ Coluna resposta_aluno.comentario criada.');
     });
   }
 });
