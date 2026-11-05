@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft, Check, X, Minus, Users, Percent, ChevronRight, ChevronDown, Save,
   Maximize2, Minimize2, Calendar, Clock,
   ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList,
-  ArrowDownUp, LayoutGrid, Shapes, Download, ZoomIn, ImageOff
+  ArrowDownUp, LayoutGrid, Shapes, Download, ZoomIn, ImageOff, UserX, PartyPopper
 } from 'lucide-react';
 import { API } from '../api';
 import { formatarDuracao } from '../tempo';
@@ -150,6 +150,35 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
 
   const tipo = atividade.tipo;
   const totalAlunos = respostas.length;
+
+  /* ------------------------------------------------------------------------
+     QUEM AINDA NÃO FEZ (06/11/2026)
+
+     A pergunta do dia a dia da professora é "de quem eu tenho que cobrar?".
+     O relatório só mostrava quem tinha respondido. Agora ele busca a lista
+     da sala e mostra quem falta — pelo nome, que é como a resposta fica
+     guardada. Sala temporária não tem lista (os alunos entram sem cadastro),
+     e aí essa parte simplesmente não aparece.
+     ------------------------------------------------------------------------ */
+  const [listaDaSala, setListaDaSala] = useState(null);
+  useEffect(() => {
+    if (!atividade?.sala_id) return;
+    let vivo = true;
+    fetch(`${API}/professor/sala/${atividade.sala_id}/alunos`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+      .then(r => (r.ok ? r.json() : []))
+      .then(lista => { if (vivo) setListaDaSala(Array.isArray(lista) ? lista : []); })
+      .catch(() => { if (vivo) setListaDaSala([]); });
+    return () => { vivo = false; };
+  }, [atividade?.sala_id]);
+
+  const normalizar = (t) => String(t || '').trim().toLocaleLowerCase('pt-BR');
+  const jaFizeram = new Set(respostas.map(r => normalizar(r.nome_aluno)));
+  const faltam = (listaDaSala || [])
+    .filter(a => !jaFizeram.has(normalizar(a.nome_aluno)))
+    .sort((a, b) => String(a.nome_aluno).localeCompare(String(b.nome_aluno), 'pt-BR'));
+  const tamanhoDaSala = listaDaSala ? listaDaSala.length : 0;
 
   // Quando a turma começou e terminou de responder
   const datasEnvio = respostas
@@ -380,6 +409,15 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
             </span>
           )}
         </div>
+
+        {tamanhoDaSala > 0 && (
+          <p className="rel-quem-fez">
+            <strong>{Math.min(totalAlunos, tamanhoDaSala)} de {tamanhoDaSala}</strong> alunos já fizeram
+            {faltam.length > 0
+              ? <> · <button className="rel-link-faltam" onClick={() => setAba('alunos')}>ver quem falta ({faltam.length})</button></>
+              : <> · <span className="rel-todos">todos fizeram</span></>}
+          </p>
+        )}
       </div>
 
       {/* ABAS */}
@@ -390,7 +428,7 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
           disabled={!temVisaoPorPergunta}
           title={temVisaoPorPergunta ? '' : 'Esta atividade não tem alternativas para somar'}
         >
-          Visão geral da turma
+          Visão geral
         </button>
         <button
           className={`rel-aba ${aba === 'alunos' ? 'ativa' : ''}`}
@@ -556,6 +594,18 @@ function RelatorioAtividade({ atividade, respostas, onVoltar, onAtualizarRespost
       {/* ====================================================================
           POR ALUNO — correção manual
           ==================================================================== */}
+      {aba === 'alunos' && faltam.length > 0 && (
+        <section className="rel-faltam-bloco" aria-label="Alunos que ainda não fizeram">
+          <h3><UserX size={17} strokeWidth={2} /> Ainda não fizeram ({faltam.length})</h3>
+          <ul>
+            {faltam.map(a => <li key={a.id || a.nome_aluno}>{a.nome_aluno}</li>)}
+          </ul>
+        </section>
+      )}
+      {aba === 'alunos' && tamanhoDaSala > 0 && faltam.length === 0 && respostas.length > 0 && (
+        <p className="rel-todos-bloco"><PartyPopper size={17} strokeWidth={2} /> Todos os alunos da sala já fizeram esta atividade.</p>
+      )}
+
       {aba === 'alunos' && (
         respostas.length === 0 ? (
           <div className="rel-vazio">

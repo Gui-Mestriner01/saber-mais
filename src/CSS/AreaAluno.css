@@ -523,3 +523,61 @@ body.modo-escuro .sala-entrar-btn,
 body.modo-escuro .btn-entrar-sala { background: #2F78BC; }
 body.modo-escuro .sala-entrar-btn:hover,
 body.modo-escuro .btn-entrar-sala:hover { background: #3B8EDD; }
+
+/* ==========================================================================
+   ENTRAR PELO CÓDIGO — 06/11/2026 (AreaAluno.jsx)
+   O campo do código vira a coisa principal da tela: maior, com a pergunta
+   escrita em cima e o código em letras grandes e espaçadas.
+   ========================================================================== */
+.busca-sala-wrap { flex-direction: column; align-items: center; gap: 10px; }
+
+.busca-sala-rotulo {
+  display: grid; gap: 2px;
+  text-align: center;
+  font-size: 22px; font-weight: 900; color: #2A4A6A;
+}
+.busca-sala-rotulo small { font-size: 14px; font-weight: 700; color: #5A7A9A; }
+
+.busca-sala-wrap .busca-sala-input { padding: 16px 20px; border-width: 3px; }
+.busca-sala-wrap .busca-sala-input input {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.busca-sala-wrap .busca-sala-input input::placeholder {
+  font-size: 17px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.salas-secao-titulo {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 26px 0 0;
+  font-size: 16px; font-weight: 900; color: #5A7A9A;
+}
+.salas-secao-titulo.achou { color: #2C7A47; }
+
+.ver-todas-salas {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 26px auto 0;
+  min-height: 46px;
+  padding: 10px 20px;
+  border: 2px solid #C8DFF0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .85);
+  color: #1A6FC4;
+  font: 800 15px/1.2 'Nunito', sans-serif;
+  cursor: pointer;
+}
+.ver-todas-salas:hover { border-color: #1A6FC4; }
+
+body.modo-escuro .busca-sala-rotulo { color: #E6EEF6; }
+body.modo-escuro .busca-sala-rotulo small,
+body.modo-escuro .salas-secao-titulo { color: #A8BCCE; }
+body.modo-escuro .ver-todas-salas { background: #1E2E3E; border-color: #35506A; color: #7FB6EE; }
+
+@media (max-width: 420px) {
+  .busca-sala-rotulo { font-size: 19px; }
+  .busca-sala-wrap .busca-sala-input input { font-size: 19px; }
+}

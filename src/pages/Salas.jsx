@@ -236,7 +236,7 @@ function Salas() {
         <header className="dashboard-header-painel">
           <div className="header-boas-vindas">
             <h1>Minhas salas</h1>
-            <p>Suas turmas, com o código e a senha que os alunos usam para entrar.</p>
+            <p>Suas salas, com o código e a senha que os alunos usam para entrar.</p>
           </div>
 
           <div className="header-acoes">
@@ -380,7 +380,7 @@ function Salas() {
                 <Search size={16} strokeWidth={1.75} />
                 <input
                   type="text"
-                  placeholder="Buscar pelo nome da turma ou pelo código..."
+                  placeholder="Buscar pelo nome da sala ou pelo código..."
                   value={busca}
                   onChange={e => setBusca(e.target.value)}
                 />

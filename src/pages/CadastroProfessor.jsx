@@ -45,11 +45,23 @@ export default function CadastroProfessor() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.erro);
 
-      // Não tem mais fila de aprovação: a conta já nasce liberada,
-      // então é só levar o professor para o login.
-      setSucesso(data.mensagem);
+      /* Já entra logada (06/11/2026): o servidor devolve o crachá junto com
+         a conta nova, igual ao login. Antes a professora caía de volta na
+         tela de login e tinha que digitar tudo de novo. */
+      setSucesso('Conta criada! Entrando…');
       setForm({ nome: '', email: '', senha: '', confirmarSenha: '' });
-      setTimeout(() => navigate('/login/professor'), 1500);
+
+      if (data.token && data.usuario) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('nomeUsuario', data.usuario.nome);
+        localStorage.setItem('idUsuario', data.usuario.id);
+        localStorage.setItem('tipoUsuario', data.usuario.tipo);
+        localStorage.removeItem('fotoUsuario');
+        setTimeout(() => navigate('/professor/dashboard'), 900);
+      } else {
+        // Servidor antigo, sem crachá no cadastro: segue pelo login.
+        setTimeout(() => navigate('/login/professor'), 1500);
+      }
 
     } catch (err) {
       setErro(err.message);

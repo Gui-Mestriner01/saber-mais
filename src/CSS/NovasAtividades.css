@@ -1228,3 +1228,43 @@ body.a11y-sem-animacao .resultado-estrela { animation: none !important; }
   border-radius: 999px;
   padding: 1px 7px;
 }
+
+/* ==========================================================================
+   PRAZO PARA ENTREGAR (EditorAtividade.jsx) — 06/11/2026
+   ========================================================================== */
+.prazo-escolha { display: grid; gap: 12px; }
+.prazo-atalhos { display: flex; flex-wrap: wrap; gap: 8px; }
+.prazo-chip {
+  min-height: 42px;
+  padding: 8px 16px;
+  border: 2px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--tinta-media);
+  font: 800 14px/1 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.prazo-chip:hover { border-color: var(--azul); color: var(--azul); }
+.prazo-chip.ativo { background: var(--azul); border-color: var(--azul); color: #fff; }
+
+.prazo-outro {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--tinta-media);
+}
+.prazo-outro .prazo-numero  { width: 84px; }
+.prazo-outro .prazo-unidade { width: auto; min-width: 110px; }
+
+.prazo-resumo {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--azul-lavado);
+  font-size: 14px; font-weight: 600; color: var(--tinta);
+  line-height: 1.45;
+}
+.prazo-resumo svg { flex: none; margin-top: 2px; color: var(--azul); }
+.prazo-resumo strong { font-weight: 900; }
+
+body.modo-escuro-prof .prazo-resumo { background: rgba(26, 111, 196, .14); }

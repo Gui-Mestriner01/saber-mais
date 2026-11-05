@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, LayoutList, Lock, Globe, Pencil, Copy } from 'lucide-react';
+import { ArrowLeft, Save, LayoutList, Lock, Globe, Pencil, Copy, CalendarClock } from 'lucide-react';
 import { SeletorTema, TemaEditorContext } from './TemaFundo';
 import Aviso from './Aviso';
 import '../CSS/Dashboard.css';
@@ -54,6 +54,104 @@ export function usarAtividadeInicial() {
   return state?.atividade ?? null;
 }
 
+/* ==========================================================================
+   PRAZO PARA ENTREGAR (06/11/2026)
+
+   O servidor e a tela do aluno já sabiam lidar com prazo (coluna
+   atividade.tempo_limite, em minutos a partir da criação — o aluno vê
+   "faltam 2 dias" e depois "Encerrado"). Só faltava a professora conseguir
+   escolher. O prazo é guardado como DURAÇÃO, igual ao do V/F, para não
+   depender do relógio do computador de cada um.
+   ========================================================================== */
+const ATALHOS_PRAZO = [
+  { min: 0,         rotulo: 'Sem prazo' },
+  { min: 60,        rotulo: '1 hora' },
+  { min: 24 * 60,   rotulo: '1 dia' },
+  { min: 3 * 1440,  rotulo: '3 dias' },
+  { min: 7 * 1440,  rotulo: '1 semana' },
+];
+
+function SeletorPrazo({ minutos, aoMudar, desde }) {
+  const ehAtalho = ATALHOS_PRAZO.some(a => a.min === minutos);
+  const [outro, setOutro] = useState(!ehAtalho);
+  const [quanto, setQuanto] = useState(() => (minutos > 0 && minutos % 1440 === 0 ? minutos / 1440 : minutos > 0 ? Math.max(1, Math.round(minutos / 60)) : 2));
+  const [unidade, setUnidade] = useState(() => (minutos > 0 && minutos % 1440 !== 0 ? 'horas' : 'dias'));
+
+  const aplicarOutro = (q, u) => {
+    const n = Math.max(1, Math.min(365, Number(q) || 1));
+    aoMudar(u === 'dias' ? n * 1440 : n * 60);
+  };
+
+  const fim = minutos > 0 ? new Date(desde.getTime() + minutos * 60000) : null;
+  const textoFim = fim
+    ? fim.toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  return (
+    <div className="prazo-escolha">
+      <div className="prazo-atalhos" role="radiogroup" aria-label="Prazo para entregar">
+        {ATALHOS_PRAZO.map(a => (
+          <button
+            key={a.min}
+            type="button"
+            role="radio"
+            aria-checked={!outro && minutos === a.min}
+            className={`prazo-chip ${!outro && minutos === a.min ? 'ativo' : ''}`}
+            onClick={() => { setOutro(false); aoMudar(a.min); }}
+          >
+            {a.rotulo}
+          </button>
+        ))}
+        <button
+          type="button"
+          role="radio"
+          aria-checked={outro}
+          className={`prazo-chip ${outro ? 'ativo' : ''}`}
+          onClick={() => { setOutro(true); aplicarOutro(quanto, unidade); }}
+        >
+          Outro…
+        </button>
+      </div>
+
+      {outro && (
+        <div className="prazo-outro">
+          <span>Os alunos têm</span>
+          <input
+            type="number"
+            min="1"
+            max="365"
+            className="editor-input prazo-numero"
+            value={quanto}
+            onChange={e => { setQuanto(e.target.value); aplicarOutro(e.target.value, unidade); }}
+            aria-label="Quantidade"
+          />
+          <select
+            className="editor-input prazo-unidade"
+            value={unidade}
+            onChange={e => { setUnidade(e.target.value); aplicarOutro(quanto, e.target.value); }}
+            aria-label="Unidade"
+          >
+            <option value="horas">horas</option>
+            <option value="dias">dias</option>
+          </select>
+          <span>para fazer.</span>
+        </div>
+      )}
+
+      <p className="prazo-resumo">
+        <CalendarClock size={16} strokeWidth={2} />
+        {/* Num <span> só: o <p> é flex, e cada pedaço de texto solto virava
+            um item separado, com espaço sobrando antes do ponto final. */}
+        <span>
+          {fim
+            ? <>Os alunos podem fazer até <strong>{textoFim}</strong>. Depois disso a atividade fecha.</>
+            : <>Sem prazo: os alunos podem fazer quando quiserem.</>}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 function EditorAtividade({
   tipo,
   nomeTipo,
@@ -79,6 +177,12 @@ function EditorAtividade({
   const [publica, setPublica]   = useState(!!original?.publica && !copiando);
   // A cópia leva o cenário junto; quem copiou troca se quiser.
   const [tema, setTema]         = useState(original?.tema || null);
+  // Prazo em minutos (0 = sem prazo). A cópia da biblioteca começa sem prazo:
+  // o da outra professora contava a partir do dia em que ELA criou.
+  const [prazoMin, setPrazoMin] = useState(() => (copiando ? 0 : Number(original?.tempo_limite) || 0));
+  const prazoDesde = editando && original?.criado_em
+    ? new Date(String(original.criado_em).replace(' ', 'T'))
+    : new Date();
   const [erro, setErro]         = useState('');
   const [salvo, setSalvo]       = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -99,7 +203,7 @@ function EditorAtividade({
      na tela — o editor do quiz, por exemplo, só pula para a pergunta com
      problema quando o professor clica em salvar. */
   const problemaAtual = (silencioso) => {
-    if (!editando && !salaId) return 'Escolha a turma que vai receber esta atividade.';
+    if (!editando && !salaId) return 'Escolha a sala que vai receber esta atividade.';
     if (!titulo.trim()) return 'Dê um título para a atividade.';
     return validar?.({ silencioso }) || null;
   };
@@ -144,12 +248,13 @@ function EditorAtividade({
           origemId: copiando ? original.id : null,
           editandoId: editando ? original.id : null,
           tema,
+          tempoLimite: prazoMin,
         });
       } else if (editando) {
         const res = await fetch(`${API}/professor/atividade/${original.id}`, {
           method: 'PUT',
           headers: cracha,
-          body: JSON.stringify({ titulo: titulo.trim(), conteudo: montarConteudo(), publica, tema }),
+          body: JSON.stringify({ titulo: titulo.trim(), conteudo: montarConteudo(), publica, tema, tempo_limite: prazoMin }),
         });
         const dados = await res.json();
         if (!res.ok) throw new Error(dados.erro || 'Não consegui salvar as alterações.');
@@ -165,6 +270,7 @@ function EditorAtividade({
             publica,
             origem_id: copiando ? original.id : null,
             tema,
+            tempo_limite: prazoMin,
           }),
         });
         const dados = await res.json();
@@ -174,7 +280,7 @@ function EditorAtividade({
       setSalvo(true);
       const texto = editando ? 'Alterações salvas!' : 'Atividade salva! A turma já pode fazer.';
       setAviso({ texto, tipo: 'ok' });
-      // O Minhas aulas mostra o mesmo aviso quando a tela troca.
+      // A tela de Atividades mostra o mesmo aviso quando a tela troca.
       setTimeout(() => navigate('/professor/minhas-aulas', { state: { aviso: texto } }), 1400);
     } catch (e) {
       setErro(e.message || 'Não consegui salvar.');
@@ -193,7 +299,7 @@ function EditorAtividade({
   return (
     /* Desde 26/10/2026 NENHUM editor tem o menu lateral: a tela inteira fica
        para montar a atividade. A volta ao painel é pelos botões do cabeçalho
-       ("Minhas aulas" e "Trocar o tipo"). */
+       ("Atividades" e "Trocar o tipo"). */
     <div className={`dashboard-container editor-sem-menu ${largo ? 'editor-sem-menu-largo' : ''}`}>
 
       <main className="dashboard-main">
@@ -208,7 +314,7 @@ function EditorAtividade({
           </div>
           <div className="header-acoes">
             <button className="btn-acao-rapida" onClick={() => navigate('/professor/minhas-aulas')}>
-              <LayoutList size={17} strokeWidth={1.75} /> Minhas aulas
+              <LayoutList size={17} strokeWidth={1.75} /> Atividades
             </button>
             <button
               className="btn-acao-rapida"
@@ -236,9 +342,9 @@ function EditorAtividade({
             {/* Só aparece para quem não veio de uma turma (cópia da biblioteca). */}
             {precisaEscolherTurma && !editando && (
               <label className="editor-campo">
-                <span>Turma que vai receber</span>
+                <span>Sala que vai receber</span>
                 <select className="editor-input" value={salaId} onChange={e => setSalaId(e.target.value)}>
-                  <option value="">Escolha a turma…</option>
+                  <option value="">Escolha a sala…</option>
                   {salas.map(s => (
                     <option key={s.id} value={s.id}>{s.nome} — {s.serie} · {s.materia}</option>
                   ))}
@@ -256,6 +362,16 @@ function EditorAtividade({
                 O cenário que aparece atrás da atividade quando o aluno for responder. Sem tema, fica o fundo de sempre.
               </p>
               <SeletorTema valor={tema} aoMudar={setTema} />
+            </section>
+          )}
+
+          {tipo !== 'v_f' && (
+            <section className="editor-cartao">
+              <h2>Prazo para entregar</h2>
+              <p className="editor-dica">
+                Até quando os alunos podem fazer. Depois do prazo a atividade fecha e aparece como encerrada para eles.
+              </p>
+              <SeletorPrazo minutos={prazoMin} aoMudar={setPrazoMin} desde={prazoDesde} />
             </section>
           )}
 
@@ -296,7 +412,7 @@ function EditorAtividade({
           <section className="editor-cartao editor-rodape" ref={rodapeRef}>
             {erro ? <p className="editor-erro">{erro}</p>
               : salvo ? <p className="editor-ok">
-                  {editando ? 'Alterações salvas!' : 'Atividade salva!'} Levando você para Minhas aulas…
+                  {editando ? 'Alterações salvas!' : 'Atividade salva!'} Levando você para as suas atividades…
                 </p>
               : <p>{rodapeExtra || (editando
                   ? 'Confira tudo e salve. A turma vê a versão nova na hora.'

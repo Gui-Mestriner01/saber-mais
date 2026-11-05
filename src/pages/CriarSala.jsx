@@ -103,7 +103,7 @@ function CriarSala() {
             <p>
               {salaCriada
                 ? 'Agora é só passar o acesso para a turma.'
-                : 'Escolha o tipo de sala e preencha os dados da turma.'}
+                : 'Escolha o tipo de sala e preencha os dados dela.'}
             </p>
           </div>
 

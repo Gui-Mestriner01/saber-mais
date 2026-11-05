@@ -482,3 +482,21 @@ body.modo-escuro .login-aluno-container {
 @media (prefers-reduced-motion: reduce) {
   .passo-corpo { animation: none; }
 }
+
+/* Esqueceu o PIN? (06/11/2026) */
+.pin-esqueci {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 13.5px; font-weight: 700;
+  color: #7AAAC8;
+  line-height: 1.45;
+}
+.pin-esqueci.destaque {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #FFF1E4;
+  color: #8A4A18;
+  font-size: 14.5px;
+}
+body.modo-escuro .pin-esqueci { color: #A8BCCE; }
+body.modo-escuro .pin-esqueci.destaque { background: rgba(245, 129, 42, .16); color: #FFC08A; }

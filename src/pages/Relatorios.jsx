@@ -145,7 +145,7 @@ function Relatorios() {
   // Respostas por turma — quanto cada turma entregou
   const porTurma = Object.values(
     atividades.reduce((acc, atv) => {
-      const turma = atv.nome_sala || 'Sem turma';
+      const turma = atv.nome_sala || 'Sem sala';
       if (!acc[turma]) acc[turma] = { turma, respostas: 0, atividades: 0 };
       acc[turma].respostas  += Number(atv.total_respostas) || 0;
       acc[turma].atividades += 1;
@@ -247,7 +247,7 @@ function Relatorios() {
         <header className="dashboard-header-painel">
           <div className="header-boas-vindas">
             <h1>Relatórios e desempenho</h1>
-            <p>Como suas turmas estão respondendo às atividades.</p>
+            <p>Como suas salas estão respondendo às atividades.</p>
           </div>
         </header>
 
@@ -259,6 +259,11 @@ function Relatorios() {
               <div className="rel-vazio">
                 <Inbox size={28} strokeWidth={1.5} />
                 <p>Nenhuma atividade criada ainda.</p>
+                {/* Antes parava aqui. Agora diz o que fazer para o relatório existir. */}
+                <small>O relatório aparece assim que a primeira atividade receber respostas.</small>
+                <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-atividade')}>
+                  Criar uma atividade <ArrowRight size={16} strokeWidth={2} />
+                </button>
               </div>
             ) : (
               <>
@@ -284,7 +289,7 @@ function Relatorios() {
                     <div className="resumo-icone"><Flame size={20} strokeWidth={1.75} /></div>
                     <div className="resumo-texto">
                       <strong className="resumo-texto-curto">{turmaMaisAtiva}</strong>
-                      <p>Turma mais ativa</p>
+                      <p>Sala mais ativa</p>
                     </div>
                   </div>
                 </div>
@@ -304,7 +309,7 @@ function Relatorios() {
                     </label>
 
                     <select value={filtroTurma} onChange={e => setFiltroTurma(e.target.value)}>
-                      <option value="todas">Todas as turmas</option>
+                      <option value="todas">Todas as salas</option>
                       {turmasDisponiveis.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
 
@@ -362,9 +367,27 @@ function Relatorios() {
                             <h3>{atv.titulo}</h3>
                             <p>{atv.nome_sala} · {atv.serie} · {atv.materia}</p>
                             <div className="rel-selos">
-                              <span className="rel-badge">
-                                {atv.total_respostas} {atv.total_respostas === 1 ? 'resposta' : 'respostas'}
-                              </span>
+                              {(() => {
+                                /* "X de Y fizeram" + "faltam Z" (06/11/2026).
+                                   Antes só dizia "3 respostas" — a professora
+                                   não sabia se faltava 1 aluno ou 20. Sala
+                                   temporária não tem lista de alunos, então
+                                   lá continua só a contagem. */
+                                const feitas = Number(atv.total_respostas) || 0;
+                                const turma  = Number(atv.total_alunos) || 0;
+                                const faltam = Math.max(0, turma - feitas);
+                                if (turma === 0) {
+                                  return <span className="rel-badge">{feitas} {feitas === 1 ? 'resposta' : 'respostas'}</span>;
+                                }
+                                return (
+                                  <>
+                                    <span className="rel-badge">{feitas} de {turma} fizeram</span>
+                                    {faltam > 0
+                                      ? <span className="rel-faltam">faltam {faltam}</span>
+                                      : <span className="rel-todos">todos fizeram</span>}
+                                  </>
+                                );
+                              })()}
                               {atv.media_acerto !== null && atv.media_acerto !== undefined && (
                                 <span className={`rel-media ${atv.media_acerto >= 70 ? 'boa' : atv.media_acerto >= 50 ? 'media' : 'baixa'}`}
                                   title="Média de acerto da turma nesta atividade">
@@ -400,8 +423,8 @@ function Relatorios() {
                   {/* Respostas por turma */}
                   <section className="gr-card">
                     <div className="gr-cabecalho">
-                      <h2>Respostas por turma</h2>
-                      <p>Quantas atividades cada turma já entregou</p>
+                      <h2>Respostas por sala</h2>
+                      <p>Quantas atividades cada sala já entregou</p>
                     </div>
 
                     {porTurma.length === 0 ? (

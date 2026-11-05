@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, School, FileText, Library, BarChart3, Award, LogOut, Moon, Sun } from 'lucide-react';
+import { Home, School, FileText, Library, BarChart3, Award, LogOut, Moon, Sun, CircleHelp } from 'lucide-react';
 import FestaInsignias from './FestaInsignias';
 import '../CSS/Conquistas.css';
 import { API } from '../api';
+import { AJUDA_PRONTA } from '../dados/videosAjuda';
 
 /* ==========================================================================
    MENU LATERAL DO PROFESSOR
@@ -17,12 +18,21 @@ import { API } from '../api';
    ========================================================================== */
 
 
-// "curto" é o nome que aparece na barra de baixo do celular, onde cabe pouco.
+/* "curto" é o nome que aparece na barra de baixo do celular, onde cabe pouco.
+
+   VOCABULÁRIO (06/11/2026): cada coisa tem UM nome no sistema inteiro.
+   As professoras não achavam as telas porque a página inicial dizia
+   "Nova turma" e "Criar atividade", enquanto o menu dizia "Salas" e
+   "Minhas aulas" (e o celular, "Aulas" e "Acervo"). Agora:
+     sala       → o espaço com código e senha (era também "turma")
+     atividade  → o que o aluno faz (era também "aula")
+     biblioteca → o acervo público (era também "acervo")
+   "Aula" ficou só onde é aula de verdade: a aula ao vivo. */
 const ITENS = [
   { chave: 'home',       rotulo: 'Página inicial', curto: 'Início',     rota: '/professor/dashboard',    Icone: Home },
   { chave: 'salas',      rotulo: 'Salas',          curto: 'Salas',      rota: '/professor/salas',        Icone: School },
-  { chave: 'aulas',      rotulo: 'Minhas aulas',   curto: 'Aulas',      rota: '/professor/minhas-aulas', Icone: FileText },
-  { chave: 'biblioteca', rotulo: 'Biblioteca',     curto: 'Acervo',     rota: '/professor/biblioteca',   Icone: Library },
+  { chave: 'aulas',      rotulo: 'Atividades',     curto: 'Atividades', rota: '/professor/minhas-aulas', Icone: FileText },
+  { chave: 'biblioteca', rotulo: 'Biblioteca',     curto: 'Biblioteca', rota: '/professor/biblioteca',   Icone: Library },
   { chave: 'relatorios', rotulo: 'Relatórios',     curto: 'Relatórios', rota: '/professor/relatorios',   Icone: BarChart3 },
   { chave: 'conquistas', rotulo: 'Conquistas',     curto: 'Conquistas', rota: '/professor/conquistas',   Icone: Award },
 ];
@@ -104,6 +114,20 @@ function BarraLateralProfessor({ ativo }) {
           </button>
         ))}
       </nav>
+
+      {/* A ajuda fica aqui embaixo, e não na lista de cima, porque no celular
+          a barra já está com seis itens e um sétimo não caberia inteiro. */}
+      {AJUDA_PRONTA && (
+        <button
+          className={`sidebar-ajuda ${ativo === 'ajuda' ? 'active' : ''}`}
+          onClick={() => { if (ativo !== 'ajuda') navigate('/professor/ajuda'); }}
+          title="Central de ajuda: vídeos curtos de como usar"
+          aria-current={ativo === 'ajuda' ? 'page' : undefined}
+        >
+          <CircleHelp size={16} strokeWidth={1.75} />
+          <span className="rotulo-botao">Ajuda</span>
+        </button>
+      )}
 
       <button
         className="sidebar-tema"

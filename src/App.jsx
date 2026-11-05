@@ -37,6 +37,7 @@ const Biblioteca = lazy(() => import('./pages/Biblioteca'));
 const SalaAoVivoAluno = lazy(() => import('./pages/SalaAoVivoAluno'));
 const SalaAoVivoProfessor = lazy(() => import('./pages/SalaAoVivoProfessor'));
 const ConquistasProfessor = lazy(() => import('./pages/ConquistasProfessor'));
+const Ajuda = lazy(() => import('./pages/Ajuda'));
 const CriarOrdenar = lazy(() => import('./pages/CriarOrdenar'));
 const CriarMemoria = lazy(() => import('./pages/CriarMemoria'));
 const CriarGrupos = lazy(() => import('./pages/CriarGrupos'));
@@ -144,6 +145,7 @@ function RotasAnimadas() {
           <Route path="/aluno/lobby" element={<SalaAoVivoAluno />} />
           <Route path="/professor/ao-vivo/:salaId" element={<SalaAoVivoProfessor />} />
           <Route path="/professor/conquistas" element={<ConquistasProfessor />} />
+          <Route path="/professor/ajuda" element={<Ajuda />} />
 
         {/* Atividades novas: colocar em ordem, jogo da memória, separar em grupos */}
           <Route path="/professor/criar-ordenar" element={<CriarOrdenar />} />

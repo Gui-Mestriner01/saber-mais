@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { School, Plus, Users, Inbox, Trophy, Star } from 'lucide-react';
+import { School, Plus, Users, Inbox, Trophy, Star, Check, ArrowRight, Radio, KeyRound } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import { API } from '../api';
@@ -21,6 +21,7 @@ function DashboardProfessor() {
   const [feed, setFeed]             = useState([]);
   const [totais, setTotais]         = useState({ total_alunos: 0, total_respostas: 0, total_atividades: 0 });
   const [carregando, setCarregando] = useState(true);
+  const [senhaPrimeira, setSenhaPrimeira] = useState('');
 
   useEffect(() => {
     carregarDadosDoBanco();
@@ -81,6 +82,35 @@ function DashboardProfessor() {
 
   const salasAtivas = salas.filter(s => s.status !== 'encerrada').length;
 
+  /* ------------------------------------------------------------------------
+     PRIMEIRO ACESSO GUIADO (06/11/2026)
+
+     As professoras novas abriam o painel e davam de cara com três cartões
+     de "0" e três caixas vazias. As ações de verdade ficavam pequenas no
+     canto, e o botão mais chamativo ("Criar atividade") nem funcionava para
+     quem ainda não tinha sala.
+
+     Agora, enquanto faltar alguma das três coisas — uma sala, uma
+     atividade, um aluno que já entrou — o painel mostra o caminho em três
+     passos, com o próximo passo sempre em destaque. Sem nenhuma sala, o
+     guia é a única coisa na tela: nada de muro de zeros.
+     ------------------------------------------------------------------------ */
+  const temSala      = salas.length > 0;
+  const temAtividade = (Number(totais.total_atividades) || 0) > 0 || atividades.length > 0;
+  const temAluno     = (Number(totais.total_alunos) || 0) > 0;
+  const mostrarGuia  = !carregando && (!temSala || !temAtividade || !temAluno);
+  const primeiraSala = salas.find(s => s.status !== 'encerrada') || salas[0] || null;
+
+  useEffect(() => {
+    if (!mostrarGuia || !primeiraSala || !primeiraSala.tem_senha) return;
+    fetch(`${API}/professor/sala/${primeiraSala.id}/senha`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+      .then(r => (r.ok ? r.json() : { senha: '' }))
+      .then(d => setSenhaPrimeira(d.senha || ''))
+      .catch(() => setSenhaPrimeira(''));
+  }, [mostrarGuia, primeiraSala?.id]);
+
   const saudacao = () => {
     const h = new Date().getHours();
     if (h < 12) return 'Bom dia';
@@ -99,14 +129,22 @@ function DashboardProfessor() {
         <header className="dashboard-header-painel">
           <div className="header-boas-vindas">
             <h1>{saudacao()}, {nomeProfessor.split(' ')[0]}</h1>
-            <p>Confira o resumo das suas turmas e o engajamento dos alunos.</p>
+            <p>Confira o resumo das suas salas e o engajamento dos alunos.</p>
           </div>
 
           <div className="header-acoes">
-            <button className="btn-acao-rapida" onClick={() => navigate('/professor/criar-sala')}>
-              <School size={17} strokeWidth={1.75} /> Nova turma
+            {/* Sem sala, o botão em destaque é o de criar a sala: é o único
+                que funciona para quem está começando. */}
+            <button
+              className={`btn-acao-rapida ${!carregando && !temSala ? 'destaque' : ''}`}
+              onClick={() => navigate('/professor/criar-sala')}
+            >
+              <School size={17} strokeWidth={1.75} /> Nova sala
             </button>
-            <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-atividade')}>
+            <button
+              className={`btn-acao-rapida ${carregando || temSala ? 'destaque' : ''}`}
+              onClick={() => navigate('/professor/criar-atividade')}
+            >
               <Plus size={17} strokeWidth={2} /> Criar atividade
             </button>
 
@@ -125,13 +163,75 @@ function DashboardProfessor() {
           </div>
         ) : (
           <>
+            {mostrarGuia && (
+              <section className="guia-inicio" aria-labelledby="guia-titulo">
+                <div className="guia-cabeca">
+                  <h2 id="guia-titulo">{temSala ? 'Falta pouco!' : 'Comece por aqui'}</h2>
+                  <p>Três passos e a sua turma já está fazendo atividades no Saber+.</p>
+                </div>
+
+                <ol className="guia-passos">
+                  <li className={`guia-passo ${temSala ? 'feito' : 'atual'}`}>
+                    <span className="guia-num">{temSala ? <Check size={16} strokeWidth={3} /> : '1'}</span>
+                    <div className="guia-texto">
+                      <strong>Crie sua sala</strong>
+                      <p>É por ela que os alunos entram, com um código e uma senha de emojis.</p>
+                    </div>
+                    {!temSala && (
+                      <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-sala')}>
+                        Criar sala <ArrowRight size={16} strokeWidth={2.2} />
+                      </button>
+                    )}
+                  </li>
+
+                  <li className={`guia-passo ${temAtividade ? 'feito' : temSala ? 'atual' : 'depois'}`}>
+                    <span className="guia-num">{temAtividade ? <Check size={16} strokeWidth={3} /> : '2'}</span>
+                    <div className="guia-texto">
+                      <strong>Crie a primeira atividade</strong>
+                      <p>Quiz, pintura, jogo da memória, ligar… O aluno vê na hora.</p>
+                    </div>
+                    {temSala && !temAtividade && (
+                      <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-atividade')}>
+                        Criar atividade <ArrowRight size={16} strokeWidth={2.2} />
+                      </button>
+                    )}
+                  </li>
+
+                  <li className={`guia-passo ${temAluno ? 'feito' : temSala && temAtividade ? 'atual' : 'depois'}`}>
+                    <span className="guia-num">{temAluno ? <Check size={16} strokeWidth={3} /> : '3'}</span>
+                    <div className="guia-texto">
+                      <strong>Passe o acesso para os alunos</strong>
+                      {primeiraSala ? (
+                        <p className="guia-acesso">
+                          <span>Escreva no quadro:</span>
+                          <span className="guia-chip">código <code>{primeiraSala.codigo}</code></span>
+                          {senhaPrimeira && (
+                            <span className="guia-chip"><KeyRound size={14} strokeWidth={2.2} /> senha <b>{senhaPrimeira}</b></span>
+                          )}
+                        </p>
+                      ) : (
+                        <p>Depois de criar a sala, o código e a senha aparecem aqui.</p>
+                      )}
+                    </div>
+                    {temSala && temAtividade && !temAluno && primeiraSala && (
+                      <button className="btn-acao-rapida" onClick={() => navigate(`/professor/ao-vivo/${primeiraSala.id}`)}>
+                        <Radio size={16} strokeWidth={2.2} /> Abrir aula ao vivo
+                      </button>
+                    )}
+                  </li>
+                </ol>
+              </section>
+            )}
+
+            {temSala && (
+            <>
             {/* NÚMEROS DO PROFESSOR */}
             <div className="resumo-grid">
               <div className="resumo-card turmas">
                 <div className="resumo-icone"><School size={20} strokeWidth={1.75} /></div>
                 <div className="resumo-texto">
                   <strong>{salasAtivas}</strong>
-                  <p>{salasAtivas === 1 ? 'Turma ativa' : 'Turmas ativas'}</p>
+                  <p>{salasAtivas === 1 ? 'Sala ativa' : 'Salas ativas'}</p>
                 </div>
               </div>
 
@@ -139,7 +239,7 @@ function DashboardProfessor() {
                 <div className="resumo-icone"><Users size={20} strokeWidth={1.75} /></div>
                 <div className="resumo-texto">
                   <strong>{totais.total_alunos}</strong>
-                  <p>{totais.total_alunos === 1 ? 'Aluno nas turmas' : 'Alunos nas turmas'}</p>
+                  <p>{totais.total_alunos === 1 ? 'Aluno nas salas' : 'Alunos nas salas'}</p>
                 </div>
               </div>
 
@@ -168,6 +268,9 @@ function DashboardProfessor() {
                 <div className="empty-state-mini">
                   <span><Inbox size={26} strokeWidth={1.5} /></span>
                   <p>Você ainda não criou atividades.</p>
+                  <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-atividade')}>
+                    <Plus size={16} strokeWidth={2} /> Criar a primeira
+                  </button>
                 </div>
               ) : (
                 <div className="progresso-grid">
@@ -179,7 +282,7 @@ function DashboardProfessor() {
                     const cor = pct === 100 ? 'var(--verde)' : pct > 0 ? 'var(--azul)' : '#DEDBD3';
 
                     const detalhe = total === 0
-                      ? 'Nenhum aluno entrou nesta turma ainda'
+                      ? 'Nenhum aluno entrou nesta sala ainda'
                       : entregues === 0
                         ? `Aguardando as entregas de ${total} ${total === 1 ? 'aluno' : 'alunos'}`
                         : `${entregues} de ${total} já entregaram`;
@@ -267,6 +370,8 @@ function DashboardProfessor() {
               </div>
 
             </div>
+            </>
+            )}
           </>
         )}
       </main>

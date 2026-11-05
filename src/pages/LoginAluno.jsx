@@ -260,6 +260,14 @@ function LoginAluno() {
             {erro && <p className="pin-erro">{erro}</p>}
 
             <Teclado aoDigitar={handleDigitarPin} aoApagar={() => setPin(p => p.slice(0, -1))} />
+
+            {/* Antes, quem esquecia o PIN ficava preso no "PIN incorreto!".
+                A professora consegue trocar (Salas → Ver detalhes → PIN), mas
+                a criança não tinha como saber disso. Depois de errar, a dica
+                fica em destaque. */}
+            <p className={`pin-esqueci ${erro ? 'destaque' : ''}`}>
+              Esqueceu o PIN? <strong>Peça para a sua professora</strong> — ela troca rapidinho.
+            </p>
           </div>
         )}
 

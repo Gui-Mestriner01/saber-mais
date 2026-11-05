@@ -1,0 +1,290 @@
+/* ==========================================================================
+   CENTRAL DE AJUDA
+   Cartões com os vídeos e a janelinha do player.
+   ========================================================================== */
+
+/* ---------- busca e abas ---------- */
+.ajuda-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.ajuda-busca {
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 46px;
+  background: var(--superficie);
+  border: 1.5px solid var(--borda);
+  border-radius: var(--r);
+  color: var(--tinta-media);
+  transition: border-color .15s;
+}
+.ajuda-busca:focus-within { border-color: var(--azul); }
+.ajuda-busca input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--tinta);
+}
+.ajuda-busca input::placeholder { color: var(--tinta-fraca); }
+
+.ajuda-abas { display: flex; gap: 8px; flex-wrap: wrap; }
+.ajuda-aba {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  min-height: 44px;
+  border: 1.5px solid var(--borda);
+  border-radius: 999px;
+  background: var(--superficie);
+  color: var(--tinta-media);
+  font: 600 14px/1 inherit;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ajuda-aba:hover { border-color: var(--borda-forte); color: var(--tinta); }
+.ajuda-aba.ativa {
+  background: var(--azul);
+  border-color: var(--azul);
+  color: #fff;
+}
+
+/* ---------- a grade de vídeos ---------- */
+.ajuda-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.ajuda-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--superficie);
+  border: 1.5px solid var(--borda);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--sombra);
+  transition: transform .15s, box-shadow .15s;
+}
+.ajuda-card:hover { transform: translateY(-3px); box-shadow: var(--sombra-alta); }
+
+.ajuda-capa {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 0;
+  background: var(--azul-lavado);
+  cursor: pointer;
+  overflow: hidden;
+}
+.ajuda-capa img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ajuda-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(26, 111, 196, .92);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
+  transition: transform .15s, background .15s;
+}
+.ajuda-capa:hover .ajuda-play { transform: scale(1.1); background: var(--azul); }
+.ajuda-duracao {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(10, 14, 28, .82);
+  color: #fff;
+  font: 700 12px/1.4 inherit;
+}
+
+.ajuda-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px 18px;
+  flex: 1;
+}
+.ajuda-texto h3 {
+  margin: 0;
+  font-size: 17px;
+  color: var(--tinta);
+  line-height: 1.3;
+}
+.ajuda-texto p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tinta-media);
+}
+
+.ajuda-selo {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font: 700 11.5px/1.4 inherit;
+  letter-spacing: .02em;
+}
+.ajuda-selo.professor { background: var(--azul-lavado);    color: var(--azul-escuro); }
+.ajuda-selo.aluno     { background: var(--laranja-lavado); color: var(--laranja-escuro); }
+
+.ajuda-topicos {
+  margin: 2px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 3px;
+}
+.ajuda-topicos li {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tinta-clara);
+}
+
+.ajuda-btn { margin-top: auto; align-self: flex-start; }
+
+/* ---------- nada encontrado ---------- */
+.ajuda-vazio {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--tinta-media);
+  background: var(--superficie);
+  border: 1.5px dashed var(--borda);
+  border-radius: var(--r-lg);
+}
+.ajuda-vazio h3 { margin: 4px 0 0; color: var(--tinta); font-size: 18px; }
+.ajuda-vazio p  { margin: 0; font-size: 14px; }
+
+.ajuda-rodape {
+  margin: 26px 0 8px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--tinta-clara);
+}
+
+/* ---------- janelinha do player ---------- */
+.ajuda-janela {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(10, 14, 28, .72);
+  backdrop-filter: blur(3px);
+  animation: ajudaEntra .18s ease-out;
+}
+@keyframes ajudaEntra { from { opacity: 0 } to { opacity: 1 } }
+
+.ajuda-janela-cartao {
+  width: min(960px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: var(--superficie);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sombra-alta);
+}
+
+.ajuda-janela-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1.5px solid var(--borda);
+}
+.ajuda-janela-topo h2 { margin: 0; font-size: 18px; color: var(--tinta); }
+
+.ajuda-fechar {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--borda);
+  border-radius: 50%;
+  background: var(--superficie);
+  color: var(--tinta-media);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.ajuda-fechar:hover { background: var(--vermelho-lavado); color: var(--vermelho); border-color: var(--vermelho); }
+
+.ajuda-player {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  background: #0a0e1c;
+}
+
+.ajuda-janela-resumo {
+  margin: 0;
+  padding: 14px 18px 18px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--tinta-media);
+}
+
+/* ---------- celular ---------- */
+@media (max-width: 720px) {
+  .ajuda-grade { grid-template-columns: 1fr; gap: 16px; }
+  .ajuda-abas  { width: 100%; }
+  .ajuda-aba   { flex: 1 1 auto; justify-content: center; font-size: 13px; padding: 10px 12px; }
+  .ajuda-janela { padding: 0; }
+  .ajuda-janela-cartao { width: 100%; max-height: 100vh; border-radius: 0; }
+  .ajuda-player { max-height: 56vh; }
+}
+
+/* ---------- tema escuro do professor ---------- */
+body.modo-escuro-prof .ajuda-busca,
+body.modo-escuro-prof .ajuda-aba,
+body.modo-escuro-prof .ajuda-card,
+body.modo-escuro-prof .ajuda-vazio,
+body.modo-escuro-prof .ajuda-janela-cartao,
+body.modo-escuro-prof .ajuda-fechar {
+  background: var(--superficie);
+  border-color: var(--borda);
+}
+body.modo-escuro-prof .ajuda-aba.ativa {
+  background: var(--azul);
+  border-color: var(--azul);
+  color: #fff;
+}
+
+/* vídeo que não carregou (internet ruim, arquivo fora do ar) */
+.ajuda-erro-video {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 44px 24px;
+  text-align: center;
+  color: var(--tinta-media);
+}
+.ajuda-erro-video h3 { margin: 6px 0 0; font-size: 17px; color: var(--tinta); }
+.ajuda-erro-video p  { margin: 0; font-size: 14px; max-width: 420px; line-height: 1.5; }

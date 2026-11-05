@@ -1000,7 +1000,17 @@ app.post('/cadastro/professor', authLimiter, async (req, res) => {
         return res.status(500).json({ erro: 'Erro ao cadastrar professor.' });
       }
       enviarBoasVindas(req, nome, email.toLowerCase());
-      res.status(201).json({ mensagem: 'Conta criada! Você já pode entrar.', id: result.insertId });
+
+      /* Já entra logada (06/11/2026). Antes a professora criava a conta,
+         via "Conta criada!" por um segundo e caía de volta na tela de login
+         para digitar tudo de novo — parecia que o cadastro tinha falhado. */
+      const novo = { id: result.insertId, nome, email: email.toLowerCase(), tipo_usuario: 'professor' };
+      res.status(201).json({
+        mensagem: 'Conta criada!',
+        id: result.insertId,
+        token: tokenDeSessao(novo),
+        usuario: { id: novo.id, nome: novo.nome, email: novo.email, tipo: 'professor', fotoUrl: null },
+      });
     });
   } catch {
     res.status(500).json({ erro: 'Erro interno do servidor.' });
@@ -1946,8 +1956,11 @@ app.get('/atividade/:id', (req, res) => {
 
 app.get('/professor/atividades', autenticar, (req, res) => {
   const sql = `
-    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.publica, a.sala_id,
-           s.nome AS nome_sala, s.serie, s.materia, COUNT(r.id) AS total_respostas
+    SELECT a.id, a.titulo, a.tipo, a.criado_em, a.publica, a.sala_id, a.tempo_limite,
+           s.nome AS nome_sala, s.serie, s.materia, COUNT(r.id) AS total_respostas,
+           /* Quantos alunos a sala tem (06/11/2026): é o que deixa o relatório
+              dizer "3 de 20 fizeram — faltam 17", em vez de só "3 respostas". */
+           (SELECT COUNT(*) FROM aluno_sala x WHERE x.sala_id = a.sala_id) AS total_alunos
     FROM atividade a
     JOIN sala s ON a.sala_id = s.id
     LEFT JOIN resposta_aluno r ON a.id = r.atividade_id

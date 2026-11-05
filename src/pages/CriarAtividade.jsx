@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, School, Check,
+  ArrowLeft, ArrowRight, School, Check, Plus, Clock,
   ListChecks, PenLine, Link2, Palette,
   ArrowDownUp, LayoutGrid, Shapes
 } from 'lucide-react';
@@ -15,7 +15,12 @@ import { API } from '../api';
    segue existindo para quem for editar uma delas. */
 const tiposAtividade = [
   { id: 'quiz',            Icone: ListChecks,  nome: 'Quiz',                  desc: 'Múltipla escolha, verdadeiro ou falso e puzzle' },
-  { id: 'resposta_aberta', Icone: PenLine,     nome: 'Resposta aberta',       desc: 'O aluno digita a resposta' },
+  /* "Em breve" (06/11/2026): o editor existe, mas a tela em que o aluno
+     escreve a resposta ainda não. Antes a professora escolhia, preenchia
+     tudo e só no fim lia que não dava para salvar. Agora o cartão já avisa
+     e nem deixa escolher. Quando a tela do aluno ficar pronta, é só tirar
+     o emBreve daqui. */
+  { id: 'resposta_aberta', Icone: PenLine,     nome: 'Resposta aberta',       desc: 'O aluno digita a resposta', emBreve: true },
   { id: 'ligar',           Icone: Link2,       nome: 'Ligar correspondentes', desc: 'Conectar as duas colunas' },
   { id: 'pintar',          Icone: Palette,     nome: 'Pintar cenário',        desc: 'O aluno pinta os elementos da cena' },
   { id: 'ordenar',         Icone: ArrowDownUp, nome: 'Colocar em ordem',      desc: 'Arrumar os itens na sequência certa' },
@@ -37,8 +42,11 @@ const ROTA_DO_EDITOR = {
 
 function CriarAtividade() {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const [salas, setSalas]                     = useState([]);
-  const [salaSelecionada, setSalaSelecionada] = useState('');
+  const [carregou, setCarregou]               = useState(false);
+  // Quem clicou em "Nova atividade" dentro de uma sala já chega com ela escolhida.
+  const [salaSelecionada, setSalaSelecionada] = useState(state?.salaId ? String(state.salaId) : '');
   const [tipoSelecionado, setTipoSelecionado] = useState('');
 
   useEffect(() => {
@@ -51,9 +59,16 @@ function CriarAtividade() {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
-      setSalas(Array.isArray(data) ? data : []);
+      const lista = Array.isArray(data) ? data : [];
+      setSalas(lista);
+      // Só uma sala (o comum para quem está começando): não faz sentido
+      // pedir para escolher. Já vem marcada.
+      const ativas = lista.filter(x => x.status !== 'encerrada');
+      if (ativas.length === 1) setSalaSelecionada(prev => prev || String(ativas[0].id));
     } catch {
       console.error('Erro ao buscar salas');
+    } finally {
+      setCarregou(true);
     }
   };
 
@@ -72,12 +87,12 @@ function CriarAtividade() {
         <header className="dashboard-header-painel">
           <div className="header-boas-vindas">
             <h1>Criar atividade</h1>
-            <p>Escolha para qual turma é e que tipo de atividade você quer montar.</p>
+            <p>Escolha para qual sala é e que tipo de atividade você quer montar.</p>
           </div>
 
           <div className="header-acoes">
             <button className="btn-acao-rapida" onClick={() => navigate('/professor/minhas-aulas')}>
-              <ArrowLeft size={17} strokeWidth={1.75} /> Minhas aulas
+              <ArrowLeft size={17} strokeWidth={1.75} /> Atividades
             </button>
           </div>
         </header>
@@ -88,7 +103,7 @@ function CriarAtividade() {
           <section className="form-card">
             <div className="passo-titulo">
               <span className="passo-num">1</span>
-              <h2 className="form-section-title">Para qual turma?</h2>
+              <h2 className="form-section-title">Para qual sala?</h2>
             </div>
 
             <div className="input-group">
@@ -106,13 +121,18 @@ function CriarAtividade() {
               </select>
             </div>
 
-            {salas.length === 0 && (
-              <p className="campo-dica">
-                Você precisa de pelo menos uma sala para lançar atividades.{' '}
-                <button className="link-ver-todas" onClick={() => navigate('/professor/criar-sala')}>
-                  Criar uma sala
+            {/* Antes era um linkzinho no fim de uma frase, fácil de não ver.
+                Sem sala nenhuma, este é o único caminho — então vira botão. */}
+            {carregou && salas.length === 0 && (
+              <div className="aviso-sem-sala">
+                <p>
+                  <strong>Primeiro crie uma sala.</strong> É por ela que os alunos
+                  entram, e toda atividade precisa de uma sala para ser enviada.
+                </p>
+                <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-sala')}>
+                  <Plus size={16} strokeWidth={2} /> Criar sala
                 </button>
-              </p>
+              </div>
             )}
           </section>
 
@@ -124,16 +144,18 @@ function CriarAtividade() {
             </div>
 
             {!salaSelecionada ? (
-              <p className="campo-dica">Escolha a turma acima para liberar os tipos.</p>
+              <p className="campo-dica">Escolha a sala acima para liberar os tipos.</p>
             ) : (
               <div className="tipos-grid">
-                {tiposAtividade.map(({ id, Icone, nome, desc }) => (
+                {tiposAtividade.map(({ id, Icone, nome, desc, emBreve }) => (
                   <button
                     type="button"
                     key={id}
-                    className={`tipo-card ${tipoSelecionado === id ? 'selecionado' : ''}`}
-                    onClick={() => setTipoSelecionado(id)}
+                    className={`tipo-card ${tipoSelecionado === id ? 'selecionado' : ''} ${emBreve ? 'em-breve' : ''}`}
+                    onClick={() => { if (!emBreve) setTipoSelecionado(id); }}
                     aria-pressed={tipoSelecionado === id}
+                    disabled={emBreve}
+                    title={emBreve ? 'Ainda em construção: falta a tela em que o aluno escreve a resposta.' : undefined}
                   >
                     <span className="tipo-card-marca">
                       <Icone size={22} strokeWidth={1.75} />
@@ -141,6 +163,9 @@ function CriarAtividade() {
                     <strong>{nome}</strong>
                     <p>{desc}</p>
 
+                    {emBreve && (
+                      <span className="tipo-card-breve"><Clock size={12} strokeWidth={2.4} /> Em breve</span>
+                    )}
                     {tipoSelecionado === id && (
                       <span className="tipo-card-check"><Check size={13} strokeWidth={3} /></span>
                     )}
@@ -155,7 +180,7 @@ function CriarAtividade() {
             <div className="nova-atividade-rodape">
               <p>
                 <strong>{tiposAtividade.find(t => t.id === tipoSelecionado)?.nome}</strong>
-                {salaAtual && <> para a turma <strong>{salaAtual.nome}</strong></>}
+                {salaAtual && <> para a sala <strong>{salaAtual.nome}</strong></>}
               </p>
               <button className="btn-acao-rapida destaque" onClick={handleContinuar}>
                 Montar atividade <ArrowRight size={17} strokeWidth={2} />

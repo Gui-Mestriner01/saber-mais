@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, ChevronDown, Maximize2, Minimize2, ArrowDownUp, LayoutGrid, Shapes, Pencil, Globe, Lock, BarChart3 } from 'lucide-react';
+import { Plus, Copy, Calendar, ListChecks, CheckCircle2, Link2, Palette, PenLine, ClipboardList, ChevronDown, Maximize2, Minimize2, ArrowDownUp, LayoutGrid, Shapes, Pencil, Globe, Lock, BarChart3, School } from 'lucide-react';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
 import '../CSS/Dashboard.css';
 import '../CSS/NovasAtividades.css';
@@ -160,7 +160,7 @@ function MinhasAulas() {
   const todasAbertas = salas.length > 0 && abertas.length === salas.length;
 
   const confirmarClonagem = async () => {
-    if (!salaDestinoId) return alert("Selecione uma turma de destino!");
+    if (!salaDestinoId) return alert("Escolha a sala de destino!");
 
     setClonando(true);
     try {
@@ -177,7 +177,7 @@ function MinhasAulas() {
         setModalAberto(false);
         carregarTudo();
       } else {
-        alert('Erro ao copiar a aula.');
+        alert('Erro ao copiar a atividade.');
       }
     } catch (error) {
       console.error('Erro ao clonar:', error);
@@ -193,9 +193,16 @@ function MinhasAulas() {
       <main className="dashboard-main">
         <header className="dashboard-header-painel">
           <div className="header-boas-vindas">
-            <h1>Minhas aulas e planejamento</h1>
-            <p>As atividades de cada turma, para reaproveitar o que já deu certo.</p>
+            <h1>Minhas atividades</h1>
+            <p>Tudo o que você criou, separado por sala. Daqui você cria, edita, copia e publica.</p>
           </div>
+          {salas.length > 0 && (
+            <div className="header-acoes">
+              <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-atividade')}>
+                <Plus size={17} strokeWidth={2} /> Nova atividade
+              </button>
+            </div>
+          )}
         </header>
 
         {carregando ? (
@@ -207,7 +214,7 @@ function MinhasAulas() {
             {salas.length > 1 && (
               <div className="perguntas-barra">
                 <span className="perguntas-barra-titulo">
-                  Suas turmas
+                  Suas salas
                   <em>{atividades.length} {atividades.length === 1 ? 'atividade no total' : 'atividades no total'}</em>
                 </span>
                 <button className="perguntas-barra-btn" onClick={todasAbertas ? fecharTodas : abrirTodas}>
@@ -220,10 +227,22 @@ function MinhasAulas() {
             )}
 
             {salas.length === 0 ? (
-              <div className="form-card"><p>Você ainda não tem turmas cadastradas.</p></div>
+              /* Antes era só o texto, sem botão nenhum: a professora lia o que
+                 faltava e não tinha como resolver dali. */
+              <div className="empty-state-mini vazio-com-acao">
+                <span><School size={30} strokeWidth={1.5} /></span>
+                <p>Para criar atividades, primeiro você precisa de uma sala.</p>
+                <small>É por ela que os alunos entram, com um código e uma senha de emojis.</small>
+                <button className="btn-acao-rapida destaque" onClick={() => navigate('/professor/criar-sala')}>
+                  <Plus size={16} strokeWidth={2} /> Criar a primeira sala
+                </button>
+              </div>
             ) : (
               salas.map(sala => {
-                const atividadesDaSala = atividades.filter(ativ => ativ.nome_sala === sala.nome);
+                /* Pelo id, não pelo nome: com duas salas de mesmo nome
+                   ("Turma da manhã" do 3º e do 4º ano), as atividades de uma
+                   apareciam também na outra. */
+                const atividadesDaSala = atividades.filter(ativ => String(ativ.sala_id) === String(sala.id));
 
                 const aberta = abertas.includes(sala.id);
 
@@ -240,15 +259,16 @@ function MinhasAulas() {
 
                       <button
                         className="btn-acao-rapida destaque"
-                        onClick={() => navigate('/professor/criar-atividade')}
+                        onClick={() => navigate('/professor/criar-atividade', { state: { salaId: sala.id } })}
+                        title={`Nova atividade para ${sala.nome}`}
                       >
-                        <Plus size={17} strokeWidth={2} /> Nova aula
+                        <Plus size={17} strokeWidth={2} /> Nova atividade
                       </button>
                     </div>
 
                     {aberta && (
                       atividadesDaSala.length === 0 ? (
-                      <p className="msg-vazia">Nenhuma atividade postada para esta turma ainda.</p>
+                      <p className="msg-vazia">Nenhuma atividade nesta sala ainda. Use o botão <strong>Nova atividade</strong> aqui do lado.</p>
                     ) : (
                       <div className="lista-atividades-turma">
                         {atividadesDaSala.map(ativ => (
@@ -293,7 +313,7 @@ function MinhasAulas() {
                                   : <><Globe size={15} strokeWidth={1.75} /> Publicar</>}
                               </button>
                               <button className="btn-clonar" onClick={() => abrirModalClonar(ativ)}>
-                                <Copy size={15} strokeWidth={1.75} /> Copiar aula
+                                <Copy size={15} strokeWidth={1.75} /> Copiar
                               </button>
                             </div>
                           </div>
@@ -313,15 +333,15 @@ function MinhasAulas() {
       {modalAberto && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>Copiar aula</h2>
-            <p>Para qual turma você deseja copiar a aula <strong>"{atividadeSelecionada?.titulo}"</strong>?</p>
+            <h2>Copiar atividade</h2>
+            <p>Para qual sala você quer copiar a atividade <strong>"{atividadeSelecionada?.titulo}"</strong>?</p>
 
             <select
               className="form-input"
               value={salaDestinoId}
               onChange={(e) => setSalaDestinoId(e.target.value)}
             >
-              <option value="">Selecione a turma de destino...</option>
+              <option value="">Escolha a sala de destino...</option>
               {salas
                 .filter(sala => sala.nome !== atividadeSelecionada?.nome_sala)
                 .map(sala => (

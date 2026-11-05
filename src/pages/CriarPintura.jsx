@@ -76,14 +76,14 @@ function CriarPintura() {
       ? await fetch(`${API}/professor/atividade/${extras.editandoId}`, {
           method: 'PUT',
           headers: cabecalho,
-          body: JSON.stringify({ titulo, conteudo, publica: extras.publica, tema: extras.tema }),
+          body: JSON.stringify({ titulo, conteudo, publica: extras.publica, tema: extras.tema, tempo_limite: extras.tempoLimite }),
         })
       : await fetch(`${API}/professor/atividade`, {
           method: 'POST',
           headers: cabecalho,
           body: JSON.stringify({
             titulo, tipo: 'pintura', sala_id: salaId, conteudo,
-            publica: extras.publica, tema: extras.tema, origem_id: extras.origemId,
+            publica: extras.publica, tema: extras.tema, origem_id: extras.origemId, tempo_limite: extras.tempoLimite,
           }),
         });
 

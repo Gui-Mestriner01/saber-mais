@@ -1085,3 +1085,48 @@ body.a11y-sem-animacao .chamado-luz { animation: none !important; }
   box-shadow: var(--sombra);
   padding: 12px 18px;
 }
+
+/* ==========================================================================
+   COMO OS ALUNOS ENTRAM — sala de espera ao vivo (06/11/2026)
+   Grande o bastante para ler projetado no quadro, da última fila.
+   ========================================================================== */
+.prof-acesso {
+  grid-column: 1 / -1;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 14px;
+  padding: 18px;
+  border-radius: var(--r-lg);
+  background: var(--superficie);
+  border: 2px solid var(--borda);
+  box-shadow: var(--sombra);
+  margin-bottom: 16px;
+}
+.prof-acesso-passo {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px;
+  border-radius: var(--r);
+  background: var(--azul-lavado);
+}
+.prof-acesso-num {
+  flex: none;
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--azul); color: #fff;
+  font-weight: 900; font-size: 15px;
+}
+.prof-acesso-passo small {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12.5px; font-weight: 800; color: var(--tinta-media);
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.prof-acesso-passo strong { display: block; font-size: 20px; font-weight: 900; color: var(--tinta); }
+.prof-acesso-codigo { font-size: 30px !important; letter-spacing: .14em; color: var(--azul) !important; }
+.prof-acesso-senha  { font-size: 34px !important; letter-spacing: .14em; line-height: 1.1; }
+
+@media (max-width: 620px) {
+  .prof-acesso { padding: 12px; gap: 8px; }
+  .prof-acesso-passo { width: 100%; }
+  .prof-acesso-codigo { font-size: 26px !important; }
+  .prof-acesso-senha  { font-size: 28px !important; }
+}
+body.modo-escuro-prof .prof-acesso-passo { background: rgba(26, 111, 196, .16); }

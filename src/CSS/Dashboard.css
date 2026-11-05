@@ -1505,6 +1505,31 @@ button.perfil-capa-foto { padding: 0; font-family: inherit; }
   background: var(--vermelho-lavado);
 }
 
+/* Ajuda: mesmo desenho do botão de tema, logo acima dele */
+.sidebar-ajuda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: var(--superficie);
+  border: 2px solid var(--borda);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--tinta-media);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sidebar-ajuda:hover,
+.sidebar-ajuda.active {
+  border-color: var(--azul);
+  color: var(--azul);
+  background: var(--azul-lavado);
+}
+
 /* ==========================================================================
    TELA DE CRIAR SALA
    ========================================================================== */
@@ -1893,3 +1918,130 @@ button.perfil-capa-foto { padding: 0; font-family: inherit; }
 }
 
 .nova-atividade-rodape strong { color: var(--tinta); font-weight: 900; }
+
+/* ==========================================================================
+   PRIMEIRO ACESSO GUIADO — 06/11/2026 (DashboardProfessor.jsx)
+
+   Os três passos que levam a professora nova do zero à turma jogando.
+   O passo da vez fica em destaque (borda azul), os feitos ficam verdes e
+   os que ainda dependem de outro ficam apagados.
+   ========================================================================== */
+.guia-inicio {
+  background: var(--superficie);
+  border: 2px solid var(--borda);
+  border-radius: var(--r-lg);
+  padding: 26px 28px 22px;
+  box-shadow: var(--sombra);
+  margin-bottom: 22px;
+}
+.guia-cabeca h2 { margin: 0 0 4px; font-size: 22px; font-weight: 900; color: var(--tinta); text-align: left; }
+.guia-cabeca p  { margin: 0 0 18px; font-size: 14.5px; color: var(--tinta-media); font-weight: 600; }
+
+.guia-passos { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.guia-passo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 2px solid var(--borda);
+  border-radius: var(--r);
+  background: var(--superficie-2, #F4F9FD);
+  transition: border-color .2s, background .2s, opacity .2s;
+}
+.guia-passo.atual {
+  border-color: var(--azul);
+  background: var(--azul-lavado);
+  box-shadow: 0 6px 18px rgba(26, 111, 196, .12);
+}
+.guia-passo.feito  { border-color: #BFE5CB; background: var(--verde-lavado); }
+/* O passo que ainda depende de outro fica mais claro — mas sem opacity,
+   para o código e a senha do passo 3 continuarem fáceis de ler. */
+.guia-passo.depois { background: var(--superficie); border-style: dashed; }
+.guia-passo.depois .guia-num { color: var(--tinta-fraca); }
+.guia-passo.depois .guia-texto strong,
+.guia-passo.depois .guia-texto > p:not(.guia-acesso) { color: var(--tinta-clara); }
+
+.guia-num {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  font-weight: 900; font-size: 16px;
+  background: var(--superficie);
+  color: var(--tinta-media);
+  border: 2px solid var(--borda);
+}
+.guia-passo.atual .guia-num { background: var(--azul); color: #fff; border-color: var(--azul); }
+.guia-passo.feito .guia-num { background: var(--verde); color: #fff; border-color: var(--verde); }
+
+.guia-texto strong { display: block; font-size: 16px; font-weight: 900; color: var(--tinta); }
+.guia-texto p { margin: 3px 0 0; font-size: 13.5px; font-weight: 600; color: var(--tinta-media); line-height: 1.45; }
+.guia-passo.feito .guia-texto strong { color: #2C7A47; }
+
+.guia-acesso { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.guia-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--superficie);
+  border: 2px solid var(--borda);
+  font-size: 13px; font-weight: 800; color: var(--tinta);
+}
+.guia-chip code { font-size: 15px; font-weight: 900; letter-spacing: .08em; color: var(--azul); }
+.guia-chip b { font-size: 18px; letter-spacing: .12em; }
+
+/* caixa vazia com botão: o botão não estica */
+.empty-state-mini .btn-acao-rapida { margin-top: 6px; }
+
+@media (max-width: 620px) {
+  .guia-inicio { padding: 20px 16px 16px; }
+  .guia-cabeca h2 { font-size: 19px; }
+  .guia-passo { grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .guia-passo > .btn-acao-rapida { grid-column: 1 / -1; justify-content: center; min-height: 46px; }
+}
+
+body.modo-escuro-prof .guia-passo.feito { border-color: #2C5E3F; background: rgba(61, 170, 92, .12); }
+body.modo-escuro-prof .guia-passo.feito .guia-texto strong { color: #7DD3A0; }
+
+/* tela vazia que oferece o próximo passo */
+.vazio-com-acao { padding: 36px 20px; gap: 10px; }
+.vazio-com-acao p { font-size: 15px; color: var(--tinta); }
+.vazio-com-acao small { font-size: 13px; font-weight: 600; color: var(--tinta-media); max-width: 420px; }
+
+/* ---------- Criar atividade (06/11/2026) ---------- */
+/* Tipo ainda em construção: aparece, mas não deixa escolher */
+.tipo-card.em-breve,
+.tipo-card.em-breve:hover {
+  position: relative;
+  cursor: not-allowed;
+  opacity: .62;
+  border-style: dashed;
+  background: var(--superficie-2, #F4F9FD);
+  border-color: var(--borda);
+  box-shadow: none;
+  transform: none;
+}
+.tipo-card-breve {
+  position: absolute;
+  top: 10px; right: 10px;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--amarelo-lavado);
+  color: #8A6400;
+  font-size: 11px; font-weight: 900;
+  letter-spacing: .02em;
+}
+
+/* Sem sala: o caminho vira um botão, não um link no fim da frase */
+.aviso-sem-sala {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 2px solid var(--laranja);
+  border-radius: var(--r);
+  background: var(--laranja-lavado);
+}
+.aviso-sem-sala p { flex: 1 1 240px; margin: 0; font-size: 14px; font-weight: 600; color: var(--tinta); line-height: 1.5; }
+.aviso-sem-sala strong { font-weight: 900; }

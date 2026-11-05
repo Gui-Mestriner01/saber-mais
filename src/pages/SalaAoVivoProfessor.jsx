@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Play, SkipForward, Square, Timer, Users, Check, X, BellRing, UserCheck } from 'lucide-react';
+import { ArrowLeft, Play, SkipForward, Square, Timer, Users, Check, X, BellRing, UserCheck, KeyRound } from 'lucide-react';
 import { FormaMarca, marca, COR_VERDADEIRO, COR_FALSO } from '../components/MarcasQuiz';
 import { CenaTema } from '../components/TemaFundo';
 import BarraLateralProfessor from '../components/BarraLateralProfessor';
@@ -43,6 +43,7 @@ function SalaAoVivoProfessor() {
   const [relogio, setRelogio]       = useState(0);
   const [turma, setTurma]           = useState([]);   // só nas salas permanentes
   const [aviso, setAviso]           = useState('');
+  const [senhaSala, setSenhaSala]   = useState('');
 
   const alvoRef = useRef(0);
 
@@ -102,6 +103,18 @@ function SalaAoVivoProfessor() {
     buscar();
     const id = setInterval(buscar, 15000); // muda pouco: não precisa correr
     return () => clearInterval(id);
+  }, [permanente, salaId]);
+
+  /* ---- senha de emojis, para mostrar grande na sala de espera ----
+     (06/11/2026) A tela ao vivo é exatamente a hora em que a professora
+     precisa passar o acesso para a turma — e só mostrava o código. A senha
+     ficava escondida atrás de um olhinho, em outra tela. */
+  useEffect(() => {
+    if (!permanente || !token) return;
+    fetch(`${API}/professor/sala/${salaId}/senha`, { headers: cabecalho })
+      .then(r => (r.ok ? r.json() : { senha: '' }))
+      .then(d => setSenhaSala(d.senha || ''))
+      .catch(() => setSenhaSala(''));
   }, [permanente, salaId]);
 
   /* ---- cronômetro suave ---- */
@@ -233,6 +246,33 @@ function SalaAoVivoProfessor() {
       {/* ---------------- SALA DE ESPERA ---------------- */}
       {estado.estado === 'lobby' && (
         <div className="prof-palco">
+          {/* Para projetar no quadro: grande o bastante para a última fila ler. */}
+          <section className="prof-acesso" aria-label="Como os alunos entram">
+            <div className="prof-acesso-passo">
+              <span className="prof-acesso-num">1</span>
+              <div>
+                <small>Abra o site e toque em</small>
+                <strong>Acesso aluno</strong>
+              </div>
+            </div>
+            <div className="prof-acesso-passo">
+              <span className="prof-acesso-num">2</span>
+              <div>
+                <small>Código da sala</small>
+                <strong className="prof-acesso-codigo">{estado.codigo}</strong>
+              </div>
+            </div>
+            {permanente && senhaSala && (
+              <div className="prof-acesso-passo">
+                <span className="prof-acesso-num">3</span>
+                <div>
+                  <small><KeyRound size={13} strokeWidth={2.4} /> Senha</small>
+                  <strong className="prof-acesso-senha">{senhaSala}</strong>
+                </div>
+              </div>
+            )}
+          </section>
+
           <section className="prof-painel">
             <h2>Sala de espera</h2>
             <p className="prof-ajuda">

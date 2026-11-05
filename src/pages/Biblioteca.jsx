@@ -128,7 +128,7 @@ function Biblioteca() {
   };
 
   const confirmarCopia = async () => {
-    if (!salaDestino) { setErro('Escolha a turma que vai receber.'); return; }
+    if (!salaDestino) { setErro('Escolha a sala que vai receber.'); return; }
     setEnviando(true);
     setErro('');
     try {
@@ -158,7 +158,7 @@ function Biblioteca() {
         <header className="dashboard-header-painel">
           <div className="header-boas-vindas">
             <h1>Biblioteca</h1>
-            <p>Atividades que outros professores publicaram. Copie para a sua turma ou adapte do seu jeito.</p>
+            <p>Atividades que outros professores publicaram. Copie para uma das suas salas ou adapte do seu jeito.</p>
           </div>
         </header>
 
@@ -202,7 +202,7 @@ function Biblioteca() {
               <>
                 <strong>A biblioteca ainda está vazia</strong>
                 Quando você ou outro professor publicar uma atividade, ela aparece aqui.
-                Para publicar uma sua, abra Minhas aulas e escolha “Publicar”.
+                Para publicar uma sua, abra Atividades e escolha “Publicar”.
               </>
             )}
           </div>
@@ -239,7 +239,7 @@ function Biblioteca() {
                     className="btn-acao-rapida destaque"
                     onClick={() => { setCopiando(ativ); setSalaDestino(''); setErro(''); }}
                   >
-                    <Copy size={16} strokeWidth={2} /> Usar na minha turma
+                    <Copy size={16} strokeWidth={2} /> Usar na minha sala
                   </button>
                   <button className="btn-acao-rapida" onClick={() => abrirNoEditor(ativ)}>
                     <Pencil size={16} strokeWidth={1.9} /> {ativ.minha ? 'Editar' : 'Adaptar'}
@@ -255,14 +255,14 @@ function Biblioteca() {
       {copiando && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h2>Usar na minha turma</h2>
+            <h2>Usar na minha sala</h2>
             <p>
               Para qual turma você quer levar <strong>"{copiando.titulo}"</strong>?
               Vai ser criada uma cópia sua — a atividade de {copiando.minha ? 'origem' : copiando.autor} não muda.
             </p>
 
             <select className="form-input" value={salaDestino} onChange={e => setSalaDestino(e.target.value)}>
-              <option value="">Selecione a turma...</option>
+              <option value="">Escolha a sala...</option>
               {salas.map(s => (
                 <option key={s.id} value={s.id}>{s.nome} — {s.serie} · {s.materia}</option>
               ))}
@@ -277,7 +277,7 @@ function Biblioteca() {
                 Cancelar
               </button>
               <button className="btn-primario" onClick={confirmarCopia} disabled={enviando || !salas.length}>
-                {enviando ? 'Copiando...' : 'Copiar para a turma'}
+                {enviando ? 'Copiando...' : 'Copiar para a sala'}
               </button>
             </div>
           </div>
