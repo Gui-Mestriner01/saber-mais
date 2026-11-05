@@ -182,9 +182,13 @@ to { opacity: 1; }
 }
 
 /* STATS */
+/* minmax(0, 1fr) em vez de 1fr: sem isso cada coluna se recusa a ficar menor
+   que o conteúdo dela (o ícone + o texto), e em celular de tela média os três
+   cartões somavam mais que a largura do aparelho. A tela ganhava rolagem para
+   o lado e o fundo parava no meio, deixando aquela faixa branca na direita. */
 .aluno-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { aplicarTemaAluno } from '../temaAluno';
 import '../CSS/Home.css';
 import BotaoInstalar from '../components/BotaoInstalar';
 import FundoAnimado from '../components/FundoAnimado';
@@ -21,6 +22,11 @@ function Home() {
   // e não a cada vez que o React redesenha a tela.
   const [professor] = useState(() => sortear(PROFESSORES));
   const [aluno]     = useState(() => sortear(ALUNOS));
+
+  /* A tela inicial segue o tema do aparelho (ou o que o aluno escolheu
+     antes), igual às outras telas de antes do login. Antes ela não fazia
+     isso, e em celular no modo escuro o navegador inventava as cores. */
+  useLayoutEffect(() => { aplicarTemaAluno(); }, []);
 
   return (
     <div className="home-container">

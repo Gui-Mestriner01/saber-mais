@@ -119,10 +119,39 @@ body.a11y-sem-animacao .fundo-animado { display: none; }
   .fundo-animado .forma-6 { display: none; }
 }
 
-/* ---------- celular: sem fundo animado ----------
-   No celular o "Saber+" fica colado no topo e os cartões ocupam a largura
-   toda, então não sobra céu livre: qualquer nuvem passaria atrás do texto.
-   Fica o degradê de sempre, e o aparelho não gasta bateria com isso. */
+/* ---------- celular: o fundo continua, em versão enxuta — 05/11/2026 ----------
+   Antes o celular ficava sem nada, só com o degradê. Mas o céu do celular
+   também pede movimento: agora passam duas nuvens, menores e bem mais
+   apagadas, e sobram duas formas no pé da tela, onde não tem cartão nenhum.
+   As formas das laterais saem: no celular a margem é de 16px e elas ficariam
+   atrás dos cartões.
+
+   Continua valendo o "desativar animações" e o "reduzir movimento" do
+   aparelho — as regras deles estão acima e nada aqui liga o fundo de volta,
+   só ajusta o tamanho e a posição do que já aparece. */
 @media (max-width: 860px) {
-  .fundo-animado { display: none; }
+  .fundo-animado .nuvem-1 { top: 1%;  width: 128px; opacity: .5;  animation-duration: 70s; }
+  .fundo-animado .nuvem-2 { top: 7%;  width: 92px;  opacity: .36; animation-duration: 95s; }
+  .fundo-animado .nuvem-3 { display: none; }
+
+  .fundo-animado .forma { display: none; }
+
+  /* Só na tela inicial, e só embaixo: ali sobra céu depois dos dois cartões. */
+  .home-container > .fundo-animado .forma-3,
+  .home-container > .fundo-animado .forma-8 {
+    display: block;
+    width: 30px;
+    height: 30px;
+    opacity: .3;
+    top: auto;
+  }
+  .home-container > .fundo-animado .forma-3 { left: 7%;  bottom: 6%; }
+  .home-container > .fundo-animado .forma-8 { right: 7%; bottom: 11%; }
+}
+
+/* Celular deitado: a tela fica baixa e o pouco céu que sobra some.
+   Nesse caso ficam só as nuvens. */
+@media (max-width: 860px) and (max-height: 520px) {
+  .home-container > .fundo-animado .forma-3,
+  .home-container > .fundo-animado .forma-8 { display: none; }
 }

@@ -22,7 +22,30 @@ require('dotenv').config({ path: path.join(__dirname, '.env') }); // acha o .env
 
 // --- IMPORTAÇÕES DO SOCKET.IO E HTTP ---
 const http = require('http');
+const os = require('os');
 const { Server } = require('socket.io');
+
+/* ==========================================================================
+   MODO LOCAL — a escola sem internet
+
+   Ligue com MODO_LOCAL=1 quando o Saber+ for rodar na rede da escola, sem
+   internet nenhuma: um notebook é o servidor e os computadores da sala
+   abrem pelo IP dele.
+
+   Duas coisas mudam, e só elas:
+
+   1. Sai o "upgrade-insecure-requests" da política de segurança. Esse item
+      manda o navegador trocar todo http:// por https://. No site publicado
+      isso é ótimo; em http://192.168.0.10:3001 ele quebra a página inteira,
+      porque não existe https nesse endereço.
+
+   2. As imagens (desenho da pintura e a entrega do aluno) ficam no próprio
+      servidor, na pasta uploads, em vez de ir para o Cloudinary — que
+      precisaria de internet.
+
+   Sem a variável, nada disso acontece: o site publicado continua igual.
+   ========================================================================== */
+const MODO_LOCAL = ['1', 'true', 'sim'].includes(String(process.env.MODO_LOCAL || '').toLowerCase());
 
 /* ==========================================================================
    1. CONFIGURAÇÕES DE NUVEM E ARMAZENAMENTO (CLOUDINARY E MULTER)
@@ -36,12 +59,29 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-if (!process.env.CLOUDINARY_API_SECRET) {
-  console.warn('⚠️  CLOUDINARY_API_SECRET não está no .env — o envio de imagens vai falhar.');
+if (!process.env.CLOUDINARY_API_SECRET && !MODO_LOCAL) {
+  console.warn('⚠️  CLOUDINARY_API_SECRET não está no .env — as imagens vão ficar guardadas aqui no servidor, não na nuvem.');
 }
 
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
+
+/* Guarda a imagem e devolve o endereço dela.
+
+   Com internet e Cloudinary configurado, vai para a nuvem, como sempre.
+   No modo local (ou se faltar a chave do Cloudinary), o arquivo fica onde o
+   multer já o colocou — a pasta uploads, que o servidor entrega em /uploads.
+   O endereço devolvido é relativo, então funciona em qualquer IP. */
+const temCloudinary = !!(process.env.CLOUDINARY_API_SECRET && process.env.CLOUDINARY_CLOUD_NAME);
+async function guardarImagem(arquivo, pasta) {
+  if (MODO_LOCAL || !temCloudinary) {
+    const nome = path.basename(arquivo.path);
+    return { url: `/uploads/${nome}`, filename: nome, local: true };
+  }
+  const r = await cloudinary.uploader.upload(arquivo.path, { folder: pasta });
+  if (fs.existsSync(arquivo.path)) fs.unlinkSync(arquivo.path);
+  return { url: r.secure_url, filename: r.public_id, local: false };
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
@@ -126,7 +166,9 @@ app.use(helmet({
       'connect-src': ["'self'", 'https://vlibras.gov.br', 'https://accounts.google.com', 'https://api.cloudinary.com', 'wss:'],
       'frame-src': ['https://accounts.google.com'],
       'worker-src': ["'self'", 'blob:'],
-      'upgrade-insecure-requests': [],
+      // No modo local o site roda em http://<ip-do-notebook>, e este item
+      // faria o navegador procurar tudo em https:// — que não existe lá.
+      ...(MODO_LOCAL ? {} : { 'upgrade-insecure-requests': [] }),
     },
   },
   // Deixa a janelinha do "Entrar com Google" conversar com o site
@@ -2322,20 +2364,33 @@ app.get('/professor/resposta/:id/pintura', autenticar, (req, res) => {
     const r = linhas[0];
     const guardado = lerJson(r.resposta, {});
     const url = guardado?.url_pintura || guardado?.url || guardado?.imagem;
-    if (!url || !/^https?:\/\//.test(url)) {
+    const naNuvem = /^https?:\/\//.test(url || '');
+    // No modo local a pintura fica em /uploads, aqui mesmo no servidor
+    const noDisco = /^\/uploads\/[\w.-]+$/.test(url || '');
+    if (!url || (!naNuvem && !noDisco)) {
       return res.status(404).json({ erro: 'Esta entrega não tem imagem.' });
     }
 
-    try {
-      const vinda = await fetch(url);
-      if (!vinda.ok) return res.status(502).json({ erro: 'Não consegui baixar a imagem agora.' });
-      const tipo = vinda.headers.get('content-type') || 'image/png';
+    const entregar = (tipo, corpo) => {
       const extensao = tipo.includes('jpeg') ? 'jpg' : tipo.includes('webp') ? 'webp' : 'png';
       const nome = `pintura-${nomeDeArquivo(r.nome_aluno, 'aluno')}-${nomeDeArquivo(r.titulo, 'atividade')}.${extensao}`;
       res.setHeader('Content-Type', tipo);
       res.setHeader('Content-Disposition', `attachment; filename="${nome}"`);
       res.setHeader('Cache-Control', 'private, max-age=300');
-      res.send(Buffer.from(await vinda.arrayBuffer()));
+      res.send(corpo);
+    };
+
+    try {
+      if (noDisco) {
+        const caminho = path.join(uploadDir, path.basename(url));
+        if (!fs.existsSync(caminho)) return res.status(404).json({ erro: 'Esta entrega não tem imagem.' });
+        const ext = path.extname(caminho).toLowerCase();
+        const tipo = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png';
+        return entregar(tipo, fs.readFileSync(caminho));
+      }
+      const vinda = await fetch(url);
+      if (!vinda.ok) return res.status(502).json({ erro: 'Não consegui baixar a imagem agora.' });
+      entregar(vinda.headers.get('content-type') || 'image/png', Buffer.from(await vinda.arrayBuffer()));
     } catch {
       res.status(502).json({ erro: 'Não consegui baixar a imagem agora.' });
     }
@@ -2397,12 +2452,11 @@ app.post('/professor/pintura/upload', autenticar, upload.single('imagem'), async
   if (!req.file) return res.status(400).json({ erro: 'Nenhuma imagem enviada.' });
   
   try {
-    const result = await cloudinary.uploader.upload(req.file.path, { folder: 'saber_plus/atividades' });
-    fs.unlinkSync(req.file.path);
-    res.json({ url: result.secure_url, filename: result.public_id });
+    const guardado = await guardarImagem(req.file, 'saber_plus/atividades');
+    res.json({ url: guardado.url, filename: guardado.filename });
   } catch (error) {
     if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    res.status(500).json({ erro: 'Erro ao salvar a imagem na nuvem.' });
+    res.status(500).json({ erro: 'Erro ao salvar a imagem.' });
   }
 });
 
@@ -2425,20 +2479,19 @@ app.post('/atividade/:id/resposta/pintura', autenticarAluno, upload.single('pint
     );
     if (ja.length > 0) { apagarArquivo(); return res.status(409).json({ erro: 'Você já enviou esta pintura.' }); }
 
-    const result = await cloudinary.uploader.upload(req.file.path, { folder: 'saber_plus/respostas_alunos' });
-    apagarArquivo();
+    const guardado = await guardarImagem(req.file, 'saber_plus/respostas_alunos');
 
-    const resposta = JSON.stringify({ url_pintura: result.secure_url, filename: result.public_id });
+    const resposta = JSON.stringify({ url_pintura: guardado.url, filename: guardado.filename });
     const [ins] = await banco.query(
       `INSERT INTO resposta_aluno (atividade_id, nome_aluno, sala_id, resposta, duracao_s) VALUES (?, ?, ?, ?, ?)`,
       [req.params.id, nome, sala_id, resposta, (() => { const d = Math.round(Number(req.body.duracao_s)); return Number.isFinite(d) && d > 0 && d <= 6 * 3600 ? d : null; })()]
     );
     await banco.query(`UPDATE aluno_sala SET pontos = pontos + ? WHERE id = ?`, [PONTOS_PINTURA, aluno_id]);
 
-    res.status(201).json({ mensagem: 'Pintura enviada e pontos adicionados!', url: result.secure_url, id: ins.insertId });
+    res.status(201).json({ mensagem: 'Pintura enviada e pontos adicionados!', url: guardado.url, id: ins.insertId });
   } catch (error) {
     apagarArquivo();
-    res.status(500).json({ erro: 'Erro ao processar pintura na nuvem.' });
+    res.status(500).json({ erro: 'Erro ao processar a pintura.' });
   }
 });
 
@@ -3943,7 +3996,39 @@ app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
 });
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => console.log(`🚀 Servidor HTTP e Socket.io rodando na porta ${PORT}`));
+/* Os endereços IP deste computador na rede. É o que as crianças digitam
+   no navegador quando o Saber+ roda na escola, sem internet. */
+function enderecosDaRede() {
+  const achados = [];
+  for (const placas of Object.values(os.networkInterfaces() || {})) {
+    for (const p of placas || []) {
+      if (p.family === 'IPv4' && !p.internal) achados.push(p.address);
+    }
+  }
+  return achados;
+}
+
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor HTTP e Socket.io rodando na porta ${PORT}`);
+  if (!MODO_LOCAL) return;
+
+  const enderecos = enderecosDaRede();
+  console.log('\n╔══════════════════════════════════════════════════════╗');
+  console.log('║  MODO LOCAL LIGADO — Saber+ funcionando sem internet ║');
+  console.log('╚══════════════════════════════════════════════════════╝');
+  if (enderecos.length === 0) {
+    console.log('\n⚠️  Este computador não está em nenhuma rede.');
+    console.log('   Conecte o cabo de rede ou o wi-fi e inicie de novo.\n');
+    return;
+  }
+  console.log('\n📺 ESCREVA ISTO NO QUADRO, para as crianças digitarem:\n');
+  enderecos.forEach(ip => console.log(`      http://${ip}:${PORT}\n`));
+  console.log('   (Se tiver mais de um endereço, teste qual funciona num');
+  console.log('    computador da sala antes da aula começar.)');
+  console.log('\n🖼️  As pinturas ficam gravadas na pasta backend/uploads.');
+  console.log('🔒  O "Entrar com Google" não funciona sem internet —');
+  console.log('    use o seu e-mail e senha.\n');
+});
 
 // Cópia diária do banco (pasta backend/backups + Cloudinary privado)
 ligarBackupAutomatico();

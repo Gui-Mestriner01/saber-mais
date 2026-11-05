@@ -9,6 +9,20 @@ html, body, #root {
   min-height: 100vh;
 }
 
+/* Fundo pintado na mão, sempre.
+
+   Sem isto o <body> fica transparente e quem aparece é a "tela" do
+   navegador — que, no celular em modo escuro, é PRETA. Era por isso que a
+   tela inicial abria com fundo preto em alguns aparelhos: não era o nosso
+   degradê sumindo, era o preto do navegador aparecendo por trás. */
+html, body {
+  background-color: #D9EEF8;
+}
+body.modo-escuro,
+body.modo-escuro-prof {
+  background-color: #0F1A30;
+}
+
 /* ==========================================================================
    PALETA DO SABER+
    As cores saíram das telas que já existiam (Home, Login, Quiz), para o

@@ -103,3 +103,27 @@
 
 .btn-blue:hover  { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(26,111,196,0.4); }
 .btn-green:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(61,170,92,0.4); }
+/* ==========================================================================
+   TEMA ESCURO DA TELA INICIAL — 05/11/2026
+
+   Quem abre o Saber+ com o celular no modo escuro via a tela inicial preta,
+   com o texto embaralhado: o navegador invertia as cores sozinho porque o
+   site não dizia que tem tema escuro. Agora diz (meta color-scheme no
+   index.html) e a tela inicial ganhou o tema escuro de verdade, combinando
+   com as telas do aluno.
+   ========================================================================== */
+body.modo-escuro .home-container {
+  background: linear-gradient(180deg, #0B1324 0%, #0F1A30 45%, #16202B 100%);
+}
+
+body.modo-escuro .subtitle { color: #A8C4DE; }
+
+body.modo-escuro .access-card {
+  background: #1E2E3E;
+  border-color: #27394B;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+body.modo-escuro .brand { filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
+body.modo-escuro .brand-saber { color: #FF9A4D; }
+body.modo-escuro .brand-plus  { color: #6FB2F0; }

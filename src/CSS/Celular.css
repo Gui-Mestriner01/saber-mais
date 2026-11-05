@@ -206,7 +206,8 @@
     box-shadow: none;
   }
 
-  /* Tema, sair e perfil viram botões redondos na barra do topo */
+  /* Ajuda, tema, sair e perfil viram botões redondos na barra do topo */
+  .sidebar-ajuda,
   .sidebar-tema,
   .sidebar-sair,
   .aluno-sair {
@@ -218,6 +219,7 @@
     border-radius: 50%;
   }
 
+  .sidebar-ajuda svg,
   .sidebar-tema svg,
   .sidebar-sair svg,
   .aluno-sair svg { width: 19px; height: 19px; }
@@ -351,26 +353,22 @@
   /* Tela bem estreita: a ilustração sai e o texto fica por conta do cartão */
   .aluno-header-imagem-bg { display: none; }
 
-  /* Pontos / nível / insígnias: três cartõezinhos em pé, lado a lado */
-  .aluno-stats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
-  .aluno-container .aluno-stats .stat-card {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 12px 6px;
-    gap: 6px;
-    min-width: 0;
-  }
-  .aluno-container .aluno-stats .stat-icon { width: 38px; height: 38px; }
-  .aluno-container .aluno-stats .stat-card strong { font-size: 17px; }
-  .aluno-container .aluno-stats .stat-card p { font-size: 11.5px; }
-
   .aluno-salas-grid { grid-template-columns: 1fr !important; }
   .avatares-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; }
   .turma-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 
   .filtros-barra { flex-direction: column; align-items: stretch; }
-  .filtros-chips { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  /* A fileira de filtros rola para o lado sozinha. O min-width: 0 é o que
+     impede ela de empurrar a página inteira: sem ele, o navegador dá à
+     fileira a largura de todos os chips somados, e a tela passa a rolar. */
+  .filtros-chips {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
   .filtros-chips > * { flex: none; }
   .filtros-selects { flex-wrap: wrap; }
   .filtros-selects > * { flex: 1 1 140px; }
@@ -610,4 +608,57 @@
   input[type="search"],
   select,
   textarea { font-size: 16px; }
+}
+
+/* ==========================================================================
+   CARTÕES DE PONTOS / NÍVEL / INSÍGNIAS — 05/11/2026
+
+   Antes isto valia só até 420px. Em celular de tela média (430, 480, 540…)
+   os três cartões continuavam deitados, não cabiam lado a lado e empurravam
+   a página para o lado: aparecia rolagem horizontal e o fundo parava antes
+   da borda, deixando uma faixa branca na direita.
+
+   Agora, em qualquer celular em pé, eles ficam em pé também — ícone em cima,
+   número no meio, nome embaixo — e encolhem junto com a tela.
+   ========================================================================== */
+@media (max-width: 620px) {
+  .aluno-stats { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px; }
+  .aluno-container .aluno-stats .stat-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 12px 6px;
+    gap: 6px;
+    min-width: 0;
+  }
+  .aluno-container .aluno-stats .stat-icon { width: 38px; height: 38px; flex: none; }
+  .aluno-container .aluno-stats .stat-card strong { font-size: 17px; }
+  .aluno-container .aluno-stats .stat-card p {
+    font-size: 11.5px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* Cartão de atividade: ícone, texto e botão numa linha só. Quando o nome da
+     atividade é comprido, o botão não cabe mais ao lado e empurrava a página
+     para fora da tela. Agora ele desce sozinho para a linha de baixo e ocupa
+     a largura toda — que de quebra vira um alvo bem maior para o dedo. */
+  .aluno-atividade-card {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+  .aluno-atividade-card .atv-info {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+  .aluno-atividade-card .atv-info strong,
+  .aluno-atividade-card .atv-info p { overflow-wrap: anywhere; }
+  .aluno-atividade-card .atv-btn {
+    flex: 1 1 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+  }
 }
