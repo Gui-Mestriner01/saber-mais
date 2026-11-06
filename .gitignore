@@ -43,3 +43,6 @@ backend/backups/
 # Vídeos dos tutoriais: 24 MB, ficam no Cloudinary (ver tutoriais/subir-videos-ajuda.mjs).
 # O script de envio continua no repositório; os .mp4, não.
 tutoriais/*.mp4
+
+# Pasta que o Claude usa quando precisa descartar algo (apagar na mao)
+_to_delete/
