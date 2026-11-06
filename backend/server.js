@@ -162,7 +162,9 @@ app.use(helmet({
       'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://vlibras.gov.br'],
       'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com'],
       'img-src': ["'self'", 'data:', 'blob:', 'https://res.cloudinary.com', 'https://vlibras.gov.br', 'https://lh3.googleusercontent.com'],
-      'media-src': ["'self'", 'https://vlibras.gov.br'],
+      // res.cloudinary.com tambem aqui: e de la que vem o video da Central de ajuda.
+      // Sem isto a capa aparece (img-src) mas o player nao toca.
+      'media-src': ["'self'", 'https://vlibras.gov.br', 'https://res.cloudinary.com'],
       'connect-src': ["'self'", 'https://vlibras.gov.br', 'https://accounts.google.com', 'https://api.cloudinary.com', 'wss:'],
       'frame-src': ['https://accounts.google.com'],
       'worker-src': ["'self'", 'blob:'],
