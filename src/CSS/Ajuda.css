@@ -288,3 +288,48 @@ body.modo-escuro-prof .ajuda-aba.ativa {
 }
 .ajuda-erro-video h3 { margin: 6px 0 0; font-size: 17px; color: var(--tinta); }
 .ajuda-erro-video p  { margin: 0; font-size: 14px; max-width: 420px; line-height: 1.5; }
+
+/* ---------- frase de boas-vindas ---------- */
+.ajuda-intro {
+  margin: -6px 0 18px;
+  max-width: 62ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--tinta-media);
+}
+
+/* ---------- número do vídeo na capa ---------- */
+.ajuda-ordem {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(10, 14, 28, .82);
+  color: #fff;
+  font: 800 14px/1 inherit;
+}
+
+/* ---------- etiquetas (para quem é + quando usar) ---------- */
+.ajuda-selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.ajuda-quando {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1.5px solid var(--borda);
+  background: var(--superficie);
+  color: var(--tinta-clara);
+  font: 700 11.5px/1.4 inherit;
+}
+body.modo-escuro-prof .ajuda-quando {
+  background: var(--superficie);
+  border-color: var(--borda);
+}

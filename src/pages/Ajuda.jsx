@@ -81,6 +81,11 @@ function Ajuda() {
           </div>
         </header>
 
+        <p className="ajuda-intro">
+          Cada vídeo mostra o Saber+ funcionando de verdade, com legenda na tela.
+          Nenhum passa de 5 minutos. Se estiver começando agora, siga a ordem dos números.
+        </p>
+
         <div className="ajuda-filtros">
           <label className="ajuda-busca">
             <Search size={17} strokeWidth={2} />
@@ -136,12 +141,16 @@ function Ajuda() {
                   />
                   <span className="ajuda-play"><Play size={22} strokeWidth={2.4} fill="currentColor" /></span>
                   <span className="ajuda-duracao">{v.duracao}</span>
+                  <span className="ajuda-ordem">{VIDEOS_AJUDA.indexOf(v) + 1}</span>
                 </button>
 
                 <div className="ajuda-texto">
-                  <span className={`ajuda-selo ${v.para}`}>
-                    {v.para === 'aluno' ? 'Como o aluno vê' : 'Para o professor'}
-                  </span>
+                  <div className="ajuda-selos">
+                    <span className={`ajuda-selo ${v.para}`}>
+                      {v.para === 'aluno' ? 'Como o aluno vê' : 'Para o professor'}
+                    </span>
+                    {v.quando && <span className="ajuda-quando">{v.quando}</span>}
+                  </div>
                   <h3>{v.titulo}</h3>
                   <p>{v.resumo}</p>
                   <ul className="ajuda-topicos">
