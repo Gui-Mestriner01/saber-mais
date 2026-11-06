@@ -23,8 +23,25 @@ export const AJUDA_PRONTA = NUVEM !== 'SEU_CLOUD_NAME';
 export const enderecoDoVideo = (arquivo) =>
   `https://res.cloudinary.com/${NUVEM}/video/upload/f_auto,q_auto/${PASTA}/${arquivo}.mp4`;
 
+/* O segundo de onde sai a capa. No comeco todo video esta na tela de login,
+   que nao diz nada; cada um tem aqui o momento em que a tela interessante
+   esta aparecendo. */
+const SEGUNDO_DA_CAPA = {
+  '9-conta-e-senha': 45,
+  '1-criar-sala': 95,
+  '2-criar-atividade': 75,
+  '7-tipos-de-atividade': 50,
+  '6-pintura-computador': 170,
+  '8-biblioteca': 42,
+  '4-relatorios': 88,
+  '5-modo-ao-vivo': 40,
+  '3-aluno-responde-celular': 85,
+  '3-aluno-responde-computador': 85,
+  '6-pintura-celular': 90,
+};
+
 export const capaDoVideo = (arquivo) =>
-  `https://res.cloudinary.com/${NUVEM}/video/upload/so_6,w_640,c_fill,q_auto/${PASTA}/${arquivo}.jpg`;
+  `https://res.cloudinary.com/${NUVEM}/video/upload/so_${SEGUNDO_DA_CAPA[arquivo] || 30},w_640,c_fill,q_auto/${PASTA}/${arquivo}.jpg`;
 
 /* A ordem aqui é a ordem da tela: é também a ordem em que faz sentido
    assistir, do primeiro dia de uso até o dia a dia. */
